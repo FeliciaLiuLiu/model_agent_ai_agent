@@ -221,6 +221,12 @@ eda-agent \
   --output ./output_eda
 ```
 
+Skip JSON output (faster):
+
+```bash
+eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --no-json
+```
+
 ### Model Testing Agent - CLI
 
 ```bash
@@ -395,3 +401,8 @@ eda.run()  # auto-detects dataset in ./data and generates full report
 ## Report Explanations
 
 Each matrix section includes result-aware text explanations based on the computed metrics and plots.
+
+## EDA Performance Notes
+
+- Plots are generated at 120 DPI with smaller figure sizes by default for faster rendering.
+- Time-series plots run only if the time column can be parsed successfully (>= 90% valid).

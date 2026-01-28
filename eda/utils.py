@@ -108,6 +108,19 @@ def ensure_datetime(df: pd.DataFrame, time_col: str) -> pd.Series:
     return pd.to_datetime(df[time_col], errors="coerce")
 
 
+def is_time_col_clean(
+    df: pd.DataFrame,
+    time_col: str,
+    min_valid_ratio: float = 0.9,
+) -> Tuple[bool, float]:
+    """Check whether a time column is clean enough for time-series analysis."""
+    if time_col not in df.columns:
+        return False, 0.0
+    parsed = ensure_datetime(df, time_col)
+    valid_ratio = float(parsed.notna().mean()) if len(parsed) > 0 else 0.0
+    return valid_ratio >= min_valid_ratio, valid_ratio
+
+
 def safe_select_columns(df: pd.DataFrame, cols: Optional[List[str]]) -> pd.DataFrame:
     """Select columns if provided; otherwise return original."""
     if not cols:

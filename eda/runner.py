@@ -14,6 +14,7 @@ from .utils import (
     auto_detect_data_path,
     detect_column_types,
     ensure_datetime,
+    is_time_col_clean,
     load_data,
     safe_select_columns,
 )
@@ -40,11 +41,19 @@ class EDA:
         time_col: Optional[str] = None,
         id_cols: Optional[List[str]] = None,
         tag: str = "eda",
+        plot_dpi: int = 120,
+        fig_size: Tuple[float, float] = (6.5, 4.0),
+        heatmap_size: Tuple[float, float] = (7.0, 5.0),
+        time_parse_min_ratio: float = 0.9,
     ):
         self.output_dir = output_dir
         self.target_col = target_col
         self.time_col = time_col
         self.id_cols = id_cols or []
+        self.plot_dpi = plot_dpi
+        self.fig_size = fig_size
+        self.heatmap_size = heatmap_size
+        self.time_parse_min_ratio = time_parse_min_ratio
         os.makedirs(output_dir, exist_ok=True)
         self.report_builder = EDAReportBuilder(output_dir=output_dir, tag=tag)
 
@@ -97,7 +106,18 @@ class EDA:
                 results["outliers"] = self.outliers(df_sec)
             elif sec == "time":
                 if time_col:
-                    results["time"] = self.time_analysis(df, time_col=time_col, target_col=target_col)
+                    clean, ratio = is_time_col_clean(df, time_col, min_valid_ratio=self.time_parse_min_ratio)
+                    if clean:
+                        results["time"] = self.time_analysis(df, time_col=time_col, target_col=target_col)
+                    else:
+                        results["time"] = {
+                            "metrics": {},
+                            "plots": {},
+                            "summary": [
+                                f"Time analysis skipped: '{time_col}' parse success ratio {ratio:.2%} "
+                                f"is below threshold {self.time_parse_min_ratio:.0%}."
+                            ],
+                        }
 
         if save_json:
             json_path = os.path.join(self.output_dir, "eda_results.json")
@@ -337,32 +357,32 @@ class EDA:
     def _plot_bar(self, series: pd.Series, path: str, title: str, ylabel: str) -> None:
         import matplotlib.pyplot as plt
 
-        fig, ax = plt.subplots(figsize=(8, 5))
+        fig, ax = plt.subplots(figsize=self.fig_size)
         series.plot(kind="bar", ax=ax, color="steelblue")
         ax.set_title(title)
         ax.set_ylabel(ylabel)
         ax.grid(True, axis="y", alpha=0.3)
         plt.tight_layout()
-        plt.savefig(path, dpi=150)
+        plt.savefig(path, dpi=self.plot_dpi)
         plt.close(fig)
 
     def _plot_hist(self, series: pd.Series, path: str, title: str) -> None:
         import matplotlib.pyplot as plt
 
-        fig, ax = plt.subplots(figsize=(7, 5))
+        fig, ax = plt.subplots(figsize=self.fig_size)
         ax.hist(series.dropna().values, bins=30, color="steelblue", alpha=0.7)
         ax.set_title(title)
         ax.set_xlabel("Value")
         ax.set_ylabel("Frequency")
         ax.grid(True, alpha=0.3)
         plt.tight_layout()
-        plt.savefig(path, dpi=150)
+        plt.savefig(path, dpi=self.plot_dpi)
         plt.close(fig)
 
     def _plot_heatmap(self, mat: np.ndarray, labels: List[str], path: str, title: str) -> None:
         import matplotlib.pyplot as plt
 
-        fig, ax = plt.subplots(figsize=(8, 6))
+        fig, ax = plt.subplots(figsize=self.heatmap_size)
         im = ax.imshow(mat, cmap="coolwarm", vmin=-1, vmax=1)
         ax.set_xticks(range(len(labels)))
         ax.set_yticks(range(len(labels)))
@@ -371,20 +391,20 @@ class EDA:
         ax.set_title(title)
         plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
         plt.tight_layout()
-        plt.savefig(path, dpi=150)
+        plt.savefig(path, dpi=self.plot_dpi)
         plt.close(fig)
 
     def _plot_line(self, series: pd.Series, path: str, title: str, ylabel: str) -> None:
         import matplotlib.pyplot as plt
 
-        fig, ax = plt.subplots(figsize=(8, 5))
+        fig, ax = plt.subplots(figsize=self.fig_size)
         ax.plot(series.index, series.values, color="steelblue", marker="o", linewidth=1)
         ax.set_title(title)
         ax.set_ylabel(ylabel)
         ax.grid(True, alpha=0.3)
         plt.xticks(rotation=45)
         plt.tight_layout()
-        plt.savefig(path, dpi=150)
+        plt.savefig(path, dpi=self.plot_dpi)
         plt.close(fig)
 
     def _convert(self, obj: Any) -> Any:

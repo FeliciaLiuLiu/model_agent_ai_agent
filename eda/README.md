@@ -79,6 +79,12 @@ eda-agent \
   --output ./output_eda
 ```
 
+### Skip JSON Output (Faster)
+
+```bash
+eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --no-json
+```
+
 ## Example (Using Scripts 03/04 Dataset)
 
 ```bash
@@ -99,3 +105,5 @@ eda-agent --data ./data/synthetic_bank_aml_200k.csv --target-col is_suspicious -
 - You can also pass a pandas DataFrame to `EDA.run(df=...)`.
 - You can set `EDA_DATA_PATH` to point to a dataset and omit `--data`.
 - The EDA runner auto-detects column types and will list numeric/categorical/time columns in the report.
+- Plots are generated at 120 DPI with smaller figure sizes by default to speed up rendering.
+- Time-series plots run only if the time column can be parsed successfully (>= 90% valid).
