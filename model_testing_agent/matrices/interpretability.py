@@ -24,8 +24,10 @@ from ..core.utils import with_score_p1, check_model_type, get_feature_names, sam
 try:
     import shap
     SHAP_AVAILABLE = True
-except ImportError:
+    SHAP_IMPORT_ERROR = None
+except Exception as e:
     SHAP_AVAILABLE = False
+    SHAP_IMPORT_ERROR = str(e)
     shap = None
 
 try:
@@ -57,6 +59,9 @@ class ModelInterpretability:
             if LIME_AVAILABLE: methods.append('lime')
 
         results = {'metrics': {'model_type': model_type, 'methods_used': methods}, 'plots': {}, 'artifacts': {}}
+        if not SHAP_AVAILABLE:
+            results['metrics']['shap_status'] = 'unavailable'
+            results['metrics']['shap_reason'] = SHAP_IMPORT_ERROR or 'SHAP import failed'
 
         # Permutation Importance
         if 'permutation' in methods:
@@ -80,6 +85,7 @@ class ModelInterpretability:
                 lime_res = self._lime_analysis(model, X_sample, y_sample, feature_names, random_state)
                 results['plots']['lime_explanation'] = lime_res['plot']
                 results['artifacts']['lime_weights'] = lime_res['weights']
+                results['metrics']['lime_instances'] = len(lime_res.get('instances', []))
             except Exception as e:
                 results['metrics']['lime_error'] = str(e)
 
@@ -88,6 +94,7 @@ class ModelInterpretability:
             try:
                 pdp_res = self._pdp_analysis(model, X_sample, feature_names, top_k)
                 results['plots']['pdp'] = pdp_res['plot']
+                results['metrics']['pdp_features'] = pdp_res.get('features', [])
             except Exception as e:
                 results['metrics']['pdp_error'] = str(e)
 
@@ -96,30 +103,11 @@ class ModelInterpretability:
             try:
                 ice_res = self._ice_analysis(model, X_sample, feature_names, top_k)
                 results['plots']['ice'] = ice_res['plot']
+                results['metrics']['ice_features'] = ice_res.get('features', [])
             except Exception as e:
                 results['metrics']['ice_error'] = str(e)
 
-        explanations = {
-            'metrics': {
-                'model_type': 'Detected estimator family used to select interpretability methods.',
-                'methods_used': 'Interpretability methods executed in this run.',
-                'perm_top_features': 'Features with the largest drop in AUC when permuted.',
-                'shap_top_features': 'Features with the largest mean absolute SHAP values.',
-                'shap_error': 'Reason SHAP could not be computed for this model/data.',
-                'lime_error': 'Reason LIME could not be computed for this model/data.',
-                'pdp_error': 'Reason PDP could not be computed for this model/data.',
-                'ice_error': 'Reason ICE could not be computed for this model/data.',
-            },
-            'plots': {
-                'permutation_importance': 'Permutation-based feature importance ranked by impact on AUC.',
-                'shap_bar': 'Global SHAP importance (mean absolute SHAP values).',
-                'shap_beeswarm': 'SHAP value distribution showing direction and magnitude per feature.',
-                'lime_explanation': 'Local LIME explanations for selected instances.',
-                'pdp': 'Partial dependence plots showing average feature effects.',
-                'ice': 'ICE plots showing individual-level feature effects.',
-            },
-        }
-        results['explanations'] = explanations
+        results['explanations'] = self._build_explanations(results)
         return results
 
     def _permutation_importance(self, model, X, y, feature_names, n_repeats, top_k, random_state):
@@ -246,7 +234,7 @@ class ModelInterpretability:
         path = os.path.join(self.data_dir, 'lime_explanation.png')
         plt.tight_layout(); plt.savefig(path, dpi=150, bbox_inches='tight'); plt.close()
 
-        return {'weights': all_weights, 'plot': path}
+        return {'weights': all_weights, 'plot': path, 'instances': list(sample_idx)}
 
     def _pdp_analysis(self, model, X, feature_names, top_k):
         """Partial Dependence Plot analysis."""
@@ -343,3 +331,55 @@ class ModelInterpretability:
         plt.tight_layout(); plt.savefig(path, dpi=150, bbox_inches='tight'); plt.close()
 
         return {'plot': path, 'features': top_features}
+
+    def _build_explanations(self, results):
+        """Build result-specific explanations for interpretability outputs."""
+        metrics = results.get('metrics', {})
+        artifacts = results.get('artifacts', {})
+
+        summary = []
+        perm_feats = metrics.get('perm_top_features', [])
+        if perm_feats:
+            summary.append(f"Permutation importance highlights: {perm_feats[:5]}.")
+
+        if metrics.get('shap_top_features'):
+            summary.append(f"SHAP top features: {metrics['shap_top_features'][:5]}.")
+        elif metrics.get('shap_error'):
+            summary.append(f"SHAP plots not generated due to error: {metrics['shap_error']}.")
+        elif metrics.get('shap_status') == 'unavailable':
+            reason = metrics.get('shap_reason', 'SHAP not installed')
+            summary.append(f"SHAP plots not generated because SHAP is unavailable ({reason}).")
+
+        if metrics.get('lime_instances'):
+            lime_weights = artifacts.get('lime_weights', {})
+            if lime_weights:
+                first_key = list(lime_weights.keys())[0]
+                weights = lime_weights[first_key]
+                ranked = sorted(weights.items(), key=lambda kv: abs(kv[1]), reverse=True)[:5]
+                top_feats = [k for k, _ in ranked]
+                summary.append(
+                    f"LIME generated local explanations for {metrics['lime_instances']} instances; "
+                    f"top contributors for {first_key}: {top_feats}."
+                )
+        elif metrics.get('lime_error'):
+            summary.append(f"LIME plots not generated due to error: {metrics['lime_error']}.")
+
+        if metrics.get('pdp_features'):
+            summary.append(f"PDP plots show average effects for: {metrics['pdp_features']}.")
+        elif metrics.get('pdp_error'):
+            summary.append(f"PDP plots not generated due to error: {metrics['pdp_error']}.")
+
+        if metrics.get('ice_features'):
+            summary.append(f"ICE plots show individual-level effects for: {metrics['ice_features']}.")
+        elif metrics.get('ice_error'):
+            summary.append(f"ICE plots not generated due to error: {metrics['ice_error']}.")
+
+        plots = {
+            'permutation_importance': "Bars show how much AUC drops when each feature is permuted.",
+            'shap_bar': "SHAP bar plot ranks global feature impact by mean absolute SHAP values.",
+            'shap_beeswarm': "SHAP beeswarm shows both impact size and direction per feature.",
+            'lime_explanation': "LIME bars show local feature contributions for selected instances.",
+            'pdp': "PDP curves show average model response as a feature varies.",
+            'ice': "ICE curves show per-instance responses as a feature varies.",
+        }
+        return {'summary': summary, 'plots': plots}

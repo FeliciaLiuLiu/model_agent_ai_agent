@@ -29,7 +29,7 @@ class ModelStability:
         os.makedirs(self.data_dir, exist_ok=True)
 
     def evaluate(self, model, X, y, X_reference=None, y_reference=None, feature_names=None,
-                 n_folds=5, n_bootstrap=100, random_state=42, **kwargs) -> Tuple[Dict, Dict, Dict]:
+                 n_folds=5, n_bootstrap=100, random_state=42, **kwargs) -> Tuple[Dict, Dict, Dict, Dict]:
         """Run full stability evaluation."""
         is_df = isinstance(X, pd.DataFrame)
         X_for_model = X if is_df else np.asarray(X)
@@ -96,28 +96,7 @@ class ModelStability:
             'concept_drift_score': concept_drift['drift_score'],
         }
         artifacts = {'data_drift': drift_results, 'cv_fold_scores': cv_results['fold_scores']}
-        explanations = {
-            'metrics': {
-                'psi': 'Population Stability Index; higher indicates larger score distribution shift.',
-                'cv_auc_roc_mean': 'Mean AUC-ROC across cross-validation folds.',
-                'cv_auc_roc_std': 'Standard deviation of AUC-ROC across folds.',
-                'cv_auc_pr_mean': 'Mean AUC-PR across cross-validation folds.',
-                'cv_auc_pr_std': 'Standard deviation of AUC-PR across folds.',
-                'bootstrap_auc_roc_mean': 'Mean AUC-ROC from bootstrap resamples.',
-                'bootstrap_auc_roc_ci_lower': 'Lower bound of bootstrap AUC-ROC 95% CI.',
-                'bootstrap_auc_roc_ci_upper': 'Upper bound of bootstrap AUC-ROC 95% CI.',
-                'concept_drift_detected': 'Flag indicating potential concept drift over time chunks.',
-                'concept_drift_score': 'Relative variation of AUC over time chunks.',
-            },
-            'plots': {
-                'psi_distribution': 'Reference vs current score distributions used to compute PSI.',
-                'data_drift_heatmap': 'Per-feature drift signals using KS statistics and p-values.',
-                'concept_drift': 'AUC across time chunks to detect concept drift.',
-                'cv_results': 'Fold-wise AUC-ROC and AUC-PR to assess stability.',
-                'bootstrap_distribution': 'Bootstrap AUC-ROC distribution and confidence interval.',
-                'stability_summary': 'Summary dashboard of PSI, CV variance, and bootstrap CI width.',
-            },
-        }
+        explanations = self._build_explanations(metrics, artifacts)
         return metrics, plots, artifacts, explanations
 
     def _calculate_psi(self, expected, actual, n_bins=10):
@@ -348,3 +327,68 @@ class ModelStability:
 
         plt.tight_layout(); plt.savefig(path, dpi=150); plt.close()
         return path
+
+    def _build_explanations(self, metrics, artifacts):
+        """Build result-specific explanations for stability metrics and plots."""
+        psi = metrics['psi']
+        roc_mean = metrics['cv_auc_roc_mean']
+        roc_std = metrics['cv_auc_roc_std']
+        pr_mean = metrics['cv_auc_pr_mean']
+        pr_std = metrics['cv_auc_pr_std']
+        boot_mean = metrics['bootstrap_auc_roc_mean']
+        ci_low = metrics['bootstrap_auc_roc_ci_lower']
+        ci_high = metrics['bootstrap_auc_roc_ci_upper']
+        drift_detected = metrics['concept_drift_detected']
+        drift_score = metrics['concept_drift_score']
+
+        psi_desc = "negligible" if psi < 0.1 else ("moderate" if psi < 0.25 else "material")
+        roc_cv = roc_std / roc_mean if roc_mean else 0.0
+        pr_cv = pr_std / pr_mean if pr_mean else 0.0
+        roc_var_desc = "stable" if roc_cv < 0.02 else ("moderate" if roc_cv < 0.05 else "variable")
+        pr_var_desc = "stable" if pr_cv < 0.02 else ("moderate" if pr_cv < 0.05 else "variable")
+        ci_width = ci_high - ci_low
+
+        drift_results = artifacts.get('data_drift', {})
+        drifted = [k for k, v in drift_results.items() if v.get('drift_detected')]
+        total = len(drift_results)
+        top_drift = sorted(
+            drift_results.items(), key=lambda kv: kv[1].get('ks_statistic', 0), reverse=True
+        )[:3]
+        top_drift_names = [k for k, _ in top_drift] if top_drift else []
+
+        summary = []
+        summary.append(
+            f"PSI is {psi:.4f}, indicating {psi_desc} score distribution shift between reference and current data."
+        )
+        summary.append(
+            f"CV AUC-ROC is {roc_mean:.4f} ± {roc_std:.4f} ({roc_var_desc} across folds)."
+        )
+        summary.append(
+            f"CV AUC-PR is {pr_mean:.4f} ± {pr_std:.4f} ({pr_var_desc} across folds)."
+        )
+        summary.append(
+            f"Bootstrap AUC-ROC mean is {boot_mean:.4f} with 95% CI [{ci_low:.4f}, {ci_high:.4f}] "
+            f"(width {ci_width:.4f})."
+        )
+        if drift_detected:
+            summary.append(
+                f"Concept drift detected with score {drift_score:.4f}; performance shifts across time chunks."
+            )
+        else:
+            summary.append(
+                f"No concept drift detected (score {drift_score:.4f}), suggesting stable performance over time."
+            )
+        if total > 0:
+            summary.append(
+                f"Data drift flagged {len(drifted)}/{total} numeric features; top drift signals: {top_drift_names}."
+            )
+
+        plots = {
+            'psi_distribution': f"Score distributions overlap consistent with PSI={psi:.4f}.",
+            'data_drift_heatmap': f"{len(drifted)}/{total} features show drift; red bars highlight flagged features.",
+            'concept_drift': "AUC across time chunks shows whether performance is stable over time.",
+            'cv_results': f"Fold scores cluster around ROC {roc_mean:.4f} and PR {pr_mean:.4f}.",
+            'bootstrap_distribution': f"Bootstrap CI [{ci_low:.4f}, {ci_high:.4f}] reflects performance stability.",
+            'stability_summary': "Dashboard summarizes PSI, CV variance, and bootstrap CI width.",
+        }
+        return {'summary': summary, 'plots': plots}

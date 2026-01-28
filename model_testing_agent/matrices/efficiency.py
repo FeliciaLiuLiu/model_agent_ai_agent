@@ -24,7 +24,7 @@ class ModelEfficiency:
         self.data_dir = data_dir or "./output"
         os.makedirs(self.data_dir, exist_ok=True)
 
-    def evaluate(self, model, X, y, threshold=0.5, **kwargs) -> Tuple[Dict, Dict]:
+    def evaluate(self, model, X, y, threshold=0.5, **kwargs) -> Tuple[Dict, Dict, Dict]:
         """Run efficiency evaluation."""
         y_true, y_pred, y_score = ensure_predictions(model, X, y, threshold)
         tn, fp, fpr_val = fpr_score(y_true, y_pred)
@@ -50,20 +50,9 @@ class ModelEfficiency:
             'fpr': fpr_val, 'tn': tn, 'fp': fp, 'threshold': threshold,
             'fpr_at_thresholds': dict(zip([f't_{t:.2f}' for t in thresholds], fpr_list)),
         }
-        explanations = {
-            'metrics': {
-                'fpr': 'False Positive Rate at the chosen threshold.',
-                'tn': 'Count of true negatives at the chosen threshold.',
-                'fp': 'Count of false positives at the chosen threshold.',
-                'threshold': 'Decision threshold used for current metrics.',
-                'fpr_at_thresholds': 'FPR values computed across a range of thresholds.',
-            },
-            'plots': {
-                'fpr_vs_threshold': 'How FPR changes as the decision threshold moves.',
-                'efficiency_frontier': 'Tradeoff between FPR and TPR across thresholds.',
-                'fpr_tpr_tradeoff': 'FPR and TPR curves across thresholds for operating-point selection.',
-            },
-        }
+        explanations = self._build_explanations(
+            y_true, y_score, threshold, metrics, thresholds, fpr_list, tpr_list
+        )
         return metrics, plots, explanations
 
     def _plot_fpr_vs_threshold(self, thresholds, fpr_list):
@@ -99,3 +88,44 @@ class ModelEfficiency:
         ax.set_title('FPR vs TPR Tradeoff'); ax.legend(); ax.grid(True, alpha=0.3)
         plt.tight_layout(); plt.savefig(path, dpi=150); plt.close()
         return path
+
+    def _build_explanations(self, y_true, y_score, threshold, metrics, thresholds, fpr_list, tpr_list):
+        """Build result-specific explanations for metrics and plots."""
+        neg = np.sum(y_true == 0)
+        pos = np.sum(y_true == 1)
+        tp = int(np.sum((y_true == 1) & (y_score >= threshold)))
+        fp = int(np.sum((y_true == 0) & (y_score >= threshold)))
+        fn = int(np.sum((y_true == 1) & (y_score < threshold)))
+        tn = int(np.sum((y_true == 0) & (y_score < threshold)))
+        tpr = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        fpr = metrics['fpr']
+
+        fpr_desc = "low" if fpr < 0.05 else ("moderate" if fpr < 0.1 else "high")
+
+        # Find a threshold that achieves FPR close to 5% if possible
+        target = 0.05
+        idx = int(np.argmin([abs(v - target) for v in fpr_list])) if fpr_list else 0
+        best_t = float(thresholds[idx]) if len(thresholds) else threshold
+        best_fpr = float(fpr_list[idx]) if fpr_list else fpr
+        best_tpr = float(tpr_list[idx]) if tpr_list else tpr
+
+        summary = []
+        summary.append(
+            f"At threshold {threshold:.2f}, FPR={fpr:.4f} ({fpr_desc}); "
+            f"FP={fp} out of {neg} negatives."
+        )
+        summary.append(
+            f"At the same threshold, TPR={tpr:.4f} with TP={tp} and FN={fn}, "
+            "showing the capture rate of positives."
+        )
+        summary.append(
+            f"A threshold near {best_t:.2f} yields FPR≈{best_fpr:.4f} with TPR≈{best_tpr:.4f} "
+            "if you want to target ~5% false positives."
+        )
+
+        plots = {
+            'fpr_vs_threshold': "FPR decreases as the threshold increases; use it to pick an operating point.",
+            'efficiency_frontier': "Each point shows the FPR/TPR tradeoff; move toward the top-left for better efficiency.",
+            'fpr_tpr_tradeoff': "FPR and TPR curves highlight how recall drops as you reduce false positives.",
+        }
+        return {'summary': summary, 'plots': plots}

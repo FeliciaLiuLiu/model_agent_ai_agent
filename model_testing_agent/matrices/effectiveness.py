@@ -28,7 +28,7 @@ class ModelEffectiveness:
         self.data_dir = data_dir or "./output"
         os.makedirs(self.data_dir, exist_ok=True)
 
-    def evaluate(self, model, X, y, threshold=0.5, k_list=None, **kwargs) -> Tuple[Dict, Dict]:
+    def evaluate(self, model, X, y, threshold=0.5, k_list=None, **kwargs) -> Tuple[Dict, Dict, Dict]:
         """Run full effectiveness evaluation with all plots."""
         k_list = k_list or [10, 50, 100, 200, 500]
         y_true, y_pred, y_score = ensure_predictions(model, X, y, threshold)
@@ -60,30 +60,9 @@ class ModelEffectiveness:
             'precision_at_k': dict(zip(k_list, pk)),
             'recall_at_k': dict(zip(k_list, rk)),
         }
-        explanations = {
-            'metrics': {
-                'auc_roc': 'Area under the ROC curve; higher means better ranking of positives above negatives.',
-                'auc_pr': 'Area under the Precision-Recall curve; higher is better for imbalanced classes.',
-                'precision': 'Fraction of predicted positives that are true positives.',
-                'recall': 'Fraction of true positives correctly detected.',
-                'f1': 'Harmonic mean of precision and recall.',
-                'ks_statistic': 'Maximum separation between positive and negative score distributions.',
-                'ks_threshold': 'Score threshold at which the KS statistic is maximal.',
-                'confusion_matrix': 'Counts of TN/FP/FN/TP at the chosen decision threshold.',
-                'precision_at_k': 'Precision when selecting the top-K scored records.',
-                'recall_at_k': 'Recall captured within the top-K scored records.',
-            },
-            'plots': {
-                'roc_curve': 'ROC curve shows TPR vs FPR across thresholds; larger area is better.',
-                'pr_curve': 'Precision-Recall curve highlights performance on the positive class.',
-                'confusion_matrix': 'Raw confusion matrix counts at the chosen threshold.',
-                'confusion_matrix_norm': 'Row-normalized confusion matrix showing per-class rates.',
-                'ks_curve': 'CDF separation between positive and negative scores; peak is KS.',
-                'precision_recall_at_k': 'Precision and recall measured at several K cutoffs.',
-                'score_distribution': 'Score histogram by class to visualize separation.',
-                'threshold_analysis': 'Precision, recall, and F1 across decision thresholds.',
-            },
-        }
+        explanations = self._build_explanations(
+            y_true, y_pred, y_score, metrics, threshold, k_list
+        )
         return metrics, plots, explanations
 
     def _ks_statistic(self, y_true, y_score, n_buckets=100):
@@ -213,3 +192,107 @@ class ModelEffectiveness:
         ax.set_title('Precision/Recall/F1 vs Threshold'); ax.legend(); ax.grid(True, alpha=0.3)
         plt.tight_layout(); plt.savefig(path, dpi=150); plt.close()
         return path
+
+    def _build_explanations(self, y_true, y_pred, y_score, metrics, threshold, k_list):
+        """Build result-specific explanations for metrics and plots."""
+        def auc_quality(val):
+            if val < 0.6: return "weak"
+            if val < 0.7: return "fair"
+            if val < 0.8: return "good"
+            if val < 0.9: return "strong"
+            return "excellent"
+
+        def ks_quality(val):
+            if val < 0.1: return "very low separation"
+            if val < 0.2: return "low separation"
+            if val < 0.3: return "moderate separation"
+            if val < 0.5: return "strong separation"
+            return "very strong separation"
+
+        cm = metrics['confusion_matrix']
+        tp, fp, fn, tn = cm['TP'], cm['FP'], cm['FN'], cm['TN']
+        pos_rate = float(np.mean(y_true)) if len(y_true) > 0 else 0.0
+        auc_roc_val = metrics['auc_roc']
+        auc_pr_val = metrics['auc_pr']
+        prec = metrics['precision']
+        rec = metrics['recall']
+        f1 = metrics['f1']
+        ks = metrics['ks_statistic']
+        ks_threshold = metrics['ks_threshold']
+        fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
+        fnr = fn / (fn + tp) if (fn + tp) > 0 else 0.0
+        tpr = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        tnr = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+
+        tradeoff = "balanced"
+        if prec - rec > 0.1: tradeoff = "precision-heavy (fewer positives caught, fewer false alarms)"
+        if rec - prec > 0.1: tradeoff = "recall-heavy (more positives caught, more false alarms)"
+
+        summary = []
+        summary.append(
+            f"Positive rate is {pos_rate:.2%}; AUC-ROC is {auc_roc_val:.4f} ({auc_quality(auc_roc_val)} ranking)."
+        )
+        if auc_pr_val <= pos_rate + 1e-6:
+            summary.append(
+                f"AUC-PR is {auc_pr_val:.4f}, close to the base rate {pos_rate:.2%}, indicating limited lift."
+            )
+        else:
+            summary.append(
+                f"AUC-PR is {auc_pr_val:.4f}, above the base rate {pos_rate:.2%}, indicating meaningful lift."
+            )
+        summary.append(
+            f"At threshold {threshold:.2f}, precision={prec:.4f}, recall={rec:.4f}, F1={f1:.4f} "
+            f"({tradeoff})."
+        )
+        summary.append(
+            f"Confusion matrix: TP={tp}, FP={fp}, FN={fn}, TN={tn} "
+            f"(FPR={fpr:.2%}, FNR={fnr:.2%})."
+        )
+        summary.append(
+            f"KS is {ks:.4f} at threshold {ks_threshold:.2f}, indicating {ks_quality(ks)}."
+        )
+
+        # Precision/Recall at K interpretation
+        pk = metrics.get('precision_at_k', {})
+        rk = metrics.get('recall_at_k', {})
+        if pk and rk:
+            k_small = min(k_list)
+            k_large = max(k_list)
+            if k_small in pk and k_small in rk:
+                summary.append(
+                    f"Top-{k_small}: precision={pk[k_small]:.4f}, recall={rk[k_small]:.4f} "
+                    "shows the quality of the highest-risk shortlist."
+                )
+            if k_large in pk and k_large in rk:
+                summary.append(
+                    f"Top-{k_large}: precision={pk[k_large]:.4f}, recall={rk[k_large]:.4f} "
+                    "shows how much coverage you get with a larger queue."
+                )
+
+        # Plot-specific captions tied to metrics
+        pos_mean = float(np.mean(y_score[y_true == 1])) if np.any(y_true == 1) else 0.0
+        neg_mean = float(np.mean(y_score[y_true == 0])) if np.any(y_true == 0) else 0.0
+
+        thresholds = np.linspace(0.1, 0.9, 17)
+        f1s = []
+        for t in thresholds:
+            y_p = (y_score >= t).astype(int)
+            cm_t = confusion_counts(y_true, y_p)
+            p_t, r_t, f1_t = precision_recall_f1(cm_t)
+            f1s.append(f1_t)
+        best_idx = int(np.argmax(f1s)) if f1s else 0
+        best_t = float(thresholds[best_idx]) if len(thresholds) else threshold
+        best_f1 = float(f1s[best_idx]) if f1s else f1
+
+        plots = {
+            'roc_curve': f"AUC-ROC={auc_roc_val:.4f}; curve above diagonal indicates {auc_quality(auc_roc_val)} separation.",
+            'pr_curve': f"AUC-PR={auc_pr_val:.4f} vs baseline {pos_rate:.2%}; higher curve implies better precision at recall.",
+            'confusion_matrix': f"At threshold {threshold:.2f}: TP={tp}, FP={fp}, FN={fn}, TN={tn}.",
+            'confusion_matrix_norm': f"Normalized rates: TPR={tpr:.2%}, TNR={tnr:.2%}.",
+            'ks_curve': f"Maximum separation KS={ks:.4f} at threshold {ks_threshold:.2f}.",
+            'precision_recall_at_k': "Bars show precision/recall as you expand the review queue.",
+            'score_distribution': f"Mean score: positive={pos_mean:.3f}, negative={neg_mean:.3f} (larger gap is better).",
+            'threshold_analysis': f"Best F1 in tested grid is {best_f1:.4f} at threshold {best_t:.2f}.",
+        }
+
+        return {'summary': summary, 'plots': plots}

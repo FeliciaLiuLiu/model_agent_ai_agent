@@ -42,9 +42,17 @@ class ReportBuilder:
                 if not payload: continue
                 metrics = payload.get('metrics', {})
                 plots = payload.get('plots', {})
-                explanations = payload.get('explanations', {})
-                metric_expl = explanations.get('metrics', {})
-                plot_expl = explanations.get('plots', {})
+                explanations = payload.get('explanations', None)
+                summary_lines = []
+                plot_expl = {}
+                if isinstance(explanations, list):
+                    summary_lines = explanations
+                elif isinstance(explanations, dict):
+                    if isinstance(explanations.get('summary'), list):
+                        summary_lines = explanations.get('summary', [])
+                    elif isinstance(explanations.get('metrics'), dict):
+                        summary_lines = [f"{k}: {v}" for k, v in explanations.get('metrics', {}).items()]
+                    plot_expl = explanations.get('plots', {}) if isinstance(explanations.get('plots'), dict) else {}
 
                 # Metrics page
                 fig = plt.figure(figsize=(8.27, 11.69))
@@ -57,21 +65,15 @@ class ReportBuilder:
                 pdf.savefig(fig); plt.close(fig)
 
                 # Explanations page(s)
-                expl_lines = []
-                for k, v in metric_expl.items():
-                    expl_lines.append(f"Metric {k}: {v}")
-                for k, v in plot_expl.items():
-                    expl_lines.append(f"Plot {k}: {v}")
-
-                if expl_lines:
+                if summary_lines:
                     page = 1
                     idx = 0
-                    while idx < len(expl_lines):
+                    while idx < len(summary_lines):
                         fig = plt.figure(figsize=(8.27, 11.69))
                         fig.text(0.5, 0.96, f"{titles.get(sec_key, sec_key)} - Explanations", ha='center', fontsize=14, weight='bold')
                         y = 0.90
-                        while idx < len(expl_lines) and y > 0.08:
-                            line = expl_lines[idx]
+                        while idx < len(summary_lines) and y > 0.08:
+                            line = summary_lines[idx]
                             for wrapped in textwrap.wrap(line, width=110):
                                 if y <= 0.08: break
                                 fig.text(0.06, y, f"- {wrapped}", fontsize=9)
