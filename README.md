@@ -1,6 +1,30 @@
-# ADM Central Utility - Model Testing Agent
+# ADM Central Utility
+
+This project provides two main APIs:
+
+- **EDA**: automated exploratory data analysis with PDF and JSON outputs.
+- **Model Testing Agent**: comprehensive model evaluation with metrics, plots, and PDF reports.
 
 Comprehensive ML model evaluation toolkit for classification models. It generates metrics, plots, and a PDF report.
+
+## Project Structure (Architecture)
+
+- `__init__.py`: Exports `EDA` and `model_testing_agent` for top-level imports.
+- `eda/`: EDA module (auto dataset detection, metrics, plots, PDF report).
+  - `eda/runner.py`: `EDA` class entry point.
+  - `eda/utils.py`: dataset auto-detection, column type detection, loaders.
+  - `eda/report.py`: PDF report builder.
+- `model_testing_agent/`: Model evaluation module.
+  - `model_testing_agent/runner/main.py`: `ModelTestingAgent` (non-interactive).
+  - `model_testing_agent/runner/interactive.py`: `InteractiveAgent`.
+  - `model_testing_agent/runner/cli.py`: CLI entry point.
+  - `model_testing_agent/matrices/`: Effectiveness, Efficiency, Stability, Interpretability.
+  - `model_testing_agent/core/`: metrics, report builder, utilities.
+- `scripts/`: synthetic dataset generation and model training.
+  - `scripts/03_generate_bank_aml_dataset.py`: generates AML dataset.
+  - `scripts/04_train_bank_aml_gbt_pipeline.py`: trains model and saves test set.
+- `examples/`: example usage.
+- `requirements.txt`, `setup.py`: dependency and packaging definitions.
 
 ## Installation
 
@@ -41,14 +65,16 @@ Run the project with:
 - If SHAP cannot be imported, the report will include the reason in the Interpretability section.
 - For the easiest setup, use Python 3.11/3.12 where prebuilt wheels are typically available.
 
-## Model Requirements
+## Model Requirements (for Model Testing Agent)
 
 - The joblib must load a scikit-learn compatible classifier or pipeline.
 - `predict_proba` is strongly recommended for full metrics and interpretability.
 - If only `decision_function` exists, AUC metrics still work but LIME will not.
 - Input features must match the training schema (names, order, types).
 
-## Quick Start (API)
+## Model Testing Agent
+
+### Quick Start (API)
 
 ```python
 from adm_central_utility import model_testing_agent
@@ -64,7 +90,9 @@ results = agent.run(model=model, X=X, y=y, feature_names=feature_names)
 agent.generate_report(results)
 ```
 
-## Quick Start (EDA)
+## EDA
+
+### Quick Start
 
 ```python
 from adm_central_utility import EDA
@@ -72,6 +100,12 @@ from adm_central_utility import EDA
 # Auto-detects the most recent dataset in ./data
 eda = EDA(output_dir="./output_eda", target_col="is_suspicious")
 results = eda.run()
+```
+
+You can also set an explicit dataset path using an environment variable:
+
+```bash
+export EDA_DATA_PATH=./data/synthetic_bank_aml_200k.csv
 ```
 
 You can also pass a DataFrame or a file path:
@@ -85,7 +119,18 @@ eda = EDA(output_dir="./output_eda", target_col="is_suspicious", time_col="txn_d
 results = eda.run(df=df)
 ```
 
-## EDA: Select Functions and Columns
+### EDA Functions (Sections)
+
+- `overview`: dataset shape, column types, unique counts, duplicate ratio, target distribution (if provided)
+- `missingness`: missing value rates and plot
+- `numeric`: numeric statistics and histograms
+- `categorical`: top categories and frequency plots
+- `correlation`: correlation heatmap and target correlation (if numeric target)
+- `target`: feature vs target summaries
+- `outliers`: IQR outlier ratios and plot
+- `time`: time-series volume and optional target rate
+
+### EDA: Select Functions and Columns
 
 By default, `EDA.run()` executes all sections and generates a PDF report. You can select specific sections and columns.
 
@@ -110,7 +155,7 @@ results = eda.run(
 )
 ```
 
-## Quick Start (CLI)
+### Model Testing Agent - CLI
 
 ```bash
 model-testing-agent \
@@ -120,7 +165,32 @@ model-testing-agent \
   --output ./output
 ```
 
-## Synthetic AML Example (Scripts 03 & 04)
+### Interactive Mode
+
+Interactive mode lets the user select which matrices to run and which columns to include for each matrix.
+
+```python
+from adm_central_utility.model_testing_agent import InteractiveAgent
+
+agent = InteractiveAgent(output_dir="./output")
+agent.run_interactive(model=model, X=X, y=y, feature_names=list(X.columns))
+```
+
+The interactive CLI will prompt for matrix selection and column indices per matrix.
+
+### Non-Interactive Mode (All Sections)
+
+If you do not choose sections or columns, the agent runs all matrices and generates a full PDF report.
+
+```python
+from adm_central_utility.model_testing_agent import ModelTestingAgent
+
+agent = ModelTestingAgent(output_dir="./output")
+results = agent.run(model=model, X=X, y=y)  # runs all sections
+agent.generate_report(results)
+```
+
+### Synthetic AML Example (Scripts 03 & 04)
 
 1) Generate dataset (with label noise):
 
@@ -164,7 +234,7 @@ model-testing-agent \
   --sections effectiveness,efficiency,stability,interpretability
 ```
 
-## Choose Matrices and Columns
+### Choose Matrices and Columns
 
 ### Sections (matrices)
 
@@ -206,7 +276,7 @@ CLI:
 --columns-interpretability txn_amount,num_txn_24h
 ```
 
-## Evaluation Matrices
+### Evaluation Matrices
 
 ### 1. Effectiveness
 - ROC Curve & AUC-ROC
@@ -235,15 +305,26 @@ CLI:
 - Partial Dependence Plot (PDP)
 - Individual Conditional Expectation (ICE)
 
-## Output
+### Output
 - `model_testing_agent_Model_Testing_Report.pdf`
 - `results.json`
 - Various `.png` plot files
 
-## EDA Output
+### EDA Output
 - `EDA_Report.pdf`
 - `eda_results.json`
 - Various `.png` plot files
+
+### EDA - Non-Interactive Full Report
+
+If you do not specify sections or columns, the EDA runner will analyze all sections and generate a complete PDF report.
+
+```python
+from adm_central_utility import EDA
+
+eda = EDA(output_dir="./output_eda", target_col="is_suspicious")
+eda.run()  # auto-detects dataset in ./data and generates full report
+```
 
 ## Report Explanations
 
