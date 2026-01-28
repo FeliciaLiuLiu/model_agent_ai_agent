@@ -26,6 +26,23 @@ Comprehensive ML model evaluation toolkit for classification models. It generate
 - `examples/`: example usage.
 - `requirements.txt`, `setup.py`: dependency and packaging definitions.
 
+## Architecture Diagram
+
+```mermaid
+flowchart TD
+  User -->|API or CLI| ADM[adm_central_utility]
+  ADM --> EDA[EDA Module]
+  ADM --> MTA[Model Testing Agent]
+  EDA --> EDAUtils[eda/utils.py]
+  EDA --> EDAReport[eda/report.py]
+  EDA --> EDARunner[eda/runner.py]
+  EDA --> EDACLI[eda/cli.py]
+  MTA --> Runner[runner/*]
+  MTA --> Matrices[matrices/*]
+  MTA --> Core[core/*]
+  MTA --> CLI[runner/cli.py]
+```
+
 ## Installation
 
 ```bash
@@ -153,6 +170,27 @@ results = eda.run(
         "target": ["txn_amount", "merchant_category"]
     },
 )
+```
+
+### EDA CLI
+
+```bash
+eda-agent --data ./data/synthetic_bank_aml_200k.csv --target-col is_suspicious --output ./output_eda
+```
+
+Auto-detect dataset (latest file in `./data`):
+
+```bash
+eda-agent --output ./output_eda
+```
+
+Select sections and columns:
+
+```bash
+eda-agent \
+  --sections overview,missingness,numeric \
+  --columns-numeric txn_amount,num_txn_24h,kyc_risk_score \
+  --output ./output_eda
 ```
 
 ### Model Testing Agent - CLI

@@ -20,6 +20,7 @@ setup(
     entry_points={
         "console_scripts": [
             "model-testing-agent=adm_central_utility.model_testing_agent.runner.cli:main",
+            "eda-agent=adm_central_utility.eda.cli:main",
         ],
     },
 )
