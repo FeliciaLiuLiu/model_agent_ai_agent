@@ -5,7 +5,35 @@ This project provides two main APIs:
 - **EDA**: automated exploratory data analysis with PDF and JSON outputs.
 - **Model Testing Agent**: comprehensive model evaluation with metrics, plots, and PDF reports.
 
-Comprehensive ML model evaluation toolkit for classification models. It generates metrics, plots, and a PDF report.
+See module-specific docs:
+
+- `eda/README.md`
+- `model_testing_agent/README.md`
+
+## EDA (High-Level)
+
+The EDA module analyzes a dataset and generates a PDF/JSON report with overview, missingness, numeric/categorical summaries, correlation, outliers, and time-based analyses. Users can run all sections or pick specific sections/columns.
+
+```python
+from adm_central_utility import EDA
+
+eda = EDA(output_dir="./output_eda", target_col="your_target")
+results = eda.run(file_path="./path/to/your_dataset.csv")
+```
+
+## Model Testing Agent (High-Level)
+
+The Model Testing Agent evaluates a classification model with effectiveness, efficiency, stability, and interpretability matrices. Users can run all matrices or select subsets interactively or via API/CLI.
+
+```python
+from adm_central_utility.model_testing_agent import ModelTestingAgent
+
+model = ModelTestingAgent.load_model("./path/to/your_model.joblib")
+X, y, feature_names = ModelTestingAgent.load_data("./path/to/your_dataset.csv", label_col="your_label")
+agent = ModelTestingAgent(output_dir="./output")
+results = agent.run(model=model, X=X, y=y, feature_names=feature_names)
+agent.generate_report(results)
+```
 
 ## Project Structure (Architecture)
 
