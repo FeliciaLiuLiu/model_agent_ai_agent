@@ -31,34 +31,50 @@ class ModelStability:
     def evaluate(self, model, X, y, X_reference=None, y_reference=None, feature_names=None,
                  n_folds=5, n_bootstrap=100, random_state=42, **kwargs) -> Tuple[Dict, Dict, Dict]:
         """Run full stability evaluation."""
-        X_arr, y_arr = np.asarray(X), np.asarray(y)
+        is_df = isinstance(X, pd.DataFrame)
+        X_for_model = X if is_df else np.asarray(X)
+        y_arr = np.asarray(y)
         feature_names = get_feature_names(X, feature_names)
-        y_score, _, _ = with_score_p1(model, X)
+        y_score, _, _ = with_score_p1(model, X_for_model)
 
         # PSI
         if X_reference is not None:
             y_score_ref, _, _ = with_score_p1(model, X_reference)
+            X_curr = X_for_model
+            y_curr = y_arr
         else:
             mid = len(y_score) // 2
             y_score_ref = y_score[:mid]
             y_score = y_score[mid:]
-            X_arr = X_arr[mid:]
-            y_arr = y_arr[mid:]
+            X_curr = X_for_model.iloc[mid:] if is_df else X_for_model[mid:]
+            y_curr = y_arr[mid:]
 
         psi = self._calculate_psi(y_score_ref, y_score)
 
         # Data Drift
-        X_ref_arr = np.asarray(X_reference) if X_reference is not None else np.asarray(X)[:len(X)//2]
-        drift_results = self._detect_data_drift(X_ref_arr, X_arr, feature_names)
+        if is_df:
+            X_num = X_for_model.select_dtypes(include=[np.number])
+            feature_names_num = list(X_num.columns)
+            if X_reference is not None:
+                X_ref_num = X_reference.select_dtypes(include=[np.number])
+            else:
+                X_ref_num = X_num.iloc[:len(X_num)//2]
+            X_curr_num = X_curr.select_dtypes(include=[np.number])
+            drift_results = self._detect_data_drift(
+                np.asarray(X_ref_num), np.asarray(X_curr_num), feature_names_num
+            )
+        else:
+            X_ref_arr = np.asarray(X_reference) if X_reference is not None else np.asarray(X)[:len(X)//2]
+            drift_results = self._detect_data_drift(X_ref_arr, np.asarray(X_curr), feature_names)
 
         # Concept Drift
-        concept_drift = self._detect_concept_drift(model, X_arr, y_arr, n_splits=5, random_state=random_state)
+        concept_drift = self._detect_concept_drift(model, X_curr, y_curr, n_splits=5, random_state=random_state)
 
         # Cross-Validation
-        cv_results = self._cross_validate(model, np.asarray(X), np.asarray(y), n_folds, random_state)
+        cv_results = self._cross_validate(model, X_for_model, y_arr, n_folds, random_state)
 
         # Bootstrap
-        bootstrap_results = self._bootstrap_evaluate(model, X_arr, y_arr, n_bootstrap, random_state)
+        bootstrap_results = self._bootstrap_evaluate(model, X_curr, y_curr, n_bootstrap, random_state)
 
         # Plots
         plots = {}
@@ -80,7 +96,29 @@ class ModelStability:
             'concept_drift_score': concept_drift['drift_score'],
         }
         artifacts = {'data_drift': drift_results, 'cv_fold_scores': cv_results['fold_scores']}
-        return metrics, plots, artifacts
+        explanations = {
+            'metrics': {
+                'psi': 'Population Stability Index; higher indicates larger score distribution shift.',
+                'cv_auc_roc_mean': 'Mean AUC-ROC across cross-validation folds.',
+                'cv_auc_roc_std': 'Standard deviation of AUC-ROC across folds.',
+                'cv_auc_pr_mean': 'Mean AUC-PR across cross-validation folds.',
+                'cv_auc_pr_std': 'Standard deviation of AUC-PR across folds.',
+                'bootstrap_auc_roc_mean': 'Mean AUC-ROC from bootstrap resamples.',
+                'bootstrap_auc_roc_ci_lower': 'Lower bound of bootstrap AUC-ROC 95% CI.',
+                'bootstrap_auc_roc_ci_upper': 'Upper bound of bootstrap AUC-ROC 95% CI.',
+                'concept_drift_detected': 'Flag indicating potential concept drift over time chunks.',
+                'concept_drift_score': 'Relative variation of AUC over time chunks.',
+            },
+            'plots': {
+                'psi_distribution': 'Reference vs current score distributions used to compute PSI.',
+                'data_drift_heatmap': 'Per-feature drift signals using KS statistics and p-values.',
+                'concept_drift': 'AUC across time chunks to detect concept drift.',
+                'cv_results': 'Fold-wise AUC-ROC and AUC-PR to assess stability.',
+                'bootstrap_distribution': 'Bootstrap AUC-ROC distribution and confidence interval.',
+                'stability_summary': 'Summary dashboard of PSI, CV variance, and bootstrap CI width.',
+            },
+        }
+        return metrics, plots, artifacts, explanations
 
     def _calculate_psi(self, expected, actual, n_bins=10):
         """Calculate Population Stability Index."""
@@ -110,12 +148,14 @@ class ModelStability:
 
     def _detect_concept_drift(self, model, X, y, n_splits=5, random_state=42):
         """Detect concept drift by comparing performance across time splits."""
+        is_df = isinstance(X, pd.DataFrame)
         n = len(y)
         chunk_size = n // n_splits
         auc_scores = []
         for i in range(n_splits):
             start, end = i * chunk_size, (i + 1) * chunk_size if i < n_splits - 1 else n
-            X_chunk, y_chunk = X[start:end], y[start:end]
+            X_chunk = X.iloc[start:end] if is_df else X[start:end]
+            y_chunk = y[start:end]
             if len(np.unique(y_chunk)) < 2: continue
             y_score, _, _ = with_score_p1(model, X_chunk)
             auc_scores.append(roc_auc_score(y_chunk, y_score))
@@ -132,10 +172,12 @@ class ModelStability:
 
     def _cross_validate(self, model, X, y, n_folds, random_state):
         """Perform cross-validation."""
+        is_df = isinstance(X, pd.DataFrame)
         cv = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=random_state)
         roc_scores, pr_scores = [], []
         for _, val_idx in cv.split(X, y):
-            X_val, y_val = X[val_idx], y[val_idx]
+            X_val = X.iloc[val_idx] if is_df else X[val_idx]
+            y_val = y[val_idx]
             if len(np.unique(y_val)) < 2: continue
             y_score, _, _ = with_score_p1(model, X_val)
             roc_scores.append(roc_auc_score(y_val, y_score))
@@ -148,12 +190,14 @@ class ModelStability:
 
     def _bootstrap_evaluate(self, model, X, y, n_bootstrap, random_state):
         """Perform bootstrap evaluation."""
+        is_df = isinstance(X, pd.DataFrame)
         rng = np.random.RandomState(random_state)
         n = len(y)
         auc_scores = []
         for _ in range(n_bootstrap):
             idx = rng.choice(n, size=n, replace=True)
-            X_boot, y_boot = X[idx], y[idx]
+            X_boot = X.iloc[idx] if is_df else X[idx]
+            y_boot = y[idx]
             if len(np.unique(y_boot)) < 2: continue
             y_score, _, _ = with_score_p1(model, X_boot)
             auc_scores.append(roc_auc_score(y_boot, y_score))

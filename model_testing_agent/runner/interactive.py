@@ -51,14 +51,14 @@ class InteractiveAgent:
             fn_sel = [feature_names[i] for i in cols] if cols else feature_names
 
             if name == 'effectiveness':
-                m, p = self.effectiveness.evaluate(model, X_sel, y)
-                results['effectiveness'] = {'metrics': m, 'plots': p}
+                m, p, e = self.effectiveness.evaluate(model, X_sel, y)
+                results['effectiveness'] = {'metrics': m, 'plots': p, 'explanations': e}
             elif name == 'efficiency':
-                m, p = self.efficiency.evaluate(model, X_sel, y)
-                results['efficiency'] = {'metrics': m, 'plots': p}
+                m, p, e = self.efficiency.evaluate(model, X_sel, y)
+                results['efficiency'] = {'metrics': m, 'plots': p, 'explanations': e}
             elif name == 'stability':
-                m, p, a = self.stability.evaluate(model, X_sel, y, feature_names=fn_sel)
-                results['stability'] = {'metrics': m, 'plots': p, 'artifacts': a}
+                m, p, a, e = self.stability.evaluate(model, X_sel, y, feature_names=fn_sel)
+                results['stability'] = {'metrics': m, 'plots': p, 'artifacts': a, 'explanations': e}
             elif name == 'interpretability':
                 results['interpretability'] = self.interpretability.evaluate(model, X_sel, y, feature_names=fn_sel)
 

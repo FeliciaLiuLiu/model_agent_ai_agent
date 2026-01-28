@@ -6,7 +6,8 @@ import pandas as pd
 
 def with_score_p1(model, X, return_predictions=True):
     """Extract probability scores P(y=1) from model."""
-    X_arr = np.asarray(X) if isinstance(X, pd.DataFrame) else X
+    # Preserve DataFrame to keep feature names for pipelines/ColumnTransformer.
+    X_arr = X if isinstance(X, pd.DataFrame) else np.asarray(X)
     if hasattr(model, 'predict_proba'):
         try:
             proba = model.predict_proba(X_arr)
@@ -37,16 +38,29 @@ def get_feature_names(X, feature_names=None):
     if isinstance(X, pd.DataFrame): return list(X.columns)
     return [f'feature_{i}' for i in range(X.shape[1] if X.ndim > 1 else 1)]
 
+def unwrap_estimator(model):
+    """Return the underlying estimator for composite models like Pipelines."""
+    if hasattr(model, "steps") and model.steps:
+        return model.steps[-1][1]
+    if hasattr(model, "named_steps") and model.named_steps:
+        return list(model.named_steps.values())[-1]
+    if hasattr(model, "estimator"):
+        return model.estimator
+    if hasattr(model, "best_estimator_"):
+        return model.best_estimator_
+    return model
+
 
 def check_model_type(model) -> str:
     """Detect model type."""
-    name = type(model).__name__.lower()
+    base = unwrap_estimator(model)
+    name = type(base).__name__.lower()
     if any(k in name for k in ['tree', 'forest', 'gradient', 'xgb', 'lgb', 'catboost']): return 'tree'
     if any(k in name for k in ['linear', 'logistic', 'ridge', 'lasso']): return 'linear'
     if 'svm' in name or 'svc' in name: return 'svm'
     if any(k in name for k in ['mlp', 'neural', 'keras']): return 'neural'
-    if hasattr(model, 'feature_importances_'): return 'tree'
-    if hasattr(model, 'coef_'): return 'linear'
+    if hasattr(base, 'feature_importances_'): return 'tree'
+    if hasattr(base, 'coef_'): return 'linear'
     return 'other'
 
 

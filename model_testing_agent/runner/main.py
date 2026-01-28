@@ -97,24 +97,24 @@ class ModelTestingAgent:
             print("Running Effectiveness evaluation...")
             cols = section_columns.get('effectiveness') or columns
             X_eff, _ = select_columns(X, cols, feature_names) if cols else (X, feature_names)
-            metrics, plots = self.effectiveness.evaluate(model, X_eff, y, threshold=threshold, **kwargs)
-            results['effectiveness'] = {'metrics': metrics, 'plots': plots}
+            metrics, plots, explanations = self.effectiveness.evaluate(model, X_eff, y, threshold=threshold, **kwargs)
+            results['effectiveness'] = {'metrics': metrics, 'plots': plots, 'explanations': explanations}
 
         if 'efficiency' in sections:
             print("Running Efficiency evaluation...")
             cols = section_columns.get('efficiency') or columns
             X_eff, _ = select_columns(X, cols, feature_names) if cols else (X, feature_names)
-            metrics, plots = self.efficiency.evaluate(model, X_eff, y, threshold=threshold, **kwargs)
-            results['efficiency'] = {'metrics': metrics, 'plots': plots}
+            metrics, plots, explanations = self.efficiency.evaluate(model, X_eff, y, threshold=threshold, **kwargs)
+            results['efficiency'] = {'metrics': metrics, 'plots': plots, 'explanations': explanations}
 
         if 'stability' in sections:
             print("Running Stability evaluation...")
             cols = section_columns.get('stability') or columns
             X_stab, feature_names_stab = select_columns(X, cols, feature_names) if cols else (X, feature_names)
-            metrics, plots, artifacts = self.stability.evaluate(
+            metrics, plots, artifacts, explanations = self.stability.evaluate(
                 model, X_stab, y, feature_names=feature_names_stab, **kwargs
             )
-            results['stability'] = {'metrics': metrics, 'plots': plots, 'artifacts': artifacts}
+            results['stability'] = {'metrics': metrics, 'plots': plots, 'artifacts': artifacts, 'explanations': explanations}
 
         if 'interpretability' in sections:
             print("Running Interpretability evaluation...")
@@ -136,9 +136,9 @@ class ModelTestingAgent:
         path = os.path.join(self.output_dir, filename)
         def convert(obj):
             if isinstance(obj, np.ndarray): return obj.tolist()
-            if isinstance(obj, (np.integer, np.floating)): return float(obj)
-            if isinstance(obj, dict): return {k: convert(v) for k, v in obj.items()}
-            if isinstance(obj, list): return [convert(v) for v in obj]
+            if isinstance(obj, (np.integer, np.floating, np.bool_)): return obj.item()
+            if isinstance(obj, dict): return {str(k): convert(v) for k, v in obj.items()}
+            if isinstance(obj, (list, tuple, set)): return [convert(v) for v in obj]
             return obj
         with open(path, 'w') as f:
             json.dump(convert(results), f, indent=2)

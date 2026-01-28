@@ -60,7 +60,31 @@ class ModelEffectiveness:
             'precision_at_k': dict(zip(k_list, pk)),
             'recall_at_k': dict(zip(k_list, rk)),
         }
-        return metrics, plots
+        explanations = {
+            'metrics': {
+                'auc_roc': 'Area under the ROC curve; higher means better ranking of positives above negatives.',
+                'auc_pr': 'Area under the Precision-Recall curve; higher is better for imbalanced classes.',
+                'precision': 'Fraction of predicted positives that are true positives.',
+                'recall': 'Fraction of true positives correctly detected.',
+                'f1': 'Harmonic mean of precision and recall.',
+                'ks_statistic': 'Maximum separation between positive and negative score distributions.',
+                'ks_threshold': 'Score threshold at which the KS statistic is maximal.',
+                'confusion_matrix': 'Counts of TN/FP/FN/TP at the chosen decision threshold.',
+                'precision_at_k': 'Precision when selecting the top-K scored records.',
+                'recall_at_k': 'Recall captured within the top-K scored records.',
+            },
+            'plots': {
+                'roc_curve': 'ROC curve shows TPR vs FPR across thresholds; larger area is better.',
+                'pr_curve': 'Precision-Recall curve highlights performance on the positive class.',
+                'confusion_matrix': 'Raw confusion matrix counts at the chosen threshold.',
+                'confusion_matrix_norm': 'Row-normalized confusion matrix showing per-class rates.',
+                'ks_curve': 'CDF separation between positive and negative scores; peak is KS.',
+                'precision_recall_at_k': 'Precision and recall measured at several K cutoffs.',
+                'score_distribution': 'Score histogram by class to visualize separation.',
+                'threshold_analysis': 'Precision, recall, and F1 across decision thresholds.',
+            },
+        }
+        return metrics, plots, explanations
 
     def _ks_statistic(self, y_true, y_score, n_buckets=100):
         """Calculate KS statistic and optimal threshold."""

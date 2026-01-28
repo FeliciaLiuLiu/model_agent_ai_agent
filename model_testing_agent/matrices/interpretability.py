@@ -18,7 +18,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.inspection import permutation_importance, PartialDependenceDisplay
 from sklearn.metrics import roc_auc_score
-from ..core.utils import with_score_p1, check_model_type, get_feature_names, sample_data
+from ..core.utils import with_score_p1, check_model_type, get_feature_names, sample_data, unwrap_estimator
 
 # Optional imports
 try:
@@ -99,18 +99,43 @@ class ModelInterpretability:
             except Exception as e:
                 results['metrics']['ice_error'] = str(e)
 
+        explanations = {
+            'metrics': {
+                'model_type': 'Detected estimator family used to select interpretability methods.',
+                'methods_used': 'Interpretability methods executed in this run.',
+                'perm_top_features': 'Features with the largest drop in AUC when permuted.',
+                'shap_top_features': 'Features with the largest mean absolute SHAP values.',
+                'shap_error': 'Reason SHAP could not be computed for this model/data.',
+                'lime_error': 'Reason LIME could not be computed for this model/data.',
+                'pdp_error': 'Reason PDP could not be computed for this model/data.',
+                'ice_error': 'Reason ICE could not be computed for this model/data.',
+            },
+            'plots': {
+                'permutation_importance': 'Permutation-based feature importance ranked by impact on AUC.',
+                'shap_bar': 'Global SHAP importance (mean absolute SHAP values).',
+                'shap_beeswarm': 'SHAP value distribution showing direction and magnitude per feature.',
+                'lime_explanation': 'Local LIME explanations for selected instances.',
+                'pdp': 'Partial dependence plots showing average feature effects.',
+                'ice': 'ICE plots showing individual-level feature effects.',
+            },
+        }
+        results['explanations'] = explanations
         return results
 
     def _permutation_importance(self, model, X, y, feature_names, n_repeats, top_k, random_state):
         """Calculate permutation importance."""
-        X_arr, y_arr = np.asarray(X), np.asarray(y)
+        X_arr = X if isinstance(X, pd.DataFrame) else np.asarray(X)
+        y_arr = np.asarray(y)
 
         def scorer(est, X, y):
             y_score, _, _ = with_score_p1(est, X)
             return roc_auc_score(y, y_score) if len(np.unique(y)) >= 2 else 0.5
 
-        result = permutation_importance(model, X_arr, y_arr, scoring=scorer, n_repeats=n_repeats,
-                                        random_state=random_state, n_jobs=-1)
+        # Use single process to avoid OS semaphore limits in restricted environments.
+        result = permutation_importance(
+            model, X_arr, y_arr, scoring=scorer, n_repeats=n_repeats,
+            random_state=random_state, n_jobs=1
+        )
         importances = result.importances_mean
         sorted_idx = np.argsort(importances)[::-1]
         ranked = [feature_names[i] for i in sorted_idx]
@@ -142,11 +167,12 @@ class ModelInterpretability:
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
+            base_model = unwrap_estimator(model)
             if model_type == 'tree':
-                explainer = shap.TreeExplainer(model)
+                explainer = shap.TreeExplainer(base_model)
                 shap_values = explainer.shap_values(X_arr)
             elif model_type == 'linear':
-                explainer = shap.LinearExplainer(model, X_arr)
+                explainer = shap.LinearExplainer(base_model, X_arr)
                 shap_values = explainer.shap_values(X_arr)
             else:
                 background = shap.sample(X_arr, min(100, len(X_arr)))
@@ -224,10 +250,18 @@ class ModelInterpretability:
 
     def _pdp_analysis(self, model, X, feature_names, top_k):
         """Partial Dependence Plot analysis."""
-        X_df = pd.DataFrame(np.asarray(X), columns=feature_names)
+        if isinstance(X, pd.DataFrame):
+            X_df = X.copy()
+        else:
+            X_df = pd.DataFrame(np.asarray(X), columns=feature_names)
 
         # Select top features based on variance
-        variances = X_df.var()
+        X_num = X_df.select_dtypes(include=[np.number]).astype(float)
+        if X_num.empty:
+            raise ValueError("PDP requires numeric features.")
+        # Ensure numeric dtype for PDP/ICE compatibility.
+        X_df[X_num.columns] = X_num
+        variances = X_num.var()
         top_features = variances.nlargest(min(top_k, 6)).index.tolist()
 
         path = os.path.join(self.data_dir, 'pdp.png')
@@ -263,10 +297,17 @@ class ModelInterpretability:
 
     def _ice_analysis(self, model, X, feature_names, top_k):
         """Individual Conditional Expectation plot."""
-        X_df = pd.DataFrame(np.asarray(X), columns=feature_names)
+        if isinstance(X, pd.DataFrame):
+            X_df = X.copy()
+        else:
+            X_df = pd.DataFrame(np.asarray(X), columns=feature_names)
 
         # Select top features
-        variances = X_df.var()
+        X_num = X_df.select_dtypes(include=[np.number]).astype(float)
+        if X_num.empty:
+            raise ValueError("ICE requires numeric features.")
+        X_df[X_num.columns] = X_num
+        variances = X_num.var()
         top_features = variances.nlargest(min(top_k, 4)).index.tolist()
 
         path = os.path.join(self.data_dir, 'ice.png')

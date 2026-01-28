@@ -50,7 +50,21 @@ class ModelEfficiency:
             'fpr': fpr_val, 'tn': tn, 'fp': fp, 'threshold': threshold,
             'fpr_at_thresholds': dict(zip([f't_{t:.2f}' for t in thresholds], fpr_list)),
         }
-        return metrics, plots
+        explanations = {
+            'metrics': {
+                'fpr': 'False Positive Rate at the chosen threshold.',
+                'tn': 'Count of true negatives at the chosen threshold.',
+                'fp': 'Count of false positives at the chosen threshold.',
+                'threshold': 'Decision threshold used for current metrics.',
+                'fpr_at_thresholds': 'FPR values computed across a range of thresholds.',
+            },
+            'plots': {
+                'fpr_vs_threshold': 'How FPR changes as the decision threshold moves.',
+                'efficiency_frontier': 'Tradeoff between FPR and TPR across thresholds.',
+                'fpr_tpr_tradeoff': 'FPR and TPR curves across thresholds for operating-point selection.',
+            },
+        }
+        return metrics, plots, explanations
 
     def _plot_fpr_vs_threshold(self, thresholds, fpr_list):
         """Plot FPR vs threshold."""

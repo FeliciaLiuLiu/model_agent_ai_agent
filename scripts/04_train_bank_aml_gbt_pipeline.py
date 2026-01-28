@@ -35,6 +35,10 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=int(os.environ.get('SEED', 42)))
     parser.add_argument('--test-path', default=os.environ.get('TEST_PATH', None))
     parser.add_argument('--no-save-test', action='store_true')
+    parser.add_argument('--use-encoded-cats', action='store_true', default=True,
+                        help='Use *_code columns for categorical features (default).')
+    parser.add_argument('--use-raw-cats', action='store_true',
+                        help='Use raw string categorical columns with one-hot encoding.')
     args = parser.parse_args()
 
     data_path = args.data
@@ -57,12 +61,18 @@ if __name__ == '__main__':
         'currency', 'origin_country', 'destination_country', 'txn_channel', 'payment_rail',
         'txn_type', 'merchant_category', 'device_type', 'ip_country',
     ]
+    encoded_cat_cols = [
+        'origin_country_code', 'destination_country_code', 'ip_country_code', 'currency_code',
+        'txn_channel_code', 'payment_rail_code', 'txn_type_code', 'merchant_category_code', 'device_type_code',
+    ]
 
-    missing = [c for c in (numeric_cols + cat_cols) if c not in df.columns]
+    use_encoded = args.use_encoded_cats and not args.use_raw_cats
+    required_cols = numeric_cols + (encoded_cat_cols if use_encoded else cat_cols)
+    missing = [c for c in required_cols if c not in df.columns]
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
 
-    X = df[numeric_cols + cat_cols]
+    X = df[required_cols]
     y = df[label_col].astype(int)
 
     stratify = y if y.nunique() > 1 else None
@@ -70,19 +80,23 @@ if __name__ == '__main__':
         X, y, test_size=args.test_size, random_state=args.seed, stratify=stratify
     )
 
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('cat', OneHotEncoder(handle_unknown='ignore'), cat_cols),
-            ('num', 'passthrough', numeric_cols),
-        ],
-        remainder='drop',
-    )
-
     model = GradientBoostingClassifier(random_state=42)
-    pipeline = Pipeline(steps=[
-        ('preprocess', preprocessor),
-        ('model', model),
-    ])
+    if use_encoded:
+        pipeline = Pipeline(steps=[
+            ('model', model),
+        ])
+    else:
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ('cat', OneHotEncoder(handle_unknown='ignore'), cat_cols),
+                ('num', 'passthrough', numeric_cols),
+            ],
+            remainder='drop',
+        )
+        pipeline = Pipeline(steps=[
+            ('preprocess', preprocessor),
+            ('model', model),
+        ])
 
     pipeline.fit(X_train, y_train)
 

@@ -2,6 +2,7 @@
 """Generate a bank-like AML dataset (200,000 rows) with different columns from SAML-D-like dataset.
 
 Includes FinTech rails/providers; suspicious rate = 4%.
+Adds numeric-encoded categorical columns for interpretability workflows.
 Output: ./data/synthetic_bank_aml_200k.csv (override with OUT_DIR)
 """
 
@@ -48,6 +49,16 @@ def make_bank_aml(
 
     device_types = ['ios','android','web','api']
     device_w = [30,35,25,10]
+
+    # Stable categorical encodings for numeric-only modeling.
+    country_code = {c: i for i, c in enumerate(countries)}
+    channel_code = {c: i for i, c in enumerate(channels)}
+    rail_code = {r: i for i, r in enumerate(rails)}
+    txn_type_code = {t: i for i, t in enumerate(txn_types)}
+    mcc_code = {m: i for i, m in enumerate(mcc)}
+    device_code = {d: i for i, d in enumerate(device_types)}
+    currency_list = sorted(set(ccy_map.values()))
+    currency_code = {c: i for i, c in enumerate(currency_list)}
 
     cust = [f"CUST_{random.randint(1, 50000):06d}" for _ in range(n_rows)]
     acct = [f"ACCT_{random.randint(1, 80000):06d}" for _ in range(n_rows)]
@@ -114,6 +125,19 @@ def make_bank_aml(
     is_cross_border = (np.array(origin_country) != np.array(dest_country)).astype(int)
     is_fintech_rail = np.array([1 if r in fintech_set else 0 for r in payment_rail]).astype(int)
 
+    ip_country = random.choices(countries, weights=country_w, k=n_rows)
+
+    # Encoded categorical columns for numeric modeling and interpretability.
+    origin_country_code = [country_code[c] for c in origin_country]
+    destination_country_code = [country_code[c] for c in dest_country]
+    ip_country_code = [country_code[c] for c in ip_country]
+    currency_code_col = [currency_code.get(c, 0) for c in currency]
+    txn_channel_code = [channel_code[c] for c in txn_channel]
+    payment_rail_code = [rail_code[c] for c in payment_rail]
+    txn_type_code_col = [txn_type_code[c] for c in txn_type]
+    merchant_category_code = [mcc_code[c] for c in merchant_category]
+    device_type_code = [device_code[c] for c in device_type]
+
     if label_noise and label_noise > 0:
         flip = np.random.rand(n_rows) < label_noise
         is_suspicious = np.where(flip, 1 - is_suspicious, is_suspicious).astype(int)
@@ -134,7 +158,7 @@ def make_bank_aml(
         'merchant_category': merchant_category,
         'device_type': device_type,
         'device_id': [f"DEV_{random.randint(1, 200000):06d}" for _ in range(n_rows)],
-        'ip_country': random.choices(countries, weights=country_w, k=n_rows),
+        'ip_country': ip_country,
         'account_age_days': account_age_days,
         'kyc_risk_score': np.round(kyc_risk_score, 2),
         'num_txn_24h': num_txn_24h,
@@ -143,6 +167,15 @@ def make_bank_aml(
         'sanctions_match': sanctions_match,
         'is_cross_border': is_cross_border,
         'is_fintech_rail': is_fintech_rail,
+        'origin_country_code': origin_country_code,
+        'destination_country_code': destination_country_code,
+        'ip_country_code': ip_country_code,
+        'currency_code': currency_code_col,
+        'txn_channel_code': txn_channel_code,
+        'payment_rail_code': payment_rail_code,
+        'txn_type_code': txn_type_code_col,
+        'merchant_category_code': merchant_category_code,
+        'device_type_code': device_type_code,
         'is_suspicious': is_suspicious,
     })
     return df

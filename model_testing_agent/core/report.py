@@ -25,6 +25,7 @@ class ReportBuilder:
     def _build_pdf(self, pdf_path, ordered):
         from matplotlib.backends.backend_pdf import PdfPages
         import matplotlib.image as mpimg
+        import textwrap
 
         with PdfPages(pdf_path) as pdf:
             # Cover page
@@ -41,6 +42,9 @@ class ReportBuilder:
                 if not payload: continue
                 metrics = payload.get('metrics', {})
                 plots = payload.get('plots', {})
+                explanations = payload.get('explanations', {})
+                metric_expl = explanations.get('metrics', {})
+                plot_expl = explanations.get('plots', {})
 
                 # Metrics page
                 fig = plt.figure(figsize=(8.27, 11.69))
@@ -52,13 +56,40 @@ class ReportBuilder:
                     if y < 0.10: break
                 pdf.savefig(fig); plt.close(fig)
 
+                # Explanations page(s)
+                expl_lines = []
+                for k, v in metric_expl.items():
+                    expl_lines.append(f"Metric {k}: {v}")
+                for k, v in plot_expl.items():
+                    expl_lines.append(f"Plot {k}: {v}")
+
+                if expl_lines:
+                    page = 1
+                    idx = 0
+                    while idx < len(expl_lines):
+                        fig = plt.figure(figsize=(8.27, 11.69))
+                        fig.text(0.5, 0.96, f"{titles.get(sec_key, sec_key)} - Explanations", ha='center', fontsize=14, weight='bold')
+                        y = 0.90
+                        while idx < len(expl_lines) and y > 0.08:
+                            line = expl_lines[idx]
+                            for wrapped in textwrap.wrap(line, width=110):
+                                if y <= 0.08: break
+                                fig.text(0.06, y, f"- {wrapped}", fontsize=9)
+                                y -= 0.018
+                            idx += 1
+                        pdf.savefig(fig); plt.close(fig)
+                        page += 1
+
                 # Plot pages
-                for img_path in self._collect_images(plots):
+                for plot_key, img_path in self._collect_images(plots):
                     try:
                         img = mpimg.imread(img_path)
                         fig = plt.figure(figsize=(8.27, 11.69))
                         ax = fig.add_axes([0.05, 0.05, 0.90, 0.90])
                         ax.axis('off'); ax.imshow(img)
+                        expl = plot_expl.get(plot_key)
+                        if expl:
+                            fig.text(0.05, 0.02, f"{plot_key}: {expl}", fontsize=8)
                         pdf.savefig(fig); plt.close(fig)
                     except: pass
 
@@ -75,9 +106,12 @@ class ReportBuilder:
         if isinstance(val, (list, tuple)): return str(val[:5]) + ('...' if len(val) > 5 else '')
         return str(val)
 
-    def _collect_images(self, plots):
+    def _collect_images(self, plots, prefix=""):
         imgs = []
-        for v in plots.values():
-            if isinstance(v, str) and v.endswith('.png'): imgs.append(v)
-            elif isinstance(v, dict): imgs.extend(self._collect_images(v))
+        for k, v in plots.items():
+            key = f"{prefix}{k}" if prefix else k
+            if isinstance(v, str) and v.endswith('.png'):
+                imgs.append((key, v))
+            elif isinstance(v, dict):
+                imgs.extend(self._collect_images(v, prefix=f"{key}."))
         return imgs
