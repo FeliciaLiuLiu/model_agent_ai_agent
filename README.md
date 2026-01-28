@@ -64,6 +64,52 @@ results = agent.run(model=model, X=X, y=y, feature_names=feature_names)
 agent.generate_report(results)
 ```
 
+## Quick Start (EDA)
+
+```python
+from adm_central_utility import EDA
+
+# Auto-detects the most recent dataset in ./data
+eda = EDA(output_dir="./output_eda", target_col="is_suspicious")
+results = eda.run()
+```
+
+You can also pass a DataFrame or a file path:
+
+```python
+import pandas as pd
+from adm_central_utility import EDA
+
+df = pd.read_csv("./data/synthetic_bank_aml_200k.csv")
+eda = EDA(output_dir="./output_eda", target_col="is_suspicious", time_col="txn_datetime")
+results = eda.run(df=df)
+```
+
+## EDA: Select Functions and Columns
+
+By default, `EDA.run()` executes all sections and generates a PDF report. You can select specific sections and columns.
+
+```python
+eda = EDA(output_dir="./output_eda", target_col="is_suspicious")
+results = eda.run(
+    sections=["overview", "missingness", "numeric"],
+    columns=["txn_amount", "num_txn_24h", "kyc_risk_score"]
+)
+```
+
+Per-section columns:
+
+```python
+results = eda.run(
+    sections=["numeric", "categorical", "target"],
+    section_columns={
+        "numeric": ["txn_amount", "avg_amount_7d"],
+        "categorical": ["merchant_category", "payment_rail"],
+        "target": ["txn_amount", "merchant_category"]
+    },
+)
+```
+
 ## Quick Start (CLI)
 
 ```bash
@@ -192,6 +238,11 @@ CLI:
 ## Output
 - `model_testing_agent_Model_Testing_Report.pdf`
 - `results.json`
+- Various `.png` plot files
+
+## EDA Output
+- `EDA_Report.pdf`
+- `eda_results.json`
 - Various `.png` plot files
 
 ## Report Explanations
