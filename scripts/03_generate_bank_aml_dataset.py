@@ -5,6 +5,7 @@ Includes FinTech rails/providers; suspicious rate = 4%.
 Output: ./data/synthetic_bank_aml_200k.csv (override with OUT_DIR)
 """
 
+import argparse
 import os
 import uuid
 import random
@@ -14,7 +15,12 @@ import numpy as np
 import pandas as pd
 
 
-def make_bank_aml(n_rows: int = 200_000, suspicious_rate: float = 0.04, seed: int = 7) -> pd.DataFrame:
+def make_bank_aml(
+    n_rows: int = 200_000,
+    suspicious_rate: float = 0.04,
+    seed: int = 7,
+    label_noise: float = 0.02,
+) -> pd.DataFrame:
     random.seed(seed)
     np.random.seed(seed)
 
@@ -108,6 +114,10 @@ def make_bank_aml(n_rows: int = 200_000, suspicious_rate: float = 0.04, seed: in
     is_cross_border = (np.array(origin_country) != np.array(dest_country)).astype(int)
     is_fintech_rail = np.array([1 if r in fintech_set else 0 for r in payment_rail]).astype(int)
 
+    if label_noise and label_noise > 0:
+        flip = np.random.rand(n_rows) < label_noise
+        is_suspicious = np.where(flip, 1 - is_suspicious, is_suspicious).astype(int)
+
     df = pd.DataFrame({
         'txn_id': [str(uuid.uuid4()) for _ in range(n_rows)],
         'txn_datetime': [t.strftime('%Y-%m-%d %H:%M:%S') for t in tx_time],
@@ -139,10 +149,19 @@ def make_bank_aml(n_rows: int = 200_000, suspicious_rate: float = 0.04, seed: in
 
 
 if __name__ == '__main__':
-    out_dir = os.environ.get('OUT_DIR', './data')
+    parser = argparse.ArgumentParser(description="Generate synthetic bank AML dataset.")
+    parser.add_argument('--out-dir', default=os.environ.get('OUT_DIR', './data'))
+    parser.add_argument('--rows', type=int, default=int(os.environ.get('N_ROWS', 200_000)))
+    parser.add_argument('--suspicious-rate', type=float, default=float(os.environ.get('SUSPICIOUS_RATE', 0.04)))
+    parser.add_argument('--seed', type=int, default=int(os.environ.get('SEED', 7)))
+    parser.add_argument('--label-noise', type=float, default=float(os.environ.get('LABEL_NOISE', 0.02)))
+    args = parser.parse_args()
+
+    out_dir = args.out_dir
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, 'synthetic_bank_aml_200k.csv')
-    df = make_bank_aml(200_000, suspicious_rate=0.04, seed=7)
+    df = make_bank_aml(args.rows, suspicious_rate=args.suspicious_rate, seed=args.seed, label_noise=args.label_noise)
     df.to_csv(out_path, index=False)
     print('Saved:', out_path)
+    print(f"Rows={len(df)} suspicious_rate={args.suspicious_rate} label_noise={args.label_noise}")
     print(df.head(3))

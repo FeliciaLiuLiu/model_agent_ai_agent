@@ -34,31 +34,95 @@ class ModelTestingAgent:
         self.interpretability = ModelInterpretability(data_dir=output_dir)
         self.report_builder = ReportBuilder(output_dir=output_dir, tag=experiment_tag)
 
-    def run(self, model, X, y, feature_names=None, sections=None, threshold=0.5, **kwargs) -> Dict[str, Any]:
+    def run(
+        self,
+        model,
+        X,
+        y,
+        feature_names=None,
+        sections=None,
+        threshold=0.5,
+        columns=None,
+        section_columns=None,
+        **kwargs
+    ) -> Dict[str, Any]:
         """Run model evaluation on all (or specified) sections."""
         sections = sections or self.SECTIONS
-        feature_names = feature_names or (list(X.columns) if isinstance(X, pd.DataFrame) else [f'f_{i}' for i in range(X.shape[1])])
+        feature_names = feature_names or (
+            list(X.columns) if isinstance(X, pd.DataFrame) else [f'f_{i}' for i in range(X.shape[1])]
+        )
 
         results = {}
 
+        def select_columns(X_in, cols, feature_names_all):
+            if not cols:
+                return X_in, feature_names_all
+            # Coerce to list if string provided
+            if isinstance(cols, str):
+                cols = [c.strip() for c in cols.split(',') if c.strip()]
+
+            if isinstance(X_in, pd.DataFrame):
+                if all(isinstance(c, int) for c in cols):
+                    X_sel = X_in.iloc[:, cols]
+                else:
+                    missing = [c for c in cols if c not in X_in.columns]
+                    if missing:
+                        raise ValueError(f"Missing columns in X: {missing}")
+                    X_sel = X_in.loc[:, cols]
+                return X_sel, list(X_sel.columns)
+
+            X_arr = np.asarray(X_in)
+            if X_arr.ndim == 1:
+                raise ValueError("Cannot select columns from 1D array")
+            if all(isinstance(c, int) for c in cols):
+                idx = cols
+            else:
+                if feature_names_all is None:
+                    raise ValueError("Column names provided but feature_names are not available for array inputs.")
+                idx = []
+                for c in cols:
+                    if isinstance(c, int):
+                        idx.append(c)
+                    elif c in feature_names_all:
+                        idx.append(feature_names_all.index(c))
+                    else:
+                        raise ValueError(f"Unknown column name: {c}")
+            X_sel = X_arr[:, idx]
+            names = [feature_names_all[i] for i in idx] if feature_names_all else [f'f_{i}' for i in idx]
+            return X_sel, names
+
+        section_columns = section_columns or {}
+
         if 'effectiveness' in sections:
             print("Running Effectiveness evaluation...")
-            metrics, plots = self.effectiveness.evaluate(model, X, y, threshold=threshold, **kwargs)
+            cols = section_columns.get('effectiveness') or columns
+            X_eff, _ = select_columns(X, cols, feature_names) if cols else (X, feature_names)
+            metrics, plots = self.effectiveness.evaluate(model, X_eff, y, threshold=threshold, **kwargs)
             results['effectiveness'] = {'metrics': metrics, 'plots': plots}
 
         if 'efficiency' in sections:
             print("Running Efficiency evaluation...")
-            metrics, plots = self.efficiency.evaluate(model, X, y, threshold=threshold, **kwargs)
+            cols = section_columns.get('efficiency') or columns
+            X_eff, _ = select_columns(X, cols, feature_names) if cols else (X, feature_names)
+            metrics, plots = self.efficiency.evaluate(model, X_eff, y, threshold=threshold, **kwargs)
             results['efficiency'] = {'metrics': metrics, 'plots': plots}
 
         if 'stability' in sections:
             print("Running Stability evaluation...")
-            metrics, plots, artifacts = self.stability.evaluate(model, X, y, feature_names=feature_names, **kwargs)
+            cols = section_columns.get('stability') or columns
+            X_stab, feature_names_stab = select_columns(X, cols, feature_names) if cols else (X, feature_names)
+            metrics, plots, artifacts = self.stability.evaluate(
+                model, X_stab, y, feature_names=feature_names_stab, **kwargs
+            )
             results['stability'] = {'metrics': metrics, 'plots': plots, 'artifacts': artifacts}
 
         if 'interpretability' in sections:
             print("Running Interpretability evaluation...")
-            interp = self.interpretability.evaluate(model, X, y, feature_names=feature_names, **kwargs)
+            cols = section_columns.get('interpretability') or columns
+            X_int, feature_names_int = select_columns(X, cols, feature_names) if cols else (X, feature_names)
+            interp = self.interpretability.evaluate(
+                model, X_int, y, feature_names=feature_names_int, **kwargs
+            )
             results['interpretability'] = interp
 
         return results

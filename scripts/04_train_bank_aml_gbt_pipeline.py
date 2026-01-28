@@ -6,6 +6,7 @@ Defaults:
 - Also writes: ./models/bank_aml_gbt_metrics.json
 """
 
+import argparse
 import os
 import json
 from datetime import datetime
@@ -26,15 +27,25 @@ def _ensure_dir(p: str) -> str:
 
 
 if __name__ == '__main__':
-    data_path = os.environ.get('DATA_PATH', './data/synthetic_bank_aml_200k.csv')
-    model_path = os.environ.get('MODEL_PATH', './models/bank_aml_gbt.joblib')
+    parser = argparse.ArgumentParser(description="Train GBT model for bank AML dataset.")
+    parser.add_argument('--data', default=os.environ.get('DATA_PATH', './data/synthetic_bank_aml_200k.csv'))
+    parser.add_argument('--model', default=os.environ.get('MODEL_PATH', './models/bank_aml_gbt.joblib'))
+    parser.add_argument('--label-col', default=os.environ.get('LABEL_COL', 'is_suspicious'))
+    parser.add_argument('--test-size', type=float, default=float(os.environ.get('TEST_SIZE', 0.3)))
+    parser.add_argument('--seed', type=int, default=int(os.environ.get('SEED', 42)))
+    parser.add_argument('--test-path', default=os.environ.get('TEST_PATH', None))
+    parser.add_argument('--no-save-test', action='store_true')
+    args = parser.parse_args()
+
+    data_path = args.data
+    model_path = args.model
 
     _ensure_dir(os.path.dirname(os.path.abspath(model_path)))
 
     print('Reading dataset from:', os.path.abspath(data_path))
     df = pd.read_csv(data_path)
 
-    label_col = 'is_suspicious'
+    label_col = args.label_col
     if label_col not in df.columns:
         raise ValueError(f"Missing label column: {label_col}")
 
@@ -56,7 +67,7 @@ if __name__ == '__main__':
 
     stratify = y if y.nunique() > 1 else None
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.3, random_state=42, stratify=stratify
+        X, y, test_size=args.test_size, random_state=args.seed, stratify=stratify
     )
 
     preprocessor = ColumnTransformer(
@@ -85,11 +96,25 @@ if __name__ == '__main__':
     print('Saved model to:', model_path)
     print('AUC(ROC)=', auc)
 
+    test_path = None
+    if not args.no_save_test:
+        if args.test_path:
+            test_path = args.test_path
+        else:
+            data_dir = os.path.dirname(os.path.abspath(data_path))
+            stem = os.path.splitext(os.path.basename(data_path))[0]
+            test_path = os.path.join(data_dir, f"{stem}_test.csv")
+        test_df = X_test.copy()
+        test_df[label_col] = y_test.values
+        test_df.to_csv(test_path, index=False)
+        print('Saved test set to:', test_path)
+
     metrics_path = os.path.splitext(model_path)[0] + '_metrics.json'
     metrics = {
         'model': 'GradientBoostingClassifier (scikit-learn)',
         'model_path': os.path.abspath(model_path),
         'data_path': os.path.abspath(data_path),
+        'test_path': os.path.abspath(test_path) if test_path else None,
         'metric': {'name': 'AUC_ROC', 'value': auc},
         'class_balance': y.value_counts(normalize=True).to_dict(),
         'timestamp': datetime.now().strftime('%Y%m%d_%H%M%S'),
