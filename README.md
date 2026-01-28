@@ -5,6 +5,9 @@ Comprehensive ML model evaluation toolkit for classification models. It generate
 ## Installation
 
 ```bash
+# Base dependencies
+pip install -r requirements.txt
+
 # From Bitbucket (SSH)
 pip install git+ssh://git@bitbucket.org/YOUR_COMPANY/adm_central_utility.git
 
@@ -14,6 +17,12 @@ pip install git+https://bitbucket.org/YOUR_COMPANY/adm_central_utility.git
 # For full features (SHAP, LIME)
 pip install "adm_central_utility[full] @ git+ssh://git@bitbucket.org/YOUR_COMPANY/adm_central_utility.git"
 ```
+
+### SHAP Notes
+
+- SHAP depends on `numba` and `llvmlite`. On some systems (especially Python 3.13), these may require LLVM and a C++ toolchain.
+- If SHAP cannot be imported, the report will include the reason in the Interpretability section.
+- For the easiest setup, use Python 3.11/3.12 where prebuilt wheels are typically available.
 
 ## Model Requirements
 
@@ -71,6 +80,11 @@ python scripts/04_train_bank_aml_gbt_pipeline.py \
   --test-size 0.3 \
   --seed 42
 ```
+
+Notes:
+- The dataset includes numeric-encoded categorical columns (e.g., `origin_country_code`).
+- By default, training uses encoded categorical columns for full interpretability support.
+- If you want to use raw string categorical columns with one-hot encoding, add `--use-raw-cats`.
 
 This creates:
 - `./models/bank_aml_gbt.joblib`
@@ -162,3 +176,7 @@ CLI:
 - `model_testing_agent_Model_Testing_Report.pdf`
 - `results.json`
 - Various `.png` plot files
+
+## Report Explanations
+
+Each matrix section includes result-aware text explanations based on the computed metrics and plots.
