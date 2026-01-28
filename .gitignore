@@ -13,6 +13,7 @@ pip-wheel-metadata/
 # Virtualenv
 .venv/
 venv/
+venv311/
 ENV/
 env/
 

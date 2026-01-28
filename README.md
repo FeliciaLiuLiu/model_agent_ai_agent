@@ -18,6 +18,23 @@ pip install git+https://bitbucket.org/YOUR_COMPANY/adm_central_utility.git
 pip install "adm_central_utility[full] @ git+ssh://git@bitbucket.org/YOUR_COMPANY/adm_central_utility.git"
 ```
 
+## Recommended Python 3.11 Environment (Conda)
+
+SHAP installation is most reliable via conda-forge on Python 3.11. This avoids LLVM build issues.
+
+```bash
+conda create -p ./venv311 python=3.11 -y
+conda install -p ./venv311 -c conda-forge \
+  numpy pandas scikit-learn matplotlib joblib scipy \
+  shap numba llvmlite lime -y
+```
+
+Run the project with:
+
+```bash
+./venv311/bin/python -m model_testing_agent.runner.cli --help
+```
+
 ### SHAP Notes
 
 - SHAP depends on `numba` and `llvmlite`. On some systems (especially Python 3.13), these may require LLVM and a C++ toolchain.
