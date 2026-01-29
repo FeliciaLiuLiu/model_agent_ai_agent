@@ -338,7 +338,6 @@ results = eda.run(df=df)
 - `numeric`: numeric statistics and histograms
 - `categorical`: top categories and frequency plots
 - `correlation`: correlation heatmap and target correlation (if numeric target)
-- `target`: feature vs target summaries
 - `outliers`: IQR outlier ratios and plot
 - `time`: time-series volume and optional target rate
 
@@ -358,11 +357,10 @@ Per-section columns:
 
 ```python
 results = eda.run(
-    sections=["numeric", "categorical", "target"],
+    sections=["numeric", "categorical"],
     section_columns={
         "numeric": ["txn_amount", "avg_amount_7d"],
         "categorical": ["merchant_category", "payment_rail"],
-        "target": ["txn_amount", "merchant_category"]
     },
 )
 ```

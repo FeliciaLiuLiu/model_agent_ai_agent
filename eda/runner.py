@@ -55,12 +55,6 @@ class EDA:
             "applicable_columns": "numeric",
         },
         {
-            "key": "target",
-            "title": "Target",
-            "description": "Feature vs target summaries (requires target_col).",
-            "applicable_columns": "numeric/categorical",
-        },
-        {
             "key": "outliers",
             "title": "Outliers",
             "description": "IQR-based outlier ratios for numeric features.",
@@ -169,9 +163,6 @@ class EDA:
                 )
             elif sec == "correlation":
                 results["correlation"] = self.correlation(df_sec, target_col=target_col)
-            elif sec == "target":
-                if target_col:
-                    results["target"] = self.target_analysis(df, target_col=target_col, feature_cols=cols)
             elif sec == "outliers":
                 results["outliers"] = self.outliers(df_sec)
             elif sec == "time":
@@ -417,39 +408,6 @@ class EDA:
 
         return {"metrics": metrics, "plots": {"correlation_heatmap": plot_path}, "summary": summary}
 
-    def target_analysis(self, df: pd.DataFrame, target_col: str, feature_cols: Optional[List[str]] = None) -> Dict[str, Any]:
-        """Analyze relationship between features and target."""
-        if target_col not in df.columns:
-            return {"metrics": {}, "plots": {}, "summary": [f"Target column not found: {target_col}."]}
-
-        target = df[target_col]
-        df_feat = safe_select_columns(df.drop(columns=[target_col]), feature_cols)
-        num = df_feat.select_dtypes(include=[np.number])
-        cat = df_feat.select_dtypes(include=["object", "string", "category", "bool"])
-
-        metrics: Dict[str, Any] = {}
-        plots: Dict[str, str] = {}
-        summary: List[str] = []
-
-        if target.nunique() <= 10:
-            # Classification-style analysis
-            summary.append(f"Target '{target_col}' appears categorical with classes: {target.unique().tolist()}.")
-            if not num.empty:
-                means = num.groupby(target).mean().round(4)
-                metrics["numeric_mean_by_target"] = means.to_dict()
-            if not cat.empty:
-                rates = {}
-                for col in cat.columns:
-                    ct = pd.crosstab(cat[col], target, normalize="index")
-                    rates[col] = ct.round(4).to_dict()
-                metrics["categorical_target_rate"] = rates
-        else:
-            summary.append(f"Target '{target_col}' appears continuous; showing correlations.")
-            if not num.empty:
-                metrics["target_correlation"] = num.corrwith(target).sort_values(ascending=False).round(4).to_dict()
-
-        return {"metrics": metrics, "plots": plots, "summary": summary}
-
     def outliers(self, df: pd.DataFrame) -> Dict[str, Any]:
         """Outlier ratio per numeric feature using IQR."""
         num = df.select_dtypes(include=[np.number])
@@ -633,9 +591,6 @@ class EDA:
             return numeric
         if section == "categorical":
             return categorical
-        if section == "target":
-            cols = [c for c in numeric + categorical if c != target_col]
-            return cols
         if section == "time":
             return [time_col] if time_col and time_col in df.columns else []
         return all_cols

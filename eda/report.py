@@ -31,7 +31,6 @@ class EDAReportBuilder:
             "numeric",
             "categorical",
             "correlation",
-            "target",
             "outliers",
             "time",
         ]

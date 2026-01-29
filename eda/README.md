@@ -9,7 +9,6 @@ The EDA module provides automated exploratory data analysis with PDF and JSON ou
 - Numeric: summary stats and distributions
 - Categorical: top categories and frequency plots
 - Correlation: correlation heatmap and target correlations (if numeric target)
-- Target: feature vs target summaries
 - Outliers: IQR-based outlier ratios
 - Time: time-series volume and target rate (if time column provided)
 
@@ -45,19 +44,13 @@ The EDA module provides automated exploratory data analysis with PDF and JSON ou
 - Metrics: correlation matrix; optional target correlation if target is numeric.
 - Plots: `correlation_heatmap.png`.
 
-### 6) Target
-- Purpose: relate features to target.
-- Applicable columns: numeric/categorical (requires `target_col`).
-- Metrics: class-wise numeric means and categorical rates (classification) or numeric correlations (regression).
-- Plots: none.
-
-### 7) Outliers
+### 6) Outliers
 - Purpose: IQR-based outlier ratios per numeric feature.
 - Applicable columns: numeric.
 - Metrics: outlier_ratio per numeric column.
 - Plots: `outliers.png` (top 10 outlier ratios).
 
-### 8) Time
+### 7) Time
 - Purpose: time-series volume and target rate over time.
 - Applicable columns: time column (requires `time_col`).
 - Metrics: daily volume and optional daily target rate.

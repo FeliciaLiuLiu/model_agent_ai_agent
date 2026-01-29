@@ -25,7 +25,6 @@ def main():
     parser.add_argument("--columns-numeric", default=None, help="Columns for numeric section")
     parser.add_argument("--columns-categorical", default=None, help="Columns for categorical section")
     parser.add_argument("--columns-correlation", default=None, help="Columns for correlation section")
-    parser.add_argument("--columns-target", default=None, help="Columns for target section")
     parser.add_argument("--columns-outliers", default=None, help="Columns for outliers section")
     parser.add_argument("--columns-time", default=None, help="Columns for time section")
     parser.add_argument("--no-report", action="store_true", help="Skip PDF report generation")
@@ -50,7 +49,6 @@ def main():
         "numeric": _parse_list(args.columns_numeric),
         "categorical": _parse_list(args.columns_categorical),
         "correlation": _parse_list(args.columns_correlation),
-        "target": _parse_list(args.columns_target),
         "outliers": _parse_list(args.columns_outliers),
         "time": _parse_list(args.columns_time),
     }
