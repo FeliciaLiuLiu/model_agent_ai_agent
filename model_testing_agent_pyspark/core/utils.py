@@ -4,7 +4,12 @@ from __future__ import annotations
 import os
 from typing import List, Optional, Tuple
 
-import joblib
+try:
+    import joblib
+    JOBLIB_AVAILABLE = True
+except Exception:
+    joblib = None
+    JOBLIB_AVAILABLE = False
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
@@ -17,7 +22,19 @@ def get_spark(app_name: str = "ModelTestingAgentSpark") -> SparkSession:
 
 def load_model(path: str):
     """Load a scikit-learn compatible model/pipeline from joblib."""
-    return joblib.load(path)
+    if JOBLIB_AVAILABLE:
+        return joblib.load(path)
+
+    # Fallback to pickle for .pkl/.pickle files if joblib is unavailable
+    if path.lower().endswith((".pkl", ".pickle")):
+        import pickle
+        with open(path, "rb") as f:
+            return pickle.load(f)
+
+    raise ImportError(
+        "joblib is required to load .joblib models. "
+        "Install joblib in the environment or convert the model to a .pkl file."
+    )
 
 
 def load_data(path: str, label_col: Optional[str] = None, spark: Optional[SparkSession] = None) -> Tuple[DataFrame, Optional[str], List[str]]:

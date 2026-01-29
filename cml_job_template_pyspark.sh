@@ -24,6 +24,9 @@ export MPLBACKEND=${MPLBACKEND:-Agg}
 
 mkdir -p "$SPARK_LOCAL_DIRS" "$OUTPUT_DIR" "$MPLCONFIGDIR"
 
+# Optional: install joblib if your CML image does not include it
+# python -m pip install joblib
+
 # Run with spark-submit (recommended in CML Spark jobs)
 spark-submit \
   --master yarn \
@@ -32,4 +35,3 @@ spark-submit \
   --data "$DATA_PATH" \
   --label_col "$LABEL_COL" \
   --output "$OUTPUT_DIR"
-

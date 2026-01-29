@@ -125,6 +125,7 @@ model-testing-agent-spark \
 - The default training script uses encoded categorical columns, which are compatible with the Spark scoring UDF.
 - If your model expects raw string categorical columns with a ColumnTransformer, you must ensure consistent feature preprocessing.
 - SHAP is removed in the PySpark interpretability module.
+- `joblib` is required for loading `.joblib` models. If `joblib` is not available in CML, either install it or export the model as `.pkl`.
 
 ## Column Selection Rules
 
