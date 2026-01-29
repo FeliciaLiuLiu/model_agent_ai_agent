@@ -101,6 +101,145 @@ pip install git+https://bitbucket.org/YOUR_COMPANY/adm_central_utility.git
 pip install "adm_central_utility[full] @ git+ssh://git@bitbucket.org/YOUR_COMPANY/adm_central_utility.git"
 ```
 
+## How To Run (Developer / Repo Owner)
+
+### 1) Setup
+
+```bash
+cd /path/to/adm_central_utility
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2) Run EDA (CLI)
+
+Full report:
+```bash
+MPLCONFIGDIR=./.mpl_cache MPLBACKEND=Agg \
+eda-agent --data ./data/synthetic_bank_aml_200k.csv \
+  --target-col is_suspicious \
+  --output ./output_eda
+```
+
+Interactive selection:
+```bash
+MPLCONFIGDIR=./.mpl_cache MPLBACKEND=Agg \
+eda-agent --data ./data/synthetic_bank_aml_200k.csv \
+  --output ./output_eda \
+  --interactive
+```
+
+### 3) Run model_testing_agent (CLI)
+
+```bash
+MPLCONFIGDIR=./.mpl_cache MPLBACKEND=Agg \
+model-testing-agent \
+  --model ./models/bank_aml_gbt_py39.joblib \
+  --data ./data/synthetic_bank_aml_200k_test_py39.csv \
+  --label_col is_suspicious \
+  --output ./output
+```
+
+### 4) Run model_testing_agent_pyspark (CLI)
+
+```bash
+mkdir -p ./spark_tmp ./output_spark
+
+JAVA_TOOL_OPTIONS='-Djava.io.tmpdir=./spark_tmp' \
+SPARK_LOCAL_DIRS=./spark_tmp \
+SPARK_DRIVER_OPTS='-Djava.io.tmpdir=./spark_tmp' \
+SPARK_EXECUTOR_OPTS='-Djava.io.tmpdir=./spark_tmp' \
+MPLCONFIGDIR=./.mpl_cache MPLBACKEND=Agg \
+python3 -m model_testing_agent_pyspark.runner.cli \
+  --model ./models/bank_aml_gbt_py39.joblib \
+  --data ./data/synthetic_bank_aml_200k_test_py39.csv \
+  --label_col is_suspicious \
+  --output ./output_spark
+```
+
+Output PDF:
+- `./output_eda/EDA_Report.pdf`
+- `./output/model_testing_agent_Model_Testing_Report.pdf`
+- `./output_spark/model_testing_agent_Model_Testing_Report_pyspark.pdf`
+
+## How To Run (User / API Usage)
+
+### 1) Install from repo
+
+```bash
+pip install -e /path/to/adm_central_utility
+```
+
+### 2) EDA (API)
+
+```python
+from adm_central_utility import EDA
+
+eda = EDA(output_dir="./output_eda", target_col="your_target")
+eda.run(file_path="/path/to/your_dataset.csv")
+```
+
+Interactive section/column selection:
+```python
+from adm_central_utility import EDA
+
+eda = EDA(output_dir="./output_eda", target_col="your_target")
+eda.print_functions()
+sections = EDA.parse_function_selection("1,2,3")
+
+results = eda.run(
+    file_path="/path/to/your_dataset.csv",
+    sections=sections,
+    section_columns={
+        "numeric": ["col_a", "col_b"],
+        "categorical": ["col_c"],
+    },
+)
+```
+
+### 3) model_testing_agent (API)
+
+```python
+from adm_central_utility.model_testing_agent import ModelTestingAgent
+
+model = ModelTestingAgent.load_model("/path/to/your_model.joblib")
+X, y, feature_names = ModelTestingAgent.load_data("/path/to/your_dataset.csv", label_col="your_label")
+
+agent = ModelTestingAgent(output_dir="./output")
+results = agent.run(model=model, X=X, y=y, feature_names=feature_names)
+agent.generate_report(results)
+```
+
+Interactive:
+```python
+from adm_central_utility.model_testing_agent import InteractiveAgent
+
+agent = InteractiveAgent(output_dir="./output")
+agent.run_interactive(model=model, X=X, y=y, feature_names=list(X.columns))
+```
+
+### 4) model_testing_agent_pyspark (API)
+
+```python
+from adm_central_utility import model_testing_agent_pyspark
+
+agent = model_testing_agent_pyspark.ModelTestingAgentSpark(output_dir="./output_spark")
+model = agent.load_model("/path/to/your_model.joblib")
+df, label_col, feature_cols = agent.load_data("/path/to/your_dataset.csv", label_col="your_label")
+
+results = agent.run(model=model, df=df, label_col=label_col, feature_cols=feature_cols)
+agent.generate_report(results)
+```
+
+Interactive:
+```python
+from adm_central_utility import model_testing_agent_pyspark
+
+agent = model_testing_agent_pyspark.InteractiveAgentSpark(output_dir="./output_spark")
+agent.run_interactive(model=model, df=df, label_col=label_col, feature_cols=feature_cols)
+```
+
 ## Recommended Python 3.11 Environment (Conda)
 
 SHAP installation is most reliable via conda-forge on Python 3.11. This avoids LLVM build issues.
