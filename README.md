@@ -1,14 +1,16 @@
 # ADM Central Utility
 
-This project provides two main APIs:
+This project provides three main APIs:
 
 - **EDA**: automated exploratory data analysis with PDF and JSON outputs.
 - **Model Testing Agent**: comprehensive model evaluation with metrics, plots, and PDF reports.
+- **Model Testing Agent (PySpark)**: Spark-based evaluation for large datasets and CML environments.
 
 See module-specific docs:
 
 - `eda/README.md`
 - `model_testing_agent/README.md`
+- `model_testing_agent_pyspark/README.md`
 
 ## EDA (High-Level)
 
@@ -32,6 +34,18 @@ model = ModelTestingAgent.load_model("./path/to/your_model.joblib")
 X, y, feature_names = ModelTestingAgent.load_data("./path/to/your_dataset.csv", label_col="your_label")
 agent = ModelTestingAgent(output_dir="./output")
 results = agent.run(model=model, X=X, y=y, feature_names=feature_names)
+agent.generate_report(results)
+```
+
+## Model Testing Agent (PySpark, High-Level)
+
+```python
+from adm_central_utility.model_testing_agent_pyspark import ModelTestingAgentSpark
+
+model = ModelTestingAgentSpark.load_model("./path/to/your_model.joblib")
+df, label_col, feature_cols = ModelTestingAgentSpark.load_data("./path/to/your_dataset.csv", label_col="your_label")
+agent = ModelTestingAgentSpark(output_dir="./output")
+results = agent.run(model=model, df=df, label_col=label_col, feature_cols=feature_cols)
 agent.generate_report(results)
 ```
 
@@ -244,6 +258,16 @@ eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --max-rows 500
 
 ```bash
 model-testing-agent \
+  --model ./models/bank_aml_gbt.joblib \
+  --data ./data/synthetic_bank_aml_200k_test.csv \
+  --label_col is_suspicious \
+  --output ./output
+```
+
+### Model Testing Agent (PySpark) - CLI
+
+```bash
+model-testing-agent-spark \
   --model ./models/bank_aml_gbt.joblib \
   --data ./data/synthetic_bank_aml_200k_test.csv \
   --label_col is_suspicious \

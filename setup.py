@@ -20,6 +20,7 @@ setup(
     entry_points={
         "console_scripts": [
             "model-testing-agent=adm_central_utility.model_testing_agent.runner.cli:main",
+            "model-testing-agent-spark=adm_central_utility.model_testing_agent_pyspark.runner.cli:main",
             "eda-agent=adm_central_utility.eda.cli:main",
         ],
     },
