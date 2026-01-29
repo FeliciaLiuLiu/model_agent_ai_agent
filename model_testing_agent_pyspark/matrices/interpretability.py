@@ -3,7 +3,6 @@ import os
 import warnings
 from typing import Dict, Any, List, Optional
 
-import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -41,7 +40,7 @@ class ModelInterpretabilitySpark:
     ) -> Dict[str, Any]:
         feature_names = list(feature_cols)
         model_type = self._check_model_type(model)
-        X_sample, y_sample = self._sample_numpy(df, feature_cols, label_col, sample_frac, random_state)
+        X_sample, y_sample = self._sample_rows(df, feature_cols, label_col, sample_frac, random_state)
 
         if methods is None:
             methods = ["permutation", "pdp", "ice"]
@@ -84,11 +83,11 @@ class ModelInterpretabilitySpark:
         results["explanations"] = self._build_explanations(results)
         return results
 
-    def _sample_numpy(self, df, feature_cols, label_col, sample_frac, random_state):
+    def _sample_rows(self, df, feature_cols, label_col, sample_frac, random_state):
         df_sample = df.sample(False, sample_frac, seed=random_state).limit(5000)
         rows = df_sample.select(*(feature_cols + [label_col])).collect()
-        X = np.array([[r[c] for c in feature_cols] for r in rows], dtype=float)
-        y = np.array([r[label_col] for r in rows], dtype=int)
+        X = [[float(r[c]) if r[c] is not None else 0.0 for c in feature_cols] for r in rows]
+        y = [int(r[label_col]) if r[label_col] is not None else 0 for r in rows]
         return X, y
 
     def _check_model_type(self, model) -> str:
@@ -105,29 +104,30 @@ class ModelInterpretabilitySpark:
                 y_score = est.predict_proba(X_in)[:, 1]
             except Exception:
                 y_score = est.decision_function(X_in)
-            return roc_auc_score(y_in, y_score) if len(np.unique(y_in)) >= 2 else 0.5
+            return roc_auc_score(y_in, y_score) if len(set(y_in)) >= 2 else 0.5
 
         result = permutation_importance(
             model, X, y, scoring=scorer, n_repeats=n_repeats, random_state=random_state, n_jobs=1
         )
-        importances = result.importances_mean
-        sorted_idx = np.argsort(importances)[::-1]
+        importances = list(result.importances_mean)
+        sorted_idx = sorted(range(len(importances)), key=lambda i: importances[i], reverse=True)
         ranked = [feature_names[i] for i in sorted_idx]
 
         path = os.path.join(self.data_dir, "permutation_importance.png")
         fig, ax = plt.subplots(figsize=(10, max(6, min(top_k, len(feature_names)) * 0.4)))
         top_idx = sorted_idx[:top_k]
         top_names = [feature_names[i] for i in top_idx]
-        top_vals = importances[top_idx]
-        top_stds = result.importances_std[top_idx]
-        y_pos = np.arange(len(top_names))
+        top_vals = [importances[i] for i in top_idx]
+        stds = list(result.importances_std)
+        top_stds = [stds[i] for i in top_idx]
+        y_pos = list(range(len(top_names)))
         ax.barh(y_pos, top_vals, xerr=top_stds, align="center", alpha=0.7, color="steelblue")
         ax.set_yticks(y_pos); ax.set_yticklabels(top_names); ax.invert_yaxis()
         ax.set_xlabel("Importance (decrease in AUC-ROC)"); ax.set_title("Permutation Importance")
         ax.grid(True, alpha=0.3, axis="x")
         plt.tight_layout(); plt.savefig(path, dpi=150, bbox_inches="tight"); plt.close()
 
-        return {"importances": dict(zip(feature_names, importances.tolist())),
+        return {"importances": dict(zip(feature_names, list(importances))),
                 "top_features": ranked[:top_k], "plot": path}
 
     def _lime_analysis(self, model, X, y, feature_names, random_state):

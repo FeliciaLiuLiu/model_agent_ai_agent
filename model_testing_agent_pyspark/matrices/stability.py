@@ -2,7 +2,7 @@
 import os
 from typing import Dict, Any, Tuple, List, Optional
 
-import numpy as np
+import math
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -90,11 +90,13 @@ class ModelStabilitySpark:
         for i in range(n_bins):
             exp_pct = max(ref_counts.get(i, 0) / ref_total, 1e-10) if ref_total else 1e-10
             act_pct = max(cur_counts.get(i, 0) / cur_total, 1e-10) if cur_total else 1e-10
-            psi += (act_pct - exp_pct) * np.log(act_pct / exp_pct)
+            psi += (act_pct - exp_pct) * math.log(act_pct / exp_pct)
         return float(psi)
 
     def _detect_data_drift(self, df_ref: DataFrame, df_curr: DataFrame, feature_cols: List[str]) -> Dict[str, Any]:
         results = {}
+        n_ref = df_ref.count()
+        n_curr = df_curr.count()
         numeric_cols = [c for c in feature_cols if c in get_numeric_columns(df_ref)][:50]
         for col in numeric_cols:
             stats_ref = df_ref.select(F.mean(col).alias("mean"), F.stddev(col).alias("std"), F.min(col).alias("min"), F.max(col).alias("max")).collect()[0]
@@ -103,9 +105,10 @@ class ModelStabilitySpark:
             std_ratio = (stats_cur["std"] or 0.0) / ((stats_ref["std"] or 0.0) + 1e-10)
 
             ks_stat = self._ks_feature(df_ref, df_curr, col)
+            ks_pvalue = self._ks_pvalue(ks_stat, n_ref, n_curr)
             results[col] = {
                 "ks_statistic": float(ks_stat),
-                "ks_pvalue": 0.0,
+                "ks_pvalue": float(ks_pvalue),
                 "mean_diff": float(mean_diff),
                 "std_ratio": float(std_ratio),
                 "drift_detected": ks_stat > 0.1,
@@ -156,7 +159,7 @@ class ModelStabilitySpark:
             aucs.append(auc)
         if len(aucs) < 2:
             return {"drift_detected": False, "drift_score": 0.0, "chunk_aucs": aucs}
-        drift_score = float(np.std(aucs) / (np.mean(aucs) + 1e-10))
+        drift_score = float(self._std(aucs) / (self._mean(aucs) + 1e-10))
         return {"drift_detected": drift_score > 0.1, "drift_score": drift_score, "chunk_aucs": aucs}
 
     def _cross_validate(self, df_pred: DataFrame, label_col: str, n_folds: int, random_state: int):
@@ -171,10 +174,10 @@ class ModelStabilitySpark:
             roc_scores.append(roc)
             pr_scores.append(pr)
         return {
-            "auc_roc_mean": float(np.mean(roc_scores)) if roc_scores else 0.0,
-            "auc_roc_std": float(np.std(roc_scores)) if roc_scores else 0.0,
-            "auc_pr_mean": float(np.mean(pr_scores)) if pr_scores else 0.0,
-            "auc_pr_std": float(np.std(pr_scores)) if pr_scores else 0.0,
+            "auc_roc_mean": float(self._mean(roc_scores)) if roc_scores else 0.0,
+            "auc_roc_std": float(self._std(roc_scores)) if roc_scores else 0.0,
+            "auc_pr_mean": float(self._mean(pr_scores)) if pr_scores else 0.0,
+            "auc_pr_std": float(self._std(pr_scores)) if pr_scores else 0.0,
             "fold_scores": list(zip(roc_scores, pr_scores)),
         }
 
@@ -188,10 +191,10 @@ class ModelStabilitySpark:
         if not auc_scores:
             return {"auc_roc_mean": 0.0, "auc_roc_std": 0.0, "ci_lower": 0.0, "ci_upper": 0.0, "samples": []}
         return {
-            "auc_roc_mean": float(np.mean(auc_scores)),
-            "auc_roc_std": float(np.std(auc_scores)),
-            "ci_lower": float(np.percentile(auc_scores, 2.5)),
-            "ci_upper": float(np.percentile(auc_scores, 97.5)),
+            "auc_roc_mean": float(self._mean(auc_scores)),
+            "auc_roc_std": float(self._std(auc_scores)),
+            "ci_lower": float(self._percentile(auc_scores, 2.5)),
+            "ci_upper": float(self._percentile(auc_scores, 97.5)),
             "samples": auc_scores,
         }
 
@@ -228,10 +231,10 @@ class ModelStabilitySpark:
         axes[0].set_xlabel("KS Statistic"); axes[0].set_title("Data Drift (Approx KS)")
         axes[0].axvline(x=0.1, color="r", linestyle="--", label="Threshold")
 
-        axes[1].barh(range(len(features)), [-np.log10(p + 1e-10) for p in pvals], color="steelblue", alpha=0.7)
+        axes[1].barh(range(len(features)), [-math.log10(p + 1e-10) for p in pvals], color="steelblue", alpha=0.7)
         axes[1].set_yticks(range(len(features))); axes[1].set_yticklabels(features)
         axes[1].set_xlabel("-log10(p-value)"); axes[1].set_title("Statistical Significance")
-        axes[1].axvline(x=-np.log10(0.05), color="r", linestyle="--", label="p=0.05")
+        axes[1].axvline(x=-math.log10(0.05), color="r", linestyle="--", label="p=0.05")
 
         plt.tight_layout(); plt.savefig(path, dpi=150); plt.close()
         return path
@@ -247,7 +250,7 @@ class ModelStabilitySpark:
         fig, ax = plt.subplots(figsize=(8, 6))
         ax.plot(range(1, len(aucs) + 1), aucs, "b-", lw=2, marker="o", markersize=10)
         ax.fill_between(range(1, len(aucs) + 1), aucs, alpha=0.2)
-        ax.axhline(y=np.mean(aucs), color="r", linestyle="--", label=f"Mean: {np.mean(aucs):.4f}")
+        ax.axhline(y=self._mean(aucs), color="r", linestyle="--", label=f"Mean: {self._mean(aucs):.4f}")
         ax.set_xlabel("Time Chunk"); ax.set_ylabel("AUC-ROC")
         ax.set_title("Concept Drift over Time Chunks"); ax.legend(); ax.grid(True, alpha=0.3)
         plt.tight_layout(); plt.savefig(path, dpi=150); plt.close()
@@ -262,7 +265,7 @@ class ModelStabilitySpark:
             plt.savefig(path, dpi=150); plt.close(); return path
         roc = [s[0] for s in scores]; pr = [s[1] for s in scores]
         fig, ax = plt.subplots(figsize=(8, 6))
-        x = np.arange(len(roc))
+        x = list(range(len(roc)))
         ax.bar(x - 0.2, roc, width=0.4, label="AUC-ROC")
         ax.bar(x + 0.2, pr, width=0.4, label="AUC-PR")
         ax.set_xticks(x); ax.set_xticklabels([f"Fold {i+1}" for i in x])
@@ -295,6 +298,45 @@ class ModelStabilitySpark:
         ax.set_title("Stability Summary"); ax.grid(True, axis="y", alpha=0.3)
         plt.tight_layout(); plt.savefig(path, dpi=150); plt.close()
         return path
+
+    def _mean(self, values: List[float]) -> float:
+        return sum(values) / len(values) if values else 0.0
+
+    def _std(self, values: List[float]) -> float:
+        if not values:
+            return 0.0
+        m = self._mean(values)
+        return math.sqrt(sum((v - m) ** 2 for v in values) / len(values))
+
+    def _percentile(self, values: List[float], p: float) -> float:
+        if not values:
+            return 0.0
+        vals = sorted(values)
+        if len(vals) == 1:
+            return float(vals[0])
+        k = (len(vals) - 1) * (p / 100.0)
+        f = int(math.floor(k))
+        c = int(math.ceil(k))
+        if f == c:
+            return float(vals[int(k)])
+        d0 = vals[f] * (c - k)
+        d1 = vals[c] * (k - f)
+        return float(d0 + d1)
+
+    def _ks_pvalue(self, d: float, n1: int, n2: int, max_terms: int = 100) -> float:
+        if n1 <= 0 or n2 <= 0:
+            return 1.0
+        ne = (n1 * n2) / (n1 + n2)
+        if ne <= 0:
+            return 1.0
+        term_sum = 0.0
+        for j in range(1, max_terms + 1):
+            term = ((-1) ** (j - 1)) * math.exp(-2 * (j ** 2) * (d ** 2) * ne)
+            term_sum += term
+            if abs(term) < 1e-8:
+                break
+        pval = max(0.0, min(1.0, 2 * term_sum))
+        return float(pval)
 
     def _build_explanations(self, metrics, artifacts):
         summary = []

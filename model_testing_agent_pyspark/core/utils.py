@@ -5,7 +5,6 @@ import os
 from typing import List, Optional, Tuple
 
 import joblib
-import numpy as np
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
@@ -63,7 +62,7 @@ def add_predictions(
     bc_model = spark.sparkContext.broadcast(model)
 
     def _score(*cols):
-        arr = np.array(cols, dtype=float).reshape(1, -1)
+        arr = [[float(c) if c is not None else 0.0 for c in cols]]
         m = bc_model.value
         if hasattr(m, "predict_proba"):
             try:

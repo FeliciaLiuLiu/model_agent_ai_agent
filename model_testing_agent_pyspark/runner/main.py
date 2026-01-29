@@ -3,7 +3,6 @@ import os
 import json
 from typing import Dict, Any, List, Optional
 
-import numpy as np
 from pyspark.sql import DataFrame
 
 from ..core.report import ReportBuilder
@@ -104,10 +103,16 @@ class ModelTestingAgentSpark:
         path = os.path.join(self.output_dir, filename)
 
         def convert(obj):
-            if isinstance(obj, np.ndarray):
-                return obj.tolist()
-            if isinstance(obj, (np.integer, np.floating, np.bool_)):
-                return obj.item()
+            if hasattr(obj, "tolist"):
+                try:
+                    return obj.tolist()
+                except Exception:
+                    pass
+            if hasattr(obj, "item"):
+                try:
+                    return obj.item()
+                except Exception:
+                    pass
             if isinstance(obj, dict):
                 return {str(k): convert(v) for k, v in obj.items()}
             if isinstance(obj, (list, tuple, set)):

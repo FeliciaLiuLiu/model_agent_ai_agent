@@ -2,7 +2,6 @@
 import os
 from typing import Dict, List, Tuple
 
-import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -105,8 +104,10 @@ class ModelEffectivenessSpark:
             cdf_neg.append(cum_neg)
 
         diffs = [abs(p - n) for p, n in zip(cdf_pos, cdf_neg)]
-        ks_idx = int(np.argmax(diffs)) if diffs else 0
-        ks_val = float(max(diffs)) if diffs else 0.0
+        if diffs:
+            ks_idx, ks_val = max(enumerate(diffs), key=lambda x: x[1])
+        else:
+            ks_idx, ks_val = 0, 0.0
         return ks_val, float(bins[ks_idx])
 
     def _precision_recall_at_k(self, df_pred: DataFrame, label_col: str, k_list: List[int]):
@@ -155,10 +156,12 @@ class ModelEffectivenessSpark:
     def _plot_confusion_matrix(self, cm, normalize=False):
         suffix = "_norm" if normalize else ""
         path = os.path.join(self.data_dir, f"confusion_matrix{suffix}.png")
-        matrix = np.array([[cm["TN"], cm["FP"]], [cm["FN"], cm["TP"]]])
+        matrix = [[cm["TN"], cm["FP"]], [cm["FN"], cm["TP"]]]
         if normalize:
-            row_sums = matrix.sum(axis=1, keepdims=True)
-            matrix = np.divide(matrix, row_sums, where=row_sums != 0)
+            row_sums = [sum(matrix[0]), sum(matrix[1])]
+            for i in range(2):
+                for j in range(2):
+                    matrix[i][j] = matrix[i][j] / row_sums[i] if row_sums[i] else 0.0
         fig, ax = plt.subplots(figsize=(7, 6))
         im = ax.imshow(matrix, cmap="Blues")
         ax.set_xticks([0, 1]); ax.set_yticks([0, 1])
@@ -175,8 +178,8 @@ class ModelEffectivenessSpark:
         path = os.path.join(self.data_dir, "ks_curve.png")
         min_max = df_pred.agg(F.min("y_score").alias("min"), F.max("y_score").alias("max")).collect()[0]
         min_val, max_val = float(min_max["min"]), float(min_max["max"])
-        bins = np.linspace(min_val, max_val, 101)
-        bucketizer = Bucketizer(splits=bins.tolist(), inputCol="y_score", outputCol="bucket", handleInvalid="keep")
+        bins = [min_val + (max_val - min_val) * i / 100 for i in range(101)]
+        bucketizer = Bucketizer(splits=bins, inputCol="y_score", outputCol="bucket", handleInvalid="keep")
         df_b = bucketizer.transform(df_pred)
         pos = df_b.filter(F.col(label_col) == 1).groupBy("bucket").count().collect()
         neg = df_b.filter(F.col(label_col) == 0).groupBy("bucket").count().collect()
@@ -194,9 +197,10 @@ class ModelEffectivenessSpark:
             cdf_neg.append(cum_neg)
 
         fig, ax = plt.subplots(figsize=(8, 6))
-        ax.plot(bins[:-1], cdf_pos, "b-", lw=2, label="Positive Class")
-        ax.plot(bins[:-1], cdf_neg, "r-", lw=2, label="Negative Class")
-        ax.fill_between(bins[:-1], cdf_pos, cdf_neg, alpha=0.2, color="green")
+        x_vals = bins[:-1]
+        ax.plot(x_vals, cdf_pos, "b-", lw=2, label="Positive Class")
+        ax.plot(x_vals, cdf_neg, "r-", lw=2, label="Negative Class")
+        ax.fill_between(x_vals, cdf_pos, cdf_neg, alpha=0.2, color="green")
         ax.set_xlabel("Score Threshold")
         ax.set_ylabel("Cumulative Distribution")
         ax.set_title(f"KS Curve (KS={ks:.4f})")
@@ -207,7 +211,7 @@ class ModelEffectivenessSpark:
     def _plot_precision_recall_at_k(self, k_list, pk, rk):
         path = os.path.join(self.data_dir, "precision_recall_at_k.png")
         fig, ax = plt.subplots(figsize=(10, 6))
-        x = np.arange(len(k_list))
+        x = list(range(len(k_list)))
         width = 0.35
         ax.bar(x - width / 2, pk, width, label="Precision@K", color="steelblue")
         ax.bar(x + width / 2, rk, width, label="Recall@K", color="coral")
@@ -234,7 +238,7 @@ class ModelEffectivenessSpark:
 
     def _plot_threshold_analysis(self, df_pred: DataFrame, label_col: str):
         path = os.path.join(self.data_dir, "threshold_analysis.png")
-        thresholds = np.linspace(0.1, 0.9, 17)
+        thresholds = [0.1 + 0.8 * i / 16 for i in range(17)]
         precs, recs, f1s = [], [], []
         for t in thresholds:
             cm = self._confusion_counts_at_threshold(df_pred, label_col, float(t))

@@ -2,7 +2,6 @@
 import os
 from typing import Dict, Tuple, List
 
-import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -25,7 +24,7 @@ class ModelEfficiencySpark:
         cm = self._confusion_counts(df_pred, label_col)
         fpr_val = fpr_score(cm)
 
-        thresholds = np.linspace(0.05, 0.95, 19)
+        thresholds = [0.05 + 0.90 * i / 18 for i in range(19)]
         fpr_list, tpr_list, precision_list = [], [], []
         for t in thresholds:
             cm_t = self._confusion_counts_at_threshold(df_pred, label_col, float(t))
@@ -106,7 +105,8 @@ class ModelEfficiencySpark:
         tp = cm["TP"]; fp = cm["FP"]; fn = cm["FN"]; tn = cm["TN"]
         tpr = tp / (tp + fn) if (tp + fn) > 0 else 0.0
         fpr_desc = "low" if fpr < 0.05 else ("moderate" if fpr < 0.1 else "high")
-        idx = int(np.argmin([abs(v - 0.05) for v in fpr_list])) if fpr_list else 0
+        diffs = [abs(v - 0.05) for v in fpr_list]
+        idx = int(min(range(len(diffs)), key=lambda i: diffs[i])) if diffs else 0
         best_t = float(thresholds[idx]) if len(thresholds) else threshold
         best_fpr = float(fpr_list[idx]) if fpr_list else fpr
         best_tpr = float(tpr_list[idx]) if tpr_list else tpr
