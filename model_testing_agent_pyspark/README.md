@@ -151,6 +151,14 @@ spark-submit \
   --output /path/to/output
 ```
 
+### CML Job Template
+
+Use the provided script to run the job in CML:
+
+```bash
+bash cml_job_template_pyspark.sh /path/to/model.joblib /path/to/data.csv your_label /path/to/output
+```
+
 If you run inside a CML Python session, you can also use:
 
 ```bash
