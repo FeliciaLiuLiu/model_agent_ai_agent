@@ -6,8 +6,9 @@ from typing import Dict, Any, List, Optional
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from sklearn.inspection import permutation_importance, PartialDependenceDisplay
-from sklearn.metrics import roc_auc_score
+from pyspark.sql import functions as F
+from pyspark.sql import Window
+from pyspark.mllib.evaluation import BinaryClassificationMetrics
 
 try:
     import lime
@@ -50,7 +51,7 @@ class ModelInterpretabilitySpark:
         results = {"metrics": {"model_type": model_type, "methods_used": methods}, "plots": {}, "artifacts": {}}
 
         if "permutation" in methods:
-            perm = self._permutation_importance(model, X_sample, y_sample, feature_names, n_repeats, top_k, random_state)
+            perm = self._permutation_importance(df, model, label_col, feature_names, n_repeats, top_k, random_state)
             results["metrics"]["perm_top_features"] = perm["top_features"]
             results["plots"]["permutation_importance"] = perm["plot"]
             results["artifacts"]["perm_importances"] = perm["importances"]
@@ -98,37 +99,61 @@ class ModelInterpretabilitySpark:
             return "linear"
         return "other"
 
-    def _permutation_importance(self, model, X, y, feature_names, n_repeats, top_k, random_state):
-        def scorer(est, X_in, y_in):
-            try:
-                y_score = est.predict_proba(X_in)[:, 1]
-            except Exception:
-                y_score = est.decision_function(X_in)
-            return roc_auc_score(y_in, y_score) if len(set(y_in)) >= 2 else 0.5
+    def _permutation_importance(self, df, model, label_col, feature_names, n_repeats, top_k, random_state):
+        """Spark-based permutation importance without sklearn."""
+        baseline_auc = self._auc_roc(self._score_df(df, model, label_col, feature_names), label_col)
+        importances = {}
 
-        result = permutation_importance(
-            model, X, y, scoring=scorer, n_repeats=n_repeats, random_state=random_state, n_jobs=1
-        )
-        importances = list(result.importances_mean)
-        sorted_idx = sorted(range(len(importances)), key=lambda i: importances[i], reverse=True)
-        ranked = [feature_names[i] for i in sorted_idx]
+        for col in feature_names:
+            imp_vals = []
+            for r in range(max(1, n_repeats)):
+                df_perm = self._permute_column(df, col, seed=random_state + r)
+                auc_perm = self._auc_roc(self._score_df(df_perm, model, label_col, feature_names), label_col)
+                imp_vals.append(baseline_auc - auc_perm)
+            importances[col] = sum(imp_vals) / len(imp_vals) if imp_vals else 0.0
+
+        ranked = sorted(importances.keys(), key=lambda k: importances[k], reverse=True)
+        top_names = ranked[:top_k]
+        top_vals = [importances[k] for k in top_names]
+        y_pos = list(range(len(top_names)))
 
         path = os.path.join(self.data_dir, "permutation_importance.png")
         fig, ax = plt.subplots(figsize=(10, max(6, min(top_k, len(feature_names)) * 0.4)))
-        top_idx = sorted_idx[:top_k]
-        top_names = [feature_names[i] for i in top_idx]
-        top_vals = [importances[i] for i in top_idx]
-        stds = list(result.importances_std)
-        top_stds = [stds[i] for i in top_idx]
-        y_pos = list(range(len(top_names)))
-        ax.barh(y_pos, top_vals, xerr=top_stds, align="center", alpha=0.7, color="steelblue")
+        ax.barh(y_pos, top_vals, align="center", alpha=0.7, color="steelblue")
         ax.set_yticks(y_pos); ax.set_yticklabels(top_names); ax.invert_yaxis()
         ax.set_xlabel("Importance (decrease in AUC-ROC)"); ax.set_title("Permutation Importance")
         ax.grid(True, alpha=0.3, axis="x")
         plt.tight_layout(); plt.savefig(path, dpi=150, bbox_inches="tight"); plt.close()
 
-        return {"importances": dict(zip(feature_names, list(importances))),
-                "top_features": ranked[:top_k], "plot": path}
+        return {"importances": importances, "top_features": top_names, "plot": path}
+
+    def _score_df(self, df, model, label_col, feature_cols):
+        """Score Spark DataFrame using Spark ML model (PipelineModel) or sklearn fallback."""
+        if hasattr(model, "transform"):
+            df_pred = model.transform(df)
+            if "probability" in df_pred.columns:
+                df_pred = df_pred.withColumn("y_score", F.col("probability").getItem(1))
+            elif "rawPrediction" in df_pred.columns:
+                df_pred = df_pred.withColumn("y_score", F.col("rawPrediction").getItem(1))
+            else:
+                raise ValueError("Spark model output missing probability/rawPrediction columns.")
+            return df_pred
+
+        # Fallback to sklearn UDF scoring if a non-Spark model is passed
+        from ..core.utils import add_predictions
+        return add_predictions(df, model, feature_cols, label_col=label_col)
+
+    def _permute_column(self, df, col, seed: int):
+        """Return DataFrame with a single column permuted across rows."""
+        w = Window.orderBy(F.monotonically_increasing_id())
+        df_idx = df.withColumn("__idx", F.row_number().over(w))
+        perm_values = df.select(col).orderBy(F.rand(seed)).withColumn("__idx", F.row_number().over(w))
+        df_perm = df_idx.drop(col).join(perm_values, "__idx").drop("__idx")
+        return df_perm
+
+    def _auc_roc(self, df_pred, label_col):
+        rdd = df_pred.select("y_score", label_col).rdd.map(lambda r: (float(r[0]), float(r[1])))
+        return float(BinaryClassificationMetrics(rdd).areaUnderROC)
 
     def _lime_analysis(self, model, X, y, feature_names, random_state):
         if not LIME_AVAILABLE:
@@ -148,6 +173,10 @@ class ModelInterpretabilitySpark:
         return {"plot": path, "weights": dict(exp.as_list()), "instances": [int(idx)]}
 
     def _pdp_analysis(self, model, X, feature_names, top_k):
+        try:
+            from sklearn.inspection import PartialDependenceDisplay
+        except Exception as e:
+            raise ImportError("scikit-learn is required for PDP. Install sklearn in the environment.") from e
         features = list(range(min(top_k, len(feature_names))))
         path = os.path.join(self.data_dir, "pdp.png")
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -158,6 +187,10 @@ class ModelInterpretabilitySpark:
         return {"plot": path, "features": [feature_names[i] for i in features]}
 
     def _ice_analysis(self, model, X, feature_names, top_k):
+        try:
+            from sklearn.inspection import PartialDependenceDisplay
+        except Exception as e:
+            raise ImportError("scikit-learn is required for ICE. Install sklearn in the environment.") from e
         features = list(range(min(top_k, len(feature_names))))
         path = os.path.join(self.data_dir, "ice.png")
         fig, ax = plt.subplots(figsize=(10, 6))
