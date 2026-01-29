@@ -1,0 +1,454 @@
+{
+  "effectiveness": {
+    "metrics": {
+      "auc_roc": 0.829851311385896,
+      "auc_pr": 0.6833013215439627,
+      "precision": 0.9666203059805285,
+      "recall": 0.6034732272069464,
+      "f1": 0.7430506058446186,
+      "ks_statistic": 0.6422025207181657,
+      "ks_threshold": 0.12,
+      "confusion_matrix": {
+        "TN": 56473,
+        "FP": 72,
+        "FN": 1370,
+        "TP": 2085
+      },
+      "precision_at_k": {
+        "10": 1.0,
+        "50": 0.96,
+        "100": 0.96,
+        "200": 0.95,
+        "500": 0.962
+      },
+      "recall_at_k": {
+        "10": 0.002894356005788712,
+        "50": 0.013892908827785818,
+        "100": 0.027785817655571636,
+        "200": 0.05499276410998553,
+        "500": 0.13921852387843706
+      }
+    },
+    "plots": {
+      "roc_curve": "./output/roc_curve.png",
+      "pr_curve": "./output/pr_curve.png",
+      "confusion_matrix": "./output/confusion_matrix.png",
+      "confusion_matrix_norm": "./output/confusion_matrix_norm.png",
+      "ks_curve": "./output/ks_curve.png",
+      "precision_recall_at_k": "./output/precision_recall_at_k.png",
+      "score_distribution": "./output/score_distribution.png",
+      "threshold_analysis": "./output/threshold_analysis.png"
+    },
+    "explanations": {
+      "summary": [
+        "Positive rate is 5.76%; AUC-ROC is 0.8299 (strong ranking).",
+        "AUC-PR is 0.6833, above the base rate 5.76%, indicating meaningful lift.",
+        "At threshold 0.50, precision=0.9666, recall=0.6035, F1=0.7431 (precision-heavy (fewer positives caught, fewer false alarms)).",
+        "Confusion matrix: TP=2085, FP=72, FN=1370, TN=56473 (FPR=0.13%, FNR=39.65%).",
+        "KS is 0.6422 at threshold 0.12, indicating very strong separation.",
+        "Top-10: precision=1.0000, recall=0.0029 shows the quality of the highest-risk shortlist.",
+        "Top-500: precision=0.9620, recall=0.1392 shows how much coverage you get with a larger queue."
+      ],
+      "plots": {
+        "roc_curve": "AUC-ROC=0.8299; curve above diagonal indicates strong separation.",
+        "pr_curve": "AUC-PR=0.6833 vs baseline 5.76%; higher curve implies better precision at recall.",
+        "confusion_matrix": "At threshold 0.50: TP=2085, FP=72, FN=1370, TN=56473.",
+        "confusion_matrix_norm": "Normalized rates: TPR=60.35%, TNR=99.87%.",
+        "ks_curve": "Maximum separation KS=0.6422 at threshold 0.12.",
+        "precision_recall_at_k": "Bars show precision/recall as you expand the review queue.",
+        "score_distribution": "Mean score: positive=0.597, negative=0.024 (larger gap is better).",
+        "threshold_analysis": "Best F1 in tested grid is 0.7530 at threshold 0.25."
+      }
+    }
+  },
+  "efficiency": {
+    "metrics": {
+      "fpr": 0.0012733221328145724,
+      "tn": 56473,
+      "fp": 72,
+      "threshold": 0.5,
+      "fpr_at_thresholds": {
+        "t_0.05": 0.028472897692103635,
+        "t_0.10": 0.010858608188168715,
+        "t_0.15": 0.005641524449553453,
+        "t_0.20": 0.0035016358652400744,
+        "t_0.25": 0.0024228490582721726,
+        "t_0.30": 0.0020514634362012556,
+        "t_0.35": 0.0017508179326200372,
+        "t_0.40": 0.001573967636395791,
+        "t_0.45": 0.0013617472809266955,
+        "t_0.50": 0.0012733221328145724,
+        "t_0.55": 0.0012379520735697233,
+        "t_0.60": 0.0010787868069679018,
+        "t_0.65": 0.0010434167477230524,
+        "t_0.70": 0.0010257317181006278,
+        "t_0.75": 0.0009549915996109294,
+        "t_0.80": 0.0008842514811212309,
+        "t_0.85": 0.0008488814218763816,
+        "t_0.90": 0.000831196392253957,
+        "t_0.95": 0.0007604562737642585
+      }
+    },
+    "plots": {
+      "fpr_vs_threshold": "./output/fpr_vs_threshold.png",
+      "efficiency_frontier": "./output/efficiency_frontier.png",
+      "fpr_tpr_tradeoff": "./output/fpr_tpr_tradeoff.png"
+    },
+    "explanations": {
+      "summary": [
+        "At threshold 0.50, FPR=0.0013 (low); FP=72 out of 56545 negatives.",
+        "At the same threshold, TPR=0.6035 with TP=2085 and FN=1370, showing the capture rate of positives.",
+        "A threshold near 0.05 yields FPR\u22480.0285 with TPR\u22480.6663 if you want to target ~5% false positives."
+      ],
+      "plots": {
+        "fpr_vs_threshold": "FPR decreases as the threshold increases; use it to pick an operating point.",
+        "efficiency_frontier": "Each point shows the FPR/TPR tradeoff; move toward the top-left for better efficiency.",
+        "fpr_tpr_tradeoff": "FPR and TPR curves highlight how recall drops as you reduce false positives."
+      }
+    }
+  },
+  "stability": {
+    "metrics": {
+      "psi": 0.0006479521035248527,
+      "cv_auc_roc_mean": 0.8298280034894023,
+      "cv_auc_roc_std": 0.010698619804752276,
+      "cv_auc_pr_mean": 0.6836978356139328,
+      "cv_auc_pr_std": 0.008822589307913263,
+      "bootstrap_auc_roc_mean": 0.8357285491414526,
+      "bootstrap_auc_roc_ci_lower": 0.823756324811946,
+      "bootstrap_auc_roc_ci_upper": 0.8467482954980204,
+      "concept_drift_detected": false,
+      "concept_drift_score": 0.022531369161845456
+    },
+    "plots": {
+      "psi_distribution": "./output/psi_distribution.png",
+      "data_drift_heatmap": "./output/data_drift_heatmap.png",
+      "concept_drift": "./output/concept_drift.png",
+      "cv_results": "./output/cv_results.png",
+      "bootstrap_distribution": "./output/bootstrap_distribution.png",
+      "stability_summary": "./output/stability_summary.png"
+    },
+    "artifacts": {
+      "data_drift": {
+        "txn_amount": {
+          "ks_statistic": 0.0073666666666666325,
+          "ks_pvalue": 0.3877973119368354,
+          "mean_diff": 61.88855699999999,
+          "std_ratio": 1.386185449071346,
+          "drift_detected": false
+        },
+        "account_age_days": {
+          "ks_statistic": 0.005199999999999982,
+          "ks_pvalue": 0.8100062528473898,
+          "mean_diff": 0.8477333333332808,
+          "std_ratio": 1.000815069708948,
+          "drift_detected": false
+        },
+        "kyc_risk_score": {
+          "ks_statistic": 0.005033333333333334,
+          "ks_pvalue": 0.8398602633843764,
+          "mean_diff": 0.11666766666666462,
+          "std_ratio": 0.9965341439034836,
+          "drift_detected": false
+        },
+        "num_txn_24h": {
+          "ks_statistic": 0.006066666666666776,
+          "ks_pvalue": 0.6366550396313084,
+          "mean_diff": 0.008533333333333282,
+          "std_ratio": 0.9817105233277543,
+          "drift_detected": false
+        },
+        "avg_amount_7d": {
+          "ks_statistic": 0.005333333333333343,
+          "ks_pvalue": 0.7849289890854889,
+          "mean_diff": 0.17038366666668026,
+          "std_ratio": 0.9958923550734423,
+          "drift_detected": false
+        },
+        "is_pep": {
+          "ks_statistic": 0.0025333333333332764,
+          "ks_pvalue": 0.9999755780091606,
+          "mean_diff": 0.0025333333333333354,
+          "std_ratio": 0.9540081833571038,
+          "drift_detected": false
+        },
+        "sanctions_match": {
+          "ks_statistic": 6.666666666665932e-05,
+          "ks_pvalue": 1.0,
+          "mean_diff": 6.666666666666626e-05,
+          "std_ratio": 0.9964428479612845,
+          "drift_detected": false
+        },
+        "is_cross_border": {
+          "ks_statistic": 0.0004333333333333411,
+          "ks_pvalue": 1.0,
+          "mean_diff": 0.00043333333333339663,
+          "std_ratio": 1.0016520529009618,
+          "drift_detected": false
+        },
+        "is_fintech_rail": {
+          "ks_statistic": 0.004633333333333378,
+          "ks_pvalue": 0.9026876509044693,
+          "mean_diff": 0.004633333333333323,
+          "std_ratio": 0.9984337577804968,
+          "drift_detected": false
+        },
+        "origin_country_code": {
+          "ks_statistic": 0.00770000000000004,
+          "ks_pvalue": 0.3343945017668385,
+          "mean_diff": 0.052633333333332644,
+          "std_ratio": 1.0012000554031464,
+          "drift_detected": false
+        },
+        "destination_country_code": {
+          "ks_statistic": 0.00436666666666663,
+          "ks_pvalue": 0.9360327634509391,
+          "mean_diff": 0.011800000000000033,
+          "std_ratio": 1.0061780916518213,
+          "drift_detected": false
+        },
+        "ip_country_code": {
+          "ks_statistic": 0.009666666666666657,
+          "ks_pvalue": 0.12040843865160467,
+          "mean_diff": 0.026866666666666816,
+          "std_ratio": 0.9942417128485173,
+          "drift_detected": false
+        },
+        "currency_code": {
+          "ks_statistic": 0.0035333333333333328,
+          "ks_pvalue": 0.9917171891247245,
+          "mean_diff": 0.01929999999999943,
+          "std_ratio": 0.99994072622006,
+          "drift_detected": false
+        },
+        "txn_channel_code": {
+          "ks_statistic": 0.006766666666666643,
+          "ks_pvalue": 0.49603257284241087,
+          "mean_diff": 0.00996666666666668,
+          "std_ratio": 1.0005343447735005,
+          "drift_detected": false
+        },
+        "payment_rail_code": {
+          "ks_statistic": 0.004633333333333378,
+          "ks_pvalue": 0.9026876509044693,
+          "mean_diff": 0.009033333333333005,
+          "std_ratio": 1.0008877809669083,
+          "drift_detected": false
+        },
+        "txn_type_code": {
+          "ks_statistic": 0.0068999999999999895,
+          "ks_pvalue": 0.47075681920999235,
+          "mean_diff": 0.007033333333333225,
+          "std_ratio": 0.9963256243971212,
+          "drift_detected": false
+        },
+        "merchant_category_code": {
+          "ks_statistic": 0.005299999999999971,
+          "ks_pvalue": 0.7912857876719448,
+          "mean_diff": 0.0028333333333332433,
+          "std_ratio": 0.9985176377000463,
+          "drift_detected": false
+        },
+        "device_type_code": {
+          "ks_statistic": 0.010266666666666646,
+          "ks_pvalue": 0.08408456466547587,
+          "mean_diff": 0.01963333333333317,
+          "std_ratio": 0.9917352358331322,
+          "drift_detected": false
+        }
+      },
+      "cv_fold_scores": [
+        [
+          0.8499598631726406,
+          0.6950219699441861
+        ],
+        [
+          0.8220372872597789,
+          0.6720554026855574
+        ],
+        [
+          0.8266067943529218,
+          0.6854057775704907
+        ],
+        [
+          0.8200549515587588,
+          0.6752079665454941
+        ],
+        [
+          0.8304811211029111,
+          0.6907980613239355
+        ]
+      ]
+    },
+    "explanations": {
+      "summary": [
+        "PSI is 0.0006, indicating negligible score distribution shift between reference and current data.",
+        "CV AUC-ROC is 0.8298 \u00b1 0.0107 (stable across folds).",
+        "CV AUC-PR is 0.6837 \u00b1 0.0088 (stable across folds).",
+        "Bootstrap AUC-ROC mean is 0.8357 with 95% CI [0.8238, 0.8467] (width 0.0230).",
+        "No concept drift detected (score 0.0225), suggesting stable performance over time.",
+        "Data drift flagged 0/18 numeric features; top drift signals: ['device_type_code', 'ip_country_code', 'origin_country_code']."
+      ],
+      "plots": {
+        "psi_distribution": "Score distributions overlap consistent with PSI=0.0006.",
+        "data_drift_heatmap": "0/18 features show drift; red bars highlight flagged features.",
+        "concept_drift": "AUC across time chunks shows whether performance is stable over time.",
+        "cv_results": "Fold scores cluster around ROC 0.8298 and PR 0.6837.",
+        "bootstrap_distribution": "Bootstrap CI [0.8238, 0.8467] reflects performance stability.",
+        "stability_summary": "Dashboard summarizes PSI, CV variance, and bootstrap CI width."
+      }
+    }
+  },
+  "interpretability": {
+    "metrics": {
+      "model_type": "tree",
+      "methods_used": [
+        "permutation",
+        "pdp",
+        "ice",
+        "shap",
+        "lime"
+      ],
+      "perm_top_features": [
+        "kyc_risk_score",
+        "origin_country_code",
+        "num_txn_24h",
+        "currency_code",
+        "destination_country_code",
+        "avg_amount_7d",
+        "sanctions_match",
+        "is_pep",
+        "txn_amount",
+        "txn_channel_code",
+        "is_cross_border",
+        "ip_country_code",
+        "device_type_code",
+        "account_age_days",
+        "is_fintech_rail",
+        "txn_type_code",
+        "merchant_category_code",
+        "payment_rail_code"
+      ],
+      "shap_top_features": [
+        "origin_country_code",
+        "num_txn_24h",
+        "kyc_risk_score",
+        "currency_code",
+        "txn_amount",
+        "destination_country_code",
+        "payment_rail_code",
+        "is_pep",
+        "avg_amount_7d",
+        "sanctions_match",
+        "is_fintech_rail",
+        "merchant_category_code",
+        "txn_type_code",
+        "account_age_days",
+        "txn_channel_code",
+        "ip_country_code",
+        "device_type_code",
+        "is_cross_border"
+      ],
+      "lime_instances": 3,
+      "pdp_features": [
+        "txn_amount",
+        "account_age_days",
+        "avg_amount_7d",
+        "kyc_risk_score",
+        "num_txn_24h",
+        "origin_country_code"
+      ],
+      "ice_features": [
+        "txn_amount",
+        "account_age_days",
+        "avg_amount_7d",
+        "kyc_risk_score"
+      ]
+    },
+    "plots": {
+      "permutation_importance": "./output/permutation_importance.png",
+      "shap_bar": "./output/shap_summary_bar.png",
+      "shap_beeswarm": "./output/shap_summary_beeswarm.png",
+      "lime_explanation": "./output/lime_explanation.png",
+      "pdp": "./output/pdp.png",
+      "ice": "./output/ice.png"
+    },
+    "artifacts": {
+      "perm_importances": {
+        "txn_amount": 0.0001036016294423514,
+        "account_age_days": -0.000464694479561667,
+        "kyc_risk_score": 0.015855710071639318,
+        "num_txn_24h": 0.012094046916701818,
+        "avg_amount_7d": 0.001407312824834983,
+        "is_pep": 0.00018034274476756983,
+        "sanctions_match": 0.0009183677482792474,
+        "is_cross_border": 0.0,
+        "is_fintech_rail": -0.000783213934541327,
+        "origin_country_code": 0.013857862059278026,
+        "destination_country_code": 0.0023254389661469866,
+        "ip_country_code": 0.0,
+        "currency_code": 0.004500221941283933,
+        "txn_channel_code": 4.410731844395332e-06,
+        "payment_rail_code": -0.0022691164489394345,
+        "txn_type_code": -0.0009500913049585114,
+        "merchant_category_code": -0.0011670318865009022,
+        "device_type_code": -1.0113780025688968e-07
+      },
+      "lime_weights": {
+        "instance_6": {
+          "num_txn_24h > 3.00": 0.5743739900435205,
+          "sanctions_match <= 0.00": -0.1746650639798077,
+          "is_pep <= 0.00": -0.09481457717658603,
+          "txn_amount > 333.44": 0.06598554848435953,
+          "kyc_risk_score > 46.42": 0.051369470695263236,
+          "origin_country_code <= 0.00": -0.018441645105343837,
+          "merchant_category_code <= 1.00": 0.0170990694473231,
+          "4.00 < destination_country_code <= 10.00": 0.011904216057852596,
+          "payment_rail_code > 8.00": 0.01093130396790949,
+          "937.75 < account_age_days <= 1838.00": 0.009725723180130647
+        },
+        "instance_18": {
+          "sanctions_match <= 0.00": -0.16290939809552368,
+          "2.00 < num_txn_24h <= 3.00": -0.14239246277909998,
+          "is_pep <= 0.00": -0.08505479759688497,
+          "39.47 < txn_amount <= 104.73": -0.023968262848219134,
+          "origin_country_code <= 0.00": -0.014385808244478661,
+          "txn_channel_code <= 0.00": 0.01417158294120502,
+          "0.00 < destination_country_code <= 4.00": -0.013876716710205274,
+          "5.00 < currency_code <= 13.00": -0.01330441488892522,
+          "payment_rail_code > 8.00": 0.01222763538330747,
+          "txn_type_code > 4.00": 0.010453838311335813
+        },
+        "instance_39": {
+          "num_txn_24h > 3.00": 0.6309681196257307,
+          "sanctions_match <= 0.00": -0.09905728357650476,
+          "is_pep <= 0.00": -0.08810412360983962,
+          "kyc_risk_score > 46.42": 0.0518358620725046,
+          "origin_country_code > 10.00": 0.03231630526281645,
+          "39.47 < txn_amount <= 104.73": -0.021346763032682264,
+          "destination_country_code > 10.00": 0.020311280237892148,
+          "1.00 < txn_type_code <= 2.00": 0.010762334552612298,
+          "4.00 < payment_rail_code <= 8.00": 0.01020582193079155,
+          "merchant_category_code <= 1.00": -0.007659653036377764
+        }
+      }
+    },
+    "explanations": {
+      "summary": [
+        "Permutation importance highlights: ['kyc_risk_score', 'origin_country_code', 'num_txn_24h', 'currency_code', 'destination_country_code'].",
+        "SHAP top features: ['origin_country_code', 'num_txn_24h', 'kyc_risk_score', 'currency_code', 'txn_amount'].",
+        "LIME generated local explanations for 3 instances; top contributors for instance_6: ['num_txn_24h > 3.00', 'sanctions_match <= 0.00', 'is_pep <= 0.00', 'txn_amount > 333.44', 'kyc_risk_score > 46.42'].",
+        "PDP plots show average effects for: ['txn_amount', 'account_age_days', 'avg_amount_7d', 'kyc_risk_score', 'num_txn_24h', 'origin_country_code'].",
+        "ICE plots show individual-level effects for: ['txn_amount', 'account_age_days', 'avg_amount_7d', 'kyc_risk_score']."
+      ],
+      "plots": {
+        "permutation_importance": "Bars show how much AUC drops when each feature is permuted.",
+        "shap_bar": "SHAP bar plot ranks global feature impact by mean absolute SHAP values.",
+        "shap_beeswarm": "SHAP beeswarm shows both impact size and direction per feature.",
+        "lime_explanation": "LIME bars show local feature contributions for selected instances.",
+        "pdp": "PDP curves show average model response as a feature varies.",
+        "ice": "ICE curves show per-instance responses as a feature varies."
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "model": "GradientBoostingClassifier (scikit-learn)",
+  "model_path": "/Users/felicia/Desktop/Felicia/DB_work/adm_central_utility/models/bank_aml_gbt.joblib",
+  "data_path": "/Users/felicia/Desktop/Felicia/DB_work/adm_central_utility/data/synthetic_bank_aml_200k.csv",
+  "test_path": "/Users/felicia/Desktop/Felicia/DB_work/adm_central_utility/data/synthetic_bank_aml_200k_test.csv",
+  "metric": {
+    "name": "AUC_ROC",
+    "value": 0.829851311385896
+  },
+  "class_balance": {
+    "0": 0.94241,
+    "1": 0.05759
+  },
+  "timestamp": "20260128_153757"
+}

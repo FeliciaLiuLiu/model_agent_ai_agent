@@ -1,0 +1,10 @@
+{
+  "model": "GBTClassifier PipelineModel",
+  "model_dir": "./models/bank_aml_gbt_20260128_122212",
+  "data_path": "/Users/felicia/Desktop/Felicia/DB_work/adm_central_utility/data/synthetic_bank_aml_200k.csv",
+  "metric": {
+    "name": "AUC_ROC",
+    "value": 0.9972835906834702
+  },
+  "timestamp": "20260128_122212"
+}
