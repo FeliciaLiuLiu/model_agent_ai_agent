@@ -1,104 +1,104 @@
 {
   "effectiveness": {
     "metrics": {
-      "auc_roc": 0.829851311385896,
-      "auc_pr": 0.6833013215439627,
-      "precision": 0.9666203059805285,
-      "recall": 0.6034732272069464,
-      "f1": 0.7430506058446186,
-      "ks_statistic": 0.6422025207181657,
-      "ks_threshold": 0.12,
+      "auc_roc": 0.842569635398078,
+      "auc_pr": 0.7009890863149786,
+      "precision": 0.9712951517648675,
+      "recall": 0.6139954853273137,
+      "f1": 0.7523804457683918,
+      "ks_statistic": 0.6502845144638916,
+      "ks_threshold": 0.08,
       "confusion_matrix": {
-        "TN": 56473,
-        "FP": 72,
-        "FN": 1370,
-        "TP": 2085
+        "TN": 188273,
+        "FP": 209,
+        "FN": 4446,
+        "TP": 7072
       },
       "precision_at_k": {
         "10": 1.0,
-        "50": 0.96,
-        "100": 0.96,
-        "200": 0.95,
-        "500": 0.962
+        "50": 1.0,
+        "100": 0.99,
+        "200": 0.985,
+        "500": 0.98
       },
       "recall_at_k": {
-        "10": 0.002894356005788712,
-        "50": 0.013892908827785818,
-        "100": 0.027785817655571636,
-        "200": 0.05499276410998553,
-        "500": 0.13921852387843706
+        "10": 0.0008682062858135093,
+        "50": 0.004341031429067547,
+        "100": 0.008595242229553742,
+        "200": 0.017103663830526132,
+        "500": 0.04254210800486195
       }
     },
     "plots": {
-      "roc_curve": "./output/roc_curve.png",
-      "pr_curve": "./output/pr_curve.png",
-      "confusion_matrix": "./output/confusion_matrix.png",
-      "confusion_matrix_norm": "./output/confusion_matrix_norm.png",
-      "ks_curve": "./output/ks_curve.png",
-      "precision_recall_at_k": "./output/precision_recall_at_k.png",
-      "score_distribution": "./output/score_distribution.png",
-      "threshold_analysis": "./output/threshold_analysis.png"
+      "roc_curve": ".\\output\\roc_curve.png",
+      "pr_curve": ".\\output\\pr_curve.png",
+      "confusion_matrix": ".\\output\\confusion_matrix.png",
+      "confusion_matrix_norm": ".\\output\\confusion_matrix_norm.png",
+      "ks_curve": ".\\output\\ks_curve.png",
+      "precision_recall_at_k": ".\\output\\precision_recall_at_k.png",
+      "score_distribution": ".\\output\\score_distribution.png",
+      "threshold_analysis": ".\\output\\threshold_analysis.png"
     },
     "explanations": {
       "summary": [
-        "Positive rate is 5.76%; AUC-ROC is 0.8299 (strong ranking).",
-        "AUC-PR is 0.6833, above the base rate 5.76%, indicating meaningful lift.",
-        "At threshold 0.50, precision=0.9666, recall=0.6035, F1=0.7431 (precision-heavy (fewer positives caught, fewer false alarms)).",
-        "Confusion matrix: TP=2085, FP=72, FN=1370, TN=56473 (FPR=0.13%, FNR=39.65%).",
-        "KS is 0.6422 at threshold 0.12, indicating very strong separation.",
-        "Top-10: precision=1.0000, recall=0.0029 shows the quality of the highest-risk shortlist.",
-        "Top-500: precision=0.9620, recall=0.1392 shows how much coverage you get with a larger queue."
+        "Positive rate is 5.76%; AUC-ROC is 0.8426 (strong ranking).",
+        "AUC-PR is 0.7010, above the base rate 5.76%, indicating meaningful lift.",
+        "At threshold 0.50, precision=0.9713, recall=0.6140, F1=0.7524 (precision-heavy (fewer positives caught, fewer false alarms)).",
+        "Confusion matrix: TP=7072, FP=209, FN=4446, TN=188273 (FPR=0.11%, FNR=38.60%).",
+        "KS is 0.6503 at threshold 0.08, indicating very strong separation.",
+        "Top-10: precision=1.0000, recall=0.0009 shows the quality of the highest-risk shortlist.",
+        "Top-500: precision=0.9800, recall=0.0425 shows how much coverage you get with a larger queue."
       ],
       "plots": {
-        "roc_curve": "AUC-ROC=0.8299; curve above diagonal indicates strong separation.",
-        "pr_curve": "AUC-PR=0.6833 vs baseline 5.76%; higher curve implies better precision at recall.",
-        "confusion_matrix": "At threshold 0.50: TP=2085, FP=72, FN=1370, TN=56473.",
-        "confusion_matrix_norm": "Normalized rates: TPR=60.35%, TNR=99.87%.",
-        "ks_curve": "Maximum separation KS=0.6422 at threshold 0.12.",
+        "roc_curve": "AUC-ROC=0.8426; curve above diagonal indicates strong separation.",
+        "pr_curve": "AUC-PR=0.7010 vs baseline 5.76%; higher curve implies better precision at recall.",
+        "confusion_matrix": "At threshold 0.50: TP=7072, FP=209, FN=4446, TN=188273.",
+        "confusion_matrix_norm": "Normalized rates: TPR=61.40%, TNR=99.89%.",
+        "ks_curve": "Maximum separation KS=0.6503 at threshold 0.08.",
         "precision_recall_at_k": "Bars show precision/recall as you expand the review queue.",
-        "score_distribution": "Mean score: positive=0.597, negative=0.024 (larger gap is better).",
-        "threshold_analysis": "Best F1 in tested grid is 0.7530 at threshold 0.25."
+        "score_distribution": "Mean score: positive=0.607, negative=0.024 (larger gap is better).",
+        "threshold_analysis": "Best F1 in tested grid is 0.7610 at threshold 0.30."
       }
     }
   },
   "efficiency": {
     "metrics": {
-      "fpr": 0.0012733221328145724,
-      "tn": 56473,
-      "fp": 72,
+      "fpr": 0.001108859201409153,
+      "tn": 188273,
+      "fp": 209,
       "threshold": 0.5,
       "fpr_at_thresholds": {
-        "t_0.05": 0.028472897692103635,
-        "t_0.10": 0.010858608188168715,
-        "t_0.15": 0.005641524449553453,
-        "t_0.20": 0.0035016358652400744,
-        "t_0.25": 0.0024228490582721726,
-        "t_0.30": 0.0020514634362012556,
-        "t_0.35": 0.0017508179326200372,
-        "t_0.40": 0.001573967636395791,
-        "t_0.45": 0.0013617472809266955,
-        "t_0.50": 0.0012733221328145724,
-        "t_0.55": 0.0012379520735697233,
-        "t_0.60": 0.0010787868069679018,
-        "t_0.65": 0.0010434167477230524,
-        "t_0.70": 0.0010257317181006278,
-        "t_0.75": 0.0009549915996109294,
-        "t_0.80": 0.0008842514811212309,
-        "t_0.85": 0.0008488814218763816,
-        "t_0.90": 0.000831196392253957,
-        "t_0.95": 0.0007604562737642585
+        "t_0.05": 0.028013285088231237,
+        "t_0.10": 0.010324593329867043,
+        "t_0.15": 0.005220657675534003,
+        "t_0.20": 0.003363716429155039,
+        "t_0.25": 0.002445856898802008,
+        "t_0.30": 0.001963052174743477,
+        "t_0.35": 0.0016288027503952632,
+        "t_0.40": 0.0013741365223204338,
+        "t_0.45": 0.0012043590369372143,
+        "t_0.50": 0.001108859201409153,
+        "t_0.55": 0.001013359365881092,
+        "t_0.60": 0.0008966373446801286,
+        "t_0.65": 0.0008276652412431957,
+        "t_0.70": 0.0007905264163156164,
+        "t_0.75": 0.0007427764985515859,
+        "t_0.80": 0.0007109432200422322,
+        "t_0.85": 0.0006419711166052992,
+        "t_0.90": 0.0006048322916777199,
+        "t_0.95": 0.0005411657346590126
       }
     },
     "plots": {
-      "fpr_vs_threshold": "./output/fpr_vs_threshold.png",
-      "efficiency_frontier": "./output/efficiency_frontier.png",
-      "fpr_tpr_tradeoff": "./output/fpr_tpr_tradeoff.png"
+      "fpr_vs_threshold": ".\\output\\fpr_vs_threshold.png",
+      "efficiency_frontier": ".\\output\\efficiency_frontier.png",
+      "fpr_tpr_tradeoff": ".\\output\\fpr_tpr_tradeoff.png"
     },
     "explanations": {
       "summary": [
-        "At threshold 0.50, FPR=0.0013 (low); FP=72 out of 56545 negatives.",
-        "At the same threshold, TPR=0.6035 with TP=2085 and FN=1370, showing the capture rate of positives.",
-        "A threshold near 0.05 yields FPR\u22480.0285 with TPR\u22480.6663 if you want to target ~5% false positives."
+        "At threshold 0.50, FPR=0.0011 (low); FP=209 out of 188482 negatives.",
+        "At the same threshold, TPR=0.6140 with TP=7072 and FN=4446, showing the capture rate of positives.",
+        "A threshold near 0.05 yields FPR\u22480.0280 with TPR\u22480.6743 if you want to target ~5% false positives."
       ],
       "plots": {
         "fpr_vs_threshold": "FPR decreases as the threshold increases; use it to pick an operating point.",
@@ -109,192 +109,192 @@
   },
   "stability": {
     "metrics": {
-      "psi": 0.0006479521035248527,
-      "cv_auc_roc_mean": 0.8298280034894023,
-      "cv_auc_roc_std": 0.010698619804752276,
-      "cv_auc_pr_mean": 0.6836978356139328,
-      "cv_auc_pr_std": 0.008822589307913263,
-      "bootstrap_auc_roc_mean": 0.8357285491414526,
-      "bootstrap_auc_roc_ci_lower": 0.823756324811946,
-      "bootstrap_auc_roc_ci_upper": 0.8467482954980204,
+      "psi": 0.00019210668836206236,
+      "cv_auc_roc_mean": 0.842557091562756,
+      "cv_auc_roc_std": 0.004700845197834919,
+      "cv_auc_pr_mean": 0.7009657208619374,
+      "cv_auc_pr_std": 0.008583254051591122,
+      "bootstrap_auc_roc_mean": 0.8400138818042092,
+      "bootstrap_auc_roc_ci_lower": 0.8337666230424206,
+      "bootstrap_auc_roc_ci_upper": 0.84738264678734,
       "concept_drift_detected": false,
-      "concept_drift_score": 0.022531369161845456
+      "concept_drift_score": 0.007796245745666869
     },
     "plots": {
-      "psi_distribution": "./output/psi_distribution.png",
-      "data_drift_heatmap": "./output/data_drift_heatmap.png",
-      "concept_drift": "./output/concept_drift.png",
-      "cv_results": "./output/cv_results.png",
-      "bootstrap_distribution": "./output/bootstrap_distribution.png",
-      "stability_summary": "./output/stability_summary.png"
+      "psi_distribution": ".\\output\\psi_distribution.png",
+      "data_drift_heatmap": ".\\output\\data_drift_heatmap.png",
+      "concept_drift": ".\\output\\concept_drift.png",
+      "cv_results": ".\\output\\cv_results.png",
+      "bootstrap_distribution": ".\\output\\bootstrap_distribution.png",
+      "stability_summary": ".\\output\\stability_summary.png"
     },
     "artifacts": {
       "data_drift": {
         "txn_amount": {
-          "ks_statistic": 0.0073666666666666325,
-          "ks_pvalue": 0.3877973119368354,
-          "mean_diff": 61.88855699999999,
-          "std_ratio": 1.386185449071346,
+          "ks_statistic": 0.003410000000000024,
+          "ks_pvalue": 0.6049243167691724,
+          "mean_diff": 51.696231799999964,
+          "std_ratio": 0.7212510281559533,
           "drift_detected": false
         },
         "account_age_days": {
-          "ks_statistic": 0.005199999999999982,
-          "ks_pvalue": 0.8100062528473898,
-          "mean_diff": 0.8477333333332808,
-          "std_ratio": 1.000815069708948,
+          "ks_statistic": 0.0034000000000000002,
+          "ks_pvalue": 0.6086714164068304,
+          "mean_diff": 1.516360000000077,
+          "std_ratio": 0.9949584726545088,
           "drift_detected": false
         },
         "kyc_risk_score": {
-          "ks_statistic": 0.005033333333333334,
-          "ks_pvalue": 0.8398602633843764,
-          "mean_diff": 0.11666766666666462,
-          "std_ratio": 0.9965341439034836,
+          "ks_statistic": 0.00490999999999997,
+          "ks_pvalue": 0.17877017821998165,
+          "mean_diff": 0.15537860000000592,
+          "std_ratio": 1.0029777195531409,
           "drift_detected": false
         },
         "num_txn_24h": {
-          "ks_statistic": 0.006066666666666776,
-          "ks_pvalue": 0.6366550396313084,
-          "mean_diff": 0.008533333333333282,
-          "std_ratio": 0.9817105233277543,
+          "ks_statistic": 0.003520000000000023,
+          "ks_pvalue": 0.5640478320774933,
+          "mean_diff": 0.014100000000000001,
+          "std_ratio": 1.0135989824963723,
           "drift_detected": false
         },
         "avg_amount_7d": {
-          "ks_statistic": 0.005333333333333343,
-          "ks_pvalue": 0.7849289890854889,
-          "mean_diff": 0.17038366666668026,
-          "std_ratio": 0.9958923550734423,
+          "ks_statistic": 0.0031799999999999606,
+          "ks_pvalue": 0.6914901624020879,
+          "mean_diff": 0.24480399999999491,
+          "std_ratio": 0.98750432058658,
           "drift_detected": false
         },
         "is_pep": {
-          "ks_statistic": 0.0025333333333332764,
-          "ks_pvalue": 0.9999755780091606,
-          "mean_diff": 0.0025333333333333354,
-          "std_ratio": 0.9540081833571038,
+          "ks_statistic": 0.0009600000000000719,
+          "ks_pvalue": 0.9999999999670306,
+          "mean_diff": 0.000959999999999999,
+          "std_ratio": 1.0183085891798442,
           "drift_detected": false
         },
         "sanctions_match": {
-          "ks_statistic": 6.666666666665932e-05,
+          "ks_statistic": 0.00014999999999998348,
           "ks_pvalue": 1.0,
-          "mean_diff": 6.666666666666626e-05,
-          "std_ratio": 0.9964428479612845,
+          "mean_diff": 0.0001499999999999991,
+          "std_ratio": 1.007633892673442,
           "drift_detected": false
         },
         "is_cross_border": {
-          "ks_statistic": 0.0004333333333333411,
-          "ks_pvalue": 1.0,
-          "mean_diff": 0.00043333333333339663,
-          "std_ratio": 1.0016520529009618,
+          "ks_statistic": 0.0021000000000000046,
+          "ks_pvalue": 0.9798403859548463,
+          "mean_diff": 0.0020999999999999908,
+          "std_ratio": 0.9920784049309431,
           "drift_detected": false
         },
         "is_fintech_rail": {
-          "ks_statistic": 0.004633333333333378,
-          "ks_pvalue": 0.9026876509044693,
-          "mean_diff": 0.004633333333333323,
-          "std_ratio": 0.9984337577804968,
+          "ks_statistic": 0.0010799999999999699,
+          "ks_pvalue": 0.9999999923472672,
+          "mean_diff": 0.0010799999999999699,
+          "std_ratio": 1.000376549964474,
           "drift_detected": false
         },
         "origin_country_code": {
-          "ks_statistic": 0.00770000000000004,
-          "ks_pvalue": 0.3343945017668385,
-          "mean_diff": 0.052633333333332644,
-          "std_ratio": 1.0012000554031464,
+          "ks_statistic": 0.0024699999999999722,
+          "ks_pvalue": 0.9197189285883667,
+          "mean_diff": 0.013560000000000016,
+          "std_ratio": 1.0011456875080358,
           "drift_detected": false
         },
         "destination_country_code": {
-          "ks_statistic": 0.00436666666666663,
-          "ks_pvalue": 0.9360327634509391,
-          "mean_diff": 0.011800000000000033,
-          "std_ratio": 1.0061780916518213,
+          "ks_statistic": 0.0024600000000000177,
+          "ks_pvalue": 0.9219951945246484,
+          "mean_diff": 0.01806999999999981,
+          "std_ratio": 1.001664814313853,
           "drift_detected": false
         },
         "ip_country_code": {
-          "ks_statistic": 0.009666666666666657,
-          "ks_pvalue": 0.12040843865160467,
-          "mean_diff": 0.026866666666666816,
-          "std_ratio": 0.9942417128485173,
+          "ks_statistic": 0.0041599999999999415,
+          "ks_pvalue": 0.3514402244474083,
+          "mean_diff": 0.03666000000000036,
+          "std_ratio": 1.0025752677635902,
           "drift_detected": false
         },
         "currency_code": {
-          "ks_statistic": 0.0035333333333333328,
-          "ks_pvalue": 0.9917171891247245,
-          "mean_diff": 0.01929999999999943,
-          "std_ratio": 0.99994072622006,
+          "ks_statistic": 0.0016299999999999995,
+          "ks_pvalue": 0.9993397529384445,
+          "mean_diff": 0.005239999999999689,
+          "std_ratio": 0.9990929426225018,
           "drift_detected": false
         },
         "txn_channel_code": {
-          "ks_statistic": 0.006766666666666643,
-          "ks_pvalue": 0.49603257284241087,
-          "mean_diff": 0.00996666666666668,
-          "std_ratio": 1.0005343447735005,
+          "ks_statistic": 0.0020399999999999308,
+          "ks_pvalue": 0.9851163353366189,
+          "mean_diff": 0.0016499999999999293,
+          "std_ratio": 1.000979625499297,
           "drift_detected": false
         },
         "payment_rail_code": {
-          "ks_statistic": 0.004633333333333378,
-          "ks_pvalue": 0.9026876509044693,
-          "mean_diff": 0.009033333333333005,
-          "std_ratio": 1.0008877809669083,
+          "ks_statistic": 0.0033100000000000074,
+          "ks_pvalue": 0.64253141776033,
+          "mean_diff": 0.01870999999999956,
+          "std_ratio": 1.001313489669193,
           "drift_detected": false
         },
         "txn_type_code": {
-          "ks_statistic": 0.0068999999999999895,
-          "ks_pvalue": 0.47075681920999235,
-          "mean_diff": 0.007033333333333225,
-          "std_ratio": 0.9963256243971212,
+          "ks_statistic": 0.0022500000000000298,
+          "ks_pvalue": 0.9614238438049111,
+          "mean_diff": 0.0026000000000001577,
+          "std_ratio": 1.001212806942605,
           "drift_detected": false
         },
         "merchant_category_code": {
-          "ks_statistic": 0.005299999999999971,
-          "ks_pvalue": 0.7912857876719448,
-          "mean_diff": 0.0028333333333332433,
-          "std_ratio": 0.9985176377000463,
+          "ks_statistic": 0.0022800000000000598,
+          "ks_pvalue": 0.9567815972969158,
+          "mean_diff": 0.0027600000000003178,
+          "std_ratio": 1.000265406353446,
           "drift_detected": false
         },
         "device_type_code": {
-          "ks_statistic": 0.010266666666666646,
-          "ks_pvalue": 0.08408456466547587,
-          "mean_diff": 0.01963333333333317,
-          "std_ratio": 0.9917352358331322,
+          "ks_statistic": 0.0024000000000000132,
+          "ks_pvalue": 0.9349041308210726,
+          "mean_diff": 0.0022100000000000453,
+          "std_ratio": 1.0020274632789559,
           "drift_detected": false
         }
       },
       "cv_fold_scores": [
         [
-          0.8499598631726406,
-          0.6950219699441861
+          0.8406292323974454,
+          0.7042215613953917
         ],
         [
-          0.8220372872597789,
-          0.6720554026855574
+          0.8377552869141657,
+          0.6937139137602263
         ],
         [
-          0.8266067943529218,
-          0.6854057775704907
+          0.846214595234095,
+          0.7033665949671365
         ],
         [
-          0.8200549515587588,
-          0.6752079665454941
+          0.8498211443098148,
+          0.7139726014385321
         ],
         [
-          0.8304811211029111,
-          0.6907980613239355
+          0.8383651989582597,
+          0.6895539327484009
         ]
       ]
     },
     "explanations": {
       "summary": [
-        "PSI is 0.0006, indicating negligible score distribution shift between reference and current data.",
-        "CV AUC-ROC is 0.8298 \u00b1 0.0107 (stable across folds).",
-        "CV AUC-PR is 0.6837 \u00b1 0.0088 (stable across folds).",
-        "Bootstrap AUC-ROC mean is 0.8357 with 95% CI [0.8238, 0.8467] (width 0.0230).",
-        "No concept drift detected (score 0.0225), suggesting stable performance over time.",
-        "Data drift flagged 0/18 numeric features; top drift signals: ['device_type_code', 'ip_country_code', 'origin_country_code']."
+        "PSI is 0.0002, indicating negligible score distribution shift between reference and current data.",
+        "CV AUC-ROC is 0.8426 \u00b1 0.0047 (stable across folds).",
+        "CV AUC-PR is 0.7010 \u00b1 0.0086 (stable across folds).",
+        "Bootstrap AUC-ROC mean is 0.8400 with 95% CI [0.8338, 0.8474] (width 0.0136).",
+        "No concept drift detected (score 0.0078), suggesting stable performance over time.",
+        "Data drift flagged 0/18 numeric features; top drift signals: ['kyc_risk_score', 'ip_country_code', 'num_txn_24h']."
       ],
       "plots": {
-        "psi_distribution": "Score distributions overlap consistent with PSI=0.0006.",
+        "psi_distribution": "Score distributions overlap consistent with PSI=0.0002.",
         "data_drift_heatmap": "0/18 features show drift; red bars highlight flagged features.",
         "concept_drift": "AUC across time chunks shows whether performance is stable over time.",
-        "cv_results": "Fold scores cluster around ROC 0.8298 and PR 0.6837.",
-        "bootstrap_distribution": "Bootstrap CI [0.8238, 0.8467] reflects performance stability.",
+        "cv_results": "Fold scores cluster around ROC 0.8426 and PR 0.7010.",
+        "bootstrap_distribution": "Bootstrap CI [0.8338, 0.8474] reflects performance stability.",
         "stability_summary": "Dashboard summarizes PSI, CV variance, and bootstrap CI width."
       }
     }
@@ -305,51 +305,30 @@
       "methods_used": [
         "permutation",
         "pdp",
-        "ice",
-        "shap",
-        "lime"
+        "ice"
       ],
+      "shap_status": "unavailable",
+      "shap_reason": "No module named 'shap'",
       "perm_top_features": [
-        "kyc_risk_score",
         "origin_country_code",
+        "kyc_risk_score",
         "num_txn_24h",
         "currency_code",
         "destination_country_code",
         "avg_amount_7d",
-        "sanctions_match",
-        "is_pep",
         "txn_amount",
-        "txn_channel_code",
-        "is_cross_border",
-        "ip_country_code",
-        "device_type_code",
-        "account_age_days",
-        "is_fintech_rail",
-        "txn_type_code",
-        "merchant_category_code",
-        "payment_rail_code"
-      ],
-      "shap_top_features": [
-        "origin_country_code",
-        "num_txn_24h",
-        "kyc_risk_score",
-        "currency_code",
-        "txn_amount",
-        "destination_country_code",
         "payment_rail_code",
-        "is_pep",
-        "avg_amount_7d",
         "sanctions_match",
-        "is_fintech_rail",
-        "merchant_category_code",
         "txn_type_code",
         "account_age_days",
         "txn_channel_code",
         "ip_country_code",
         "device_type_code",
-        "is_cross_border"
+        "is_cross_border",
+        "is_fintech_rail",
+        "merchant_category_code",
+        "is_pep"
       ],
-      "lime_instances": 3,
       "pdp_features": [
         "txn_amount",
         "account_age_days",
@@ -366,78 +345,36 @@
       ]
     },
     "plots": {
-      "permutation_importance": "./output/permutation_importance.png",
-      "shap_bar": "./output/shap_summary_bar.png",
-      "shap_beeswarm": "./output/shap_summary_beeswarm.png",
-      "lime_explanation": "./output/lime_explanation.png",
-      "pdp": "./output/pdp.png",
-      "ice": "./output/ice.png"
+      "permutation_importance": ".\\output\\permutation_importance.png",
+      "pdp": ".\\output\\pdp.png",
+      "ice": ".\\output\\ice.png"
     },
     "artifacts": {
       "perm_importances": {
-        "txn_amount": 0.0001036016294423514,
-        "account_age_days": -0.000464694479561667,
-        "kyc_risk_score": 0.015855710071639318,
-        "num_txn_24h": 0.012094046916701818,
-        "avg_amount_7d": 0.001407312824834983,
-        "is_pep": 0.00018034274476756983,
-        "sanctions_match": 0.0009183677482792474,
+        "txn_amount": 0.0016327988965905925,
+        "account_age_days": 9.630910232494294e-05,
+        "kyc_risk_score": 0.011066571977918271,
+        "num_txn_24h": 0.009463852628710778,
+        "avg_amount_7d": 0.003470510765755097,
+        "is_pep": -0.0002313033073040538,
+        "sanctions_match": 0.0006690392882946373,
         "is_cross_border": 0.0,
-        "is_fintech_rail": -0.000783213934541327,
-        "origin_country_code": 0.013857862059278026,
-        "destination_country_code": 0.0023254389661469866,
-        "ip_country_code": 0.0,
-        "currency_code": 0.004500221941283933,
-        "txn_channel_code": 4.410731844395332e-06,
-        "payment_rail_code": -0.0022691164489394345,
-        "txn_type_code": -0.0009500913049585114,
-        "merchant_category_code": -0.0011670318865009022,
-        "device_type_code": -1.0113780025688968e-07
-      },
-      "lime_weights": {
-        "instance_6": {
-          "num_txn_24h > 3.00": 0.5743739900435205,
-          "sanctions_match <= 0.00": -0.1746650639798077,
-          "is_pep <= 0.00": -0.09481457717658603,
-          "txn_amount > 333.44": 0.06598554848435953,
-          "kyc_risk_score > 46.42": 0.051369470695263236,
-          "origin_country_code <= 0.00": -0.018441645105343837,
-          "merchant_category_code <= 1.00": 0.0170990694473231,
-          "4.00 < destination_country_code <= 10.00": 0.011904216057852596,
-          "payment_rail_code > 8.00": 0.01093130396790949,
-          "937.75 < account_age_days <= 1838.00": 0.009725723180130647
-        },
-        "instance_18": {
-          "sanctions_match <= 0.00": -0.16290939809552368,
-          "2.00 < num_txn_24h <= 3.00": -0.14239246277909998,
-          "is_pep <= 0.00": -0.08505479759688497,
-          "39.47 < txn_amount <= 104.73": -0.023968262848219134,
-          "origin_country_code <= 0.00": -0.014385808244478661,
-          "txn_channel_code <= 0.00": 0.01417158294120502,
-          "0.00 < destination_country_code <= 4.00": -0.013876716710205274,
-          "5.00 < currency_code <= 13.00": -0.01330441488892522,
-          "payment_rail_code > 8.00": 0.01222763538330747,
-          "txn_type_code > 4.00": 0.010453838311335813
-        },
-        "instance_39": {
-          "num_txn_24h > 3.00": 0.6309681196257307,
-          "sanctions_match <= 0.00": -0.09905728357650476,
-          "is_pep <= 0.00": -0.08810412360983962,
-          "kyc_risk_score > 46.42": 0.0518358620725046,
-          "origin_country_code > 10.00": 0.03231630526281645,
-          "39.47 < txn_amount <= 104.73": -0.021346763032682264,
-          "destination_country_code > 10.00": 0.020311280237892148,
-          "1.00 < txn_type_code <= 2.00": 0.010762334552612298,
-          "4.00 < payment_rail_code <= 8.00": 0.01020582193079155,
-          "merchant_category_code <= 1.00": -0.007659653036377764
-        }
+        "is_fintech_rail": -5.216892978792132e-05,
+        "origin_country_code": 0.013000486299140879,
+        "destination_country_code": 0.0037045004081419862,
+        "ip_country_code": 1.5854122795144754e-06,
+        "currency_code": 0.006606408275026043,
+        "txn_channel_code": 8.945845242225304e-06,
+        "payment_rail_code": 0.0012195353708374101,
+        "txn_type_code": 0.00026079745163334336,
+        "merchant_category_code": -8.681253492242025e-05,
+        "device_type_code": 3.2334066202288625e-08
       }
     },
     "explanations": {
       "summary": [
-        "Permutation importance highlights: ['kyc_risk_score', 'origin_country_code', 'num_txn_24h', 'currency_code', 'destination_country_code'].",
-        "SHAP top features: ['origin_country_code', 'num_txn_24h', 'kyc_risk_score', 'currency_code', 'txn_amount'].",
-        "LIME generated local explanations for 3 instances; top contributors for instance_6: ['num_txn_24h > 3.00', 'sanctions_match <= 0.00', 'is_pep <= 0.00', 'txn_amount > 333.44', 'kyc_risk_score > 46.42'].",
+        "Permutation importance highlights: ['origin_country_code', 'kyc_risk_score', 'num_txn_24h', 'currency_code', 'destination_country_code'].",
+        "SHAP plots not generated because SHAP is unavailable (No module named 'shap').",
         "PDP plots show average effects for: ['txn_amount', 'account_age_days', 'avg_amount_7d', 'kyc_risk_score', 'num_txn_24h', 'origin_country_code'].",
         "ICE plots show individual-level effects for: ['txn_amount', 'account_age_days', 'avg_amount_7d', 'kyc_risk_score']."
       ],
