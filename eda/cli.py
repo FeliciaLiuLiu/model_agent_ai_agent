@@ -31,7 +31,14 @@ def main():
     parser.add_argument("--no-report", action="store_true", help="Skip PDF report generation")
     parser.add_argument("--no-json", action="store_true", help="Skip JSON output")
     parser.add_argument("--report-name", default="EDA_Report.pdf", help="PDF report filename")
+    parser.add_argument("--max-rows", type=int, default=None, help="Use only the first N rows for analysis")
+    parser.add_argument("--interactive", action="store_true", help="Interactive selection mode")
+    parser.add_argument("--list-functions", action="store_true", help="List available EDA functions and exit")
     args = parser.parse_args()
+
+    if args.list_functions:
+        EDA().print_functions()
+        return
 
     id_cols = _parse_list(args.id_cols)
     sections = _parse_list(args.sections)
@@ -55,18 +62,31 @@ def main():
         id_cols=id_cols,
     )
 
-    eda.run(
-        df=None,
-        file_path=args.data,
-        sections=sections,
-        columns=columns,
-        section_columns=section_columns,
-        target_col=args.target_col,
-        time_col=args.time_col,
-        save_json=not args.no_json,
-        generate_report=not args.no_report,
-        report_name=args.report_name,
-    )
+    if args.interactive:
+        eda.run_interactive(
+            df=None,
+            file_path=args.data,
+            target_col=args.target_col,
+            time_col=args.time_col,
+            max_rows=args.max_rows,
+            save_json=not args.no_json,
+            generate_report=not args.no_report,
+            report_name=args.report_name,
+        )
+    else:
+        eda.run(
+            df=None,
+            file_path=args.data,
+            sections=sections,
+            columns=columns,
+            section_columns=section_columns,
+            target_col=args.target_col,
+            time_col=args.time_col,
+            max_rows=args.max_rows,
+            save_json=not args.no_json,
+            generate_report=not args.no_report,
+            report_name=args.report_name,
+        )
 
     if not args.no_report:
         print(f"PDF: {args.output}/{args.report_name}")

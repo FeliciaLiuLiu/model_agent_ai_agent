@@ -32,6 +32,7 @@ htmlcov/
 .idea/
 .vscode/
 .DS_Store
+.mpl_cache/
 
 # Large/generated artifacts
 /data/

@@ -31,6 +31,7 @@ The EDA module provides automated exploratory data analysis with PDF and JSON ou
 
 ```python
 from adm_central_utility import EDA
+# or: from adm_central_utility import eda
 
 eda = EDA(output_dir="./output_eda", target_col="your_target")
 results = eda.run(file_path="./path/to/your_dataset.csv")
@@ -42,12 +43,28 @@ results = eda.run(file_path="./path/to/your_dataset.csv")
 from adm_central_utility import EDA
 
 eda = EDA(output_dir="./output_eda", target_col="your_target")
+results = eda.run_interactive(file_path="./path/to/your_dataset.csv")
+```
+
+### Choose Functions and Columns by Number (Notebook)
+
+```python
+from adm_central_utility import EDA
+
+eda = EDA(output_dir="./output_eda", target_col="your_target")
+eda.print_functions()  # Shows numbered list
+
+# Example: select 1,2,3 (overview, missingness, numeric)
+sections = EDA.parse_function_selection("1,2,3")
+
+numeric_cols = ["col_a", "col_b", "col_c"]
+selected_numeric = EDA.parse_column_selection("1,3", numeric_cols)  # -> ["col_a", "col_c"]
+
 results = eda.run(
     file_path="./path/to/your_dataset.csv",
-    sections=["overview", "missingness", "numeric"],
-    columns=["col_a", "col_b", "col_c"],
+    sections=sections,
     section_columns={
-        "numeric": ["col_a", "col_b"],
+        "numeric": selected_numeric,
         "categorical": ["col_c"],
     },
 )
@@ -59,6 +76,18 @@ results = eda.run(
 
 ```bash
 eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --target-col your_target
+```
+
+### List Functions
+
+```bash
+eda-agent --list-functions
+```
+
+### Interactive Mode (Select by 1,2,3)
+
+```bash
+eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --interactive
 ```
 
 ### Auto-Detect Dataset
@@ -78,6 +107,14 @@ eda-agent \
   --columns-numeric col_a,col_b \
   --output ./output_eda
 ```
+
+### Limit Rows for Faster Reports
+
+```bash
+eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --max-rows 5000
+```
+
+For testing datasets, use `--max-rows 5000` to generate a quicker PDF.
 
 ### Skip JSON Output (Faster)
 

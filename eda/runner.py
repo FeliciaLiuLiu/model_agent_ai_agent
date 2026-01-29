@@ -23,16 +23,57 @@ from .utils import (
 class EDA:
     """Exploratory Data Analysis utility."""
 
-    SECTIONS = [
-        "overview",
-        "missingness",
-        "numeric",
-        "categorical",
-        "correlation",
-        "target",
-        "outliers",
-        "time",
+    SECTION_INFO = [
+        {
+            "key": "overview",
+            "title": "Overview",
+            "description": "Dataset size, column types, uniqueness, duplicates, and target distribution.",
+            "applicable_columns": "all",
+        },
+        {
+            "key": "missingness",
+            "title": "Missingness",
+            "description": "Missing value rates and top missing columns plot.",
+            "applicable_columns": "all",
+        },
+        {
+            "key": "numeric",
+            "title": "Numeric",
+            "description": "Numeric summary statistics and histograms.",
+            "applicable_columns": "numeric",
+        },
+        {
+            "key": "categorical",
+            "title": "Categorical",
+            "description": "Top categories and frequency plots.",
+            "applicable_columns": "categorical/boolean",
+        },
+        {
+            "key": "correlation",
+            "title": "Correlation",
+            "description": "Correlation heatmap for numeric features.",
+            "applicable_columns": "numeric",
+        },
+        {
+            "key": "target",
+            "title": "Target",
+            "description": "Feature vs target summaries (requires target_col).",
+            "applicable_columns": "numeric/categorical",
+        },
+        {
+            "key": "outliers",
+            "title": "Outliers",
+            "description": "IQR-based outlier ratios for numeric features.",
+            "applicable_columns": "numeric",
+        },
+        {
+            "key": "time",
+            "title": "Time",
+            "description": "Time-series volume and target rate (requires time_col).",
+            "applicable_columns": "time_col",
+        },
     ]
+    SECTIONS = [s["key"] for s in SECTION_INFO]
 
     def __init__(
         self,
@@ -66,6 +107,7 @@ class EDA:
         section_columns: Optional[Dict[str, List[str]]] = None,
         target_col: Optional[str] = None,
         time_col: Optional[str] = None,
+        max_rows: Optional[int] = None,
         save_json: bool = True,
         generate_report: bool = True,
         report_name: str = "EDA_Report.pdf",
@@ -78,19 +120,37 @@ class EDA:
         else:
             path = file_path
 
+        rows_original = int(df.shape[0])
+        if max_rows and rows_original > max_rows:
+            df = df.head(max_rows).copy()
+
         target_col = target_col or self.target_col
         time_col = time_col or self.time_col
         section_columns = section_columns or {}
+        col_types = detect_column_types(df, id_cols=self.id_cols)
 
         results: Dict[str, Any] = {}
         run_sections = sections or self.SECTIONS
 
         for sec in run_sections:
-            cols = section_columns.get(sec) or columns
+            cols_requested = section_columns.get(sec) if sec in section_columns else columns
+            cols = self._filter_columns_for_section(cols_requested, sec, col_types, target_col, time_col, df)
+            if cols_requested is not None and not cols:
+                results[sec] = {
+                    "metrics": {},
+                    "plots": {},
+                    "summary": [f"No applicable columns for section '{sec}'. Skipped."],
+                }
+                continue
             df_sec = safe_select_columns(df, cols) if cols else df
 
             if sec == "overview":
-                results["overview"] = self.overview(df_sec, target_col=target_col, data_path=path)
+                results["overview"] = self.overview(
+                    df_sec,
+                    target_col=target_col,
+                    data_path=path,
+                    rows_original=rows_original,
+                )
             elif sec == "missingness":
                 results["missingness"] = self.missingness(df_sec)
             elif sec == "numeric":
@@ -139,8 +199,70 @@ class EDA:
 
         return results
 
+    def run_interactive(
+        self,
+        df: Optional[pd.DataFrame] = None,
+        file_path: Optional[str] = None,
+        target_col: Optional[str] = None,
+        time_col: Optional[str] = None,
+        max_rows: Optional[int] = None,
+        save_json: bool = True,
+        generate_report: bool = True,
+        report_name: str = "EDA_Report.pdf",
+    ) -> Dict[str, Any]:
+        """Interactive selection of sections and columns."""
+        if df is None:
+            path = file_path or auto_detect_data_path()
+            df = load_data(path)
+        else:
+            path = file_path
+
+        if max_rows and len(df) > max_rows:
+            df = df.head(max_rows).copy()
+
+        target_col = target_col or self.target_col
+        time_col = time_col or self.time_col
+        col_types = detect_column_types(df, id_cols=self.id_cols)
+
+        self.print_functions()
+        selection = input("Select functions by number (e.g., 1,2,3) or 'all': ").strip()
+        sections = self.parse_function_selection(selection)
+        if not sections:
+            sections = None
+
+        section_columns: Dict[str, List[str]] = {}
+        for sec in sections or self.SECTIONS:
+            applicable = self._applicable_columns_for_section(sec, col_types, target_col, time_col, df)
+            if not applicable:
+                continue
+            print(f"\nSection '{sec}' columns ({len(applicable)}):")
+            self._print_numbered_list(applicable, max_items=50)
+            cols_raw = input("Select columns by number/name (comma-separated), or press Enter for default: ").strip()
+            cols = self.parse_column_selection(cols_raw, applicable)
+            if cols:
+                section_columns[sec] = cols
+
+        return self.run(
+            df=df,
+            file_path=path,
+            sections=sections,
+            section_columns=section_columns,
+            target_col=target_col,
+            time_col=time_col,
+            max_rows=max_rows,
+            save_json=save_json,
+            generate_report=generate_report,
+            report_name=report_name,
+        )
+
     # Section methods
-    def overview(self, df: pd.DataFrame, target_col: Optional[str], data_path: Optional[str] = None) -> Dict[str, Any]:
+    def overview(
+        self,
+        df: pd.DataFrame,
+        target_col: Optional[str],
+        data_path: Optional[str] = None,
+        rows_original: Optional[int] = None,
+    ) -> Dict[str, Any]:
         """Overview of dataset and column types."""
         types = detect_column_types(df, id_cols=self.id_cols)
         duplicate_ratio = float(df.duplicated().mean())
@@ -148,6 +270,7 @@ class EDA:
 
         metrics = {
             "rows": int(df.shape[0]),
+            "rows_original": int(rows_original) if rows_original is not None else int(df.shape[0]),
             "columns": int(df.shape[1]),
             "data_path": data_path or "",
             "duplicate_ratio": round(duplicate_ratio, 6),
@@ -162,6 +285,8 @@ class EDA:
 
         summary = []
         summary.append(f"Dataset has {df.shape[0]} rows and {df.shape[1]} columns.")
+        if rows_original and rows_original > df.shape[0]:
+            summary.append(f"Rows limited to first {df.shape[0]} of {rows_original} for analysis.")
         summary.append(f"Duplicate row ratio is {duplicate_ratio:.2%}.")
         summary.append(f"Numeric columns: {types['numeric']}.")
         summary.append(f"Categorical columns: {types['categorical']}.")
@@ -454,3 +579,84 @@ class EDA:
         if isinstance(obj, (list, tuple, set)):
             return [self._convert(v) for v in obj]
         return obj
+
+    @classmethod
+    def list_functions(cls) -> List[Dict[str, str]]:
+        """Return EDA function catalog."""
+        return [dict(info) for info in cls.SECTION_INFO]
+
+    @classmethod
+    def parse_function_selection(cls, selection: Optional[str]) -> Optional[List[str]]:
+        """Parse section selection by number or name."""
+        if not selection:
+            return None
+        if selection.strip().lower() == "all":
+            return None
+        items = [s.strip() for s in selection.split(",") if s.strip()]
+        keys = [s["key"] for s in cls.SECTION_INFO]
+        if all(item.isdigit() for item in items):
+            idxs = [int(i) for i in items]
+            return [keys[i - 1] for i in idxs if 1 <= i <= len(keys)]
+        return [item for item in items if item in keys]
+
+    def print_functions(self) -> None:
+        """Print EDA functions with numbering."""
+        for idx, info in enumerate(self.SECTION_INFO, start=1):
+            print(f"{idx}. {info['title']} ({info['key']}): {info['description']} | columns: {info['applicable_columns']}")
+
+    def _filter_columns_for_section(
+        self,
+        cols: Optional[List[str]],
+        section: str,
+        col_types: Dict[str, List[str]],
+        target_col: Optional[str],
+        time_col: Optional[str],
+        df: pd.DataFrame,
+    ) -> Optional[List[str]]:
+        if not cols:
+            return None
+        applicable = set(self._applicable_columns_for_section(section, col_types, target_col, time_col, df))
+        return [c for c in cols if c in applicable]
+
+    def _applicable_columns_for_section(
+        self,
+        section: str,
+        col_types: Dict[str, List[str]],
+        target_col: Optional[str],
+        time_col: Optional[str],
+        df: pd.DataFrame,
+    ) -> List[str]:
+        all_cols = list(df.columns)
+        numeric = col_types["numeric"]
+        categorical = col_types["categorical"] + col_types["boolean"]
+        if section in ("numeric", "correlation", "outliers"):
+            return numeric
+        if section == "categorical":
+            return categorical
+        if section == "target":
+            cols = [c for c in numeric + categorical if c != target_col]
+            return cols
+        if section == "time":
+            return [time_col] if time_col and time_col in df.columns else []
+        return all_cols
+
+    @classmethod
+    def parse_column_selection(cls, selection: str, options: List[str]) -> Optional[List[str]]:
+        """Parse column selection by number or name."""
+        if not selection:
+            return None
+        if selection.strip().lower() == "all":
+            return options
+        items = [s.strip() for s in selection.split(",") if s.strip()]
+        if not items:
+            return None
+        if all(item.isdigit() for item in items):
+            idxs = [int(i) for i in items]
+            return [options[i - 1] for i in idxs if 1 <= i <= len(options)]
+        return [item for item in items if item in options]
+
+    def _print_numbered_list(self, items: List[str], max_items: int = 50) -> None:
+        if len(items) > max_items:
+            print(f"(showing first {max_items} of {len(items)} columns)")
+        for i, name in enumerate(items[:max_items], start=1):
+            print(f"{i}. {name}")

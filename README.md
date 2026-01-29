@@ -206,6 +206,13 @@ results = eda.run(
 eda-agent --data ./data/synthetic_bank_aml_200k.csv --target-col is_suspicious --output ./output_eda
 ```
 
+List functions and interactive selection:
+
+```bash
+eda-agent --list-functions
+eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --interactive
+```
+
 Auto-detect dataset (latest file in `./data`):
 
 ```bash
@@ -225,6 +232,12 @@ Skip JSON output (faster):
 
 ```bash
 eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --no-json
+```
+
+Limit rows for faster PDF:
+
+```bash
+eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --max-rows 5000
 ```
 
 ### Model Testing Agent - CLI
