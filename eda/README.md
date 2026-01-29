@@ -13,6 +13,60 @@ The EDA module provides automated exploratory data analysis with PDF and JSON ou
 - Outliers: IQR-based outlier ratios
 - Time: time-series volume and target rate (if time column provided)
 
+## Functions (Detailed)
+
+### 1) Overview
+- Purpose: dataset size, column types, uniqueness, duplicates, and target distribution (if provided).
+- Applicable columns: all.
+- Metrics: rows, columns, duplicate_ratio, unique_counts, typed column lists.
+- Plots: none.
+
+### 2) Missingness
+- Purpose: missing rate per column.
+- Applicable columns: all.
+- Metrics: missing_rate per column.
+- Plots: `missingness.png` (top 20 missing columns).
+
+### 3) Numeric
+- Purpose: numeric summary statistics and distributions.
+- Applicable columns: numeric.
+- Metrics: count/mean/std/min/percentiles/max per numeric column.
+- Plots: `hist_<col>.png` (up to top 5 numeric columns by variance when no columns are specified).
+
+### 4) Categorical
+- Purpose: category frequency summaries.
+- Applicable columns: categorical/boolean.
+- Metrics: top category counts per column.
+- Plots: `cat_<col>.png` (up to top 5 categorical columns by unique count when no columns are specified).
+
+### 5) Correlation
+- Purpose: correlation structure of numeric features.
+- Applicable columns: numeric.
+- Metrics: correlation matrix; optional target correlation if target is numeric.
+- Plots: `correlation_heatmap.png`.
+
+### 6) Target
+- Purpose: relate features to target.
+- Applicable columns: numeric/categorical (requires `target_col`).
+- Metrics: class-wise numeric means and categorical rates (classification) or numeric correlations (regression).
+- Plots: none.
+
+### 7) Outliers
+- Purpose: IQR-based outlier ratios per numeric feature.
+- Applicable columns: numeric.
+- Metrics: outlier_ratio per numeric column.
+- Plots: `outliers.png` (top 10 outlier ratios).
+
+### 8) Time
+- Purpose: time-series volume and target rate over time.
+- Applicable columns: time column (requires `time_col`).
+- Metrics: daily volume and optional daily target rate.
+- Plots: `time_volume.png`, `time_target_rate.png` (if target is categorical).
+
+Notes:
+- If you pass columns that do not apply to a function (e.g., strings to Numeric), the function is skipped with a summary note.
+- Time analysis runs only if the time column parses successfully (>= 90% valid).
+
 ## Inputs
 
 - Dataset file path (CSV, Parquet, or XLSX) or a pandas DataFrame
