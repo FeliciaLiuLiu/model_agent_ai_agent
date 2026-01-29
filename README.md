@@ -274,6 +274,10 @@ model-testing-agent-spark \
   --output ./output
 ```
 
+PySpark report filename:
+
+- `model_testing_agent_Model_Testing_Report_pyspark.pdf`
+
 ### Interactive Mode
 
 Interactive mode lets the user select which matrices to run and which columns to include for each matrix.

@@ -3,6 +3,7 @@ import os
 from typing import Dict, Any, List, Optional
 
 from ..core.report import ReportBuilder
+from ..core.utils import get_numeric_columns
 from ..matrices.effectiveness import ModelEffectivenessSpark
 from ..matrices.efficiency import ModelEfficiencySpark
 from ..matrices.stability import ModelStabilitySpark
@@ -38,13 +39,21 @@ class InteractiveAgentSpark:
             return {}
 
         results = {}
+        numeric_cols = [c for c in feature_cols if c in get_numeric_columns(df)]
+
         for key in selected:
             name, desc = self.MATRICES[key]
             print(f"\n{'=' * 60}\nConfiguring: {desc}\n{'=' * 60}")
-            cols = self._select_columns(feature_cols, name)
+            if name == "interpretability" and numeric_cols:
+                cols = self._select_columns(numeric_cols, name)
+            else:
+                cols = self._select_columns(feature_cols, name)
 
             df_sel = df.select(*(cols + [label_col])) if cols else df
-            feat_sel = cols if cols else feature_cols
+            if cols:
+                feat_sel = cols
+            else:
+                feat_sel = numeric_cols if (name == "interpretability" and numeric_cols) else feature_cols
 
             print(f"\nRunning {name}...")
             if name == "effectiveness":

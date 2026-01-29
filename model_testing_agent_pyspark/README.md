@@ -44,6 +44,10 @@ results = agent.run(
 agent.generate_report(results)
 ```
 
+The PySpark report filename is:
+
+- `model_testing_agent_Model_Testing_Report_pyspark.pdf`
+
 ## Interactive Mode
 
 ```python
@@ -72,6 +76,19 @@ model-testing-agent-spark \
   --label_col your_label \
   --output ./output \
   --interactive
+```
+
+Select matrices and columns:
+
+```bash
+model-testing-agent-spark \
+  --model ./path/to/your_model.joblib \
+  --data ./path/to/your_dataset.csv \
+  --label_col your_label \
+  --sections effectiveness,stability,interpretability \
+  --columns-stability col_a,col_b \
+  --columns-interpretability col_a,col_b \
+  --output ./output
 ```
 
 ## Example (Using Scripts 03/04)
@@ -108,3 +125,38 @@ model-testing-agent-spark \
 - The default training script uses encoded categorical columns, which are compatible with the Spark scoring UDF.
 - If your model expects raw string categorical columns with a ColumnTransformer, you must ensure consistent feature preprocessing.
 - SHAP is removed in the PySpark interpretability module.
+
+## Column Selection Rules
+
+- If you do not specify columns, all features are used for effectiveness/efficiency/stability.
+- For interpretability (Permutation/LIME/PDP/ICE), numeric columns are used by default.
+- You can pass `--columns` or `--columns-interpretability` to override defaults.
+
+## CML Execution (Spark Cluster)
+
+Use `spark-submit` or a CML session with Spark enabled. Ensure temp dirs are writable.
+
+```bash
+export SPARK_LOCAL_DIRS=/tmp/spark
+export JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=/tmp/spark"
+export MPLCONFIGDIR=./.mpl_cache
+export MPLBACKEND=Agg
+
+spark-submit \
+  --master yarn \
+  -m model_testing_agent_pyspark.runner.cli \
+  --model /path/to/model.joblib \
+  --data /path/to/data.csv \
+  --label_col your_label \
+  --output /path/to/output
+```
+
+If you run inside a CML Python session, you can also use:
+
+```bash
+python -m model_testing_agent_pyspark.runner.cli \
+  --model /path/to/model.joblib \
+  --data /path/to/data.csv \
+  --label_col your_label \
+  --output /path/to/output
+```

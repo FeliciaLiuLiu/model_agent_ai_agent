@@ -6,7 +6,7 @@ from typing import Dict, Any, List, Optional
 from pyspark.sql import DataFrame
 
 from ..core.report import ReportBuilder
-from ..core.utils import load_model as _load_model, load_data as _load_data, get_spark
+from ..core.utils import load_model as _load_model, load_data as _load_data, get_spark, get_numeric_columns
 from ..matrices.effectiveness import ModelEffectivenessSpark
 from ..matrices.efficiency import ModelEfficiencySpark
 from ..matrices.stability import ModelStabilitySpark
@@ -43,6 +43,7 @@ class ModelTestingAgentSpark:
     ) -> Dict[str, Any]:
         sections = sections or self.SECTIONS
         feature_cols = feature_cols or [c for c in df.columns if c != label_col]
+        numeric_cols = [c for c in feature_cols if c in get_numeric_columns(df)]
 
         def select_columns(df_in: DataFrame, cols: Optional[List[str]], feature_names_all: List[str]):
             if not cols:
@@ -88,7 +89,18 @@ class ModelTestingAgentSpark:
 
         if "interpretability" in sections:
             cols = section_columns.get("interpretability") or columns
-            df_int, feat_int = select_columns(df, cols, feature_cols) if cols else (df, feature_cols)
+            if cols:
+                # Keep only numeric columns for interpretability
+                cols = [c for c in cols if c in numeric_cols] if numeric_cols else cols
+                if cols:
+                    df_int, feat_int = select_columns(df, cols, feature_cols)
+                else:
+                    feat_int = numeric_cols if numeric_cols else feature_cols
+                    df_int = df.select(*(feat_int + [label_col]))
+            else:
+                # Default to numeric columns for PDP/ICE/Permutation/LIME
+                feat_int = numeric_cols if numeric_cols else feature_cols
+                df_int = df.select(*(feat_int + [label_col]))
             interp = self.interpretability.evaluate(
                 model, df_int, label_col=label_col, feature_cols=feat_int, **kwargs
             )
@@ -97,7 +109,7 @@ class ModelTestingAgentSpark:
         return results
 
     def generate_report(self, results: Dict[str, Any], filename: Optional[str] = None) -> str:
-        return self.report_builder.build(results, filename=filename or "model_testing_agent_Model_Testing_Report.pdf")
+        return self.report_builder.build(results, filename=filename or "model_testing_agent_Model_Testing_Report_pyspark.pdf")
 
     def save_results(self, results: Dict[str, Any], filename: str = "results.json") -> str:
         path = os.path.join(self.output_dir, filename)
