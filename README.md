@@ -101,74 +101,88 @@ pip install git+https://bitbucket.org/YOUR_COMPANY/adm_central_utility.git
 pip install "adm_central_utility[full] @ git+ssh://git@bitbucket.org/YOUR_COMPANY/adm_central_utility.git"
 ```
 
-## How To Run (Developer / Repo Owner)
+## How To Run on Windows (Developer / Repo Owner)
 
-### 1) Setup
+### 1) Setup (PowerShell)
 
-```bash
-cd /path/to/adm_central_utility
-python3 -m venv .venv
-source .venv/bin/activate
+```powershell
+cd C:\path\to\adm_central_utility
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-### 2) Run EDA (CLI)
+If you use **cmd.exe** instead of PowerShell:
+
+```bat
+cd C:\path\to\adm_central_utility
+python -m venv .venv
+.\.venv\Scripts\activate.bat
+pip install -r requirements.txt
+```
+
+### 2) Run EDA (CLI, PowerShell)
 
 Full report:
-```bash
-MPLCONFIGDIR=./.mpl_cache MPLBACKEND=Agg \
-eda-agent --data ./data/synthetic_bank_aml_200k.csv \
-  --target-col is_suspicious \
-  --output ./output_eda
+```powershell
+$env:MPLCONFIGDIR=".\.mpl_cache"
+$env:MPLBACKEND="Agg"
+eda-agent --data .\data\synthetic_bank_aml_200k.csv `
+  --target-col is_suspicious `
+  --output .\output_eda
 ```
 
 Interactive selection:
-```bash
-MPLCONFIGDIR=./.mpl_cache MPLBACKEND=Agg \
-eda-agent --data ./data/synthetic_bank_aml_200k.csv \
-  --output ./output_eda \
+```powershell
+$env:MPLCONFIGDIR=".\.mpl_cache"
+$env:MPLBACKEND="Agg"
+eda-agent --data .\data\synthetic_bank_aml_200k.csv `
+  --output .\output_eda `
   --interactive
 ```
 
-### 3) Run model_testing_agent (CLI)
+### 3) Run model_testing_agent (CLI, PowerShell)
 
-```bash
-MPLCONFIGDIR=./.mpl_cache MPLBACKEND=Agg \
-model-testing-agent \
-  --model ./models/bank_aml_gbt_py39.joblib \
-  --data ./data/synthetic_bank_aml_200k_test_py39.csv \
-  --label_col is_suspicious \
-  --output ./output
+```powershell
+$env:MPLCONFIGDIR=".\.mpl_cache"
+$env:MPLBACKEND="Agg"
+model-testing-agent `
+  --model .\models\bank_aml_gbt_py39.joblib `
+  --data .\data\synthetic_bank_aml_200k_test_py39.csv `
+  --label_col is_suspicious `
+  --output .\output
 ```
 
-### 4) Run model_testing_agent_pyspark (CLI)
+### 4) Run model_testing_agent_pyspark (CLI, PowerShell)
 
-```bash
-mkdir -p ./spark_tmp ./output_spark
+```powershell
+New-Item -ItemType Directory -Force .\spark_tmp, .\output_spark | Out-Null
 
-JAVA_TOOL_OPTIONS='-Djava.io.tmpdir=./spark_tmp' \
-SPARK_LOCAL_DIRS=./spark_tmp \
-SPARK_DRIVER_OPTS='-Djava.io.tmpdir=./spark_tmp' \
-SPARK_EXECUTOR_OPTS='-Djava.io.tmpdir=./spark_tmp' \
-MPLCONFIGDIR=./.mpl_cache MPLBACKEND=Agg \
-python3 -m model_testing_agent_pyspark.runner.cli \
-  --model ./models/bank_aml_gbt_py39.joblib \
-  --data ./data/synthetic_bank_aml_200k_test_py39.csv \
-  --label_col is_suspicious \
-  --output ./output_spark
+$env:JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=.\spark_tmp"
+$env:SPARK_LOCAL_DIRS=".\spark_tmp"
+$env:SPARK_DRIVER_OPTS="-Djava.io.tmpdir=.\spark_tmp"
+$env:SPARK_EXECUTOR_OPTS="-Djava.io.tmpdir=.\spark_tmp"
+$env:MPLCONFIGDIR=".\.mpl_cache"
+$env:MPLBACKEND="Agg"
+
+python -m model_testing_agent_pyspark.runner.cli `
+  --model .\models\bank_aml_gbt_py39.joblib `
+  --data .\data\synthetic_bank_aml_200k_test_py39.csv `
+  --label_col is_suspicious `
+  --output .\output_spark
 ```
 
 Output PDF:
-- `./output_eda/EDA_Report.pdf`
-- `./output/model_testing_agent_Model_Testing_Report.pdf`
-- `./output_spark/model_testing_agent_Model_Testing_Report_pyspark.pdf`
+- `.\output_eda\EDA_Report.pdf`
+- `.\output\model_testing_agent_Model_Testing_Report.pdf`
+- `.\output_spark\model_testing_agent_Model_Testing_Report_pyspark.pdf`
 
-## How To Run (User / API Usage)
+## How To Run on Windows (User / API Usage)
 
 ### 1) Install from repo
 
-```bash
-pip install -e /path/to/adm_central_utility
+```powershell
+pip install -e C:\path\to\adm_central_utility
 ```
 
 ### 2) EDA (API)
@@ -177,7 +191,7 @@ pip install -e /path/to/adm_central_utility
 from adm_central_utility import EDA
 
 eda = EDA(output_dir="./output_eda", target_col="your_target")
-eda.run(file_path="/path/to/your_dataset.csv")
+eda.run(file_path=r"C:\path\to\your_dataset.csv")
 ```
 
 Interactive section/column selection:
@@ -189,7 +203,7 @@ eda.print_functions()
 sections = EDA.parse_function_selection("1,2,3")
 
 results = eda.run(
-    file_path="/path/to/your_dataset.csv",
+    file_path=r"C:\path\to\your_dataset.csv",
     sections=sections,
     section_columns={
         "numeric": ["col_a", "col_b"],
@@ -203,8 +217,8 @@ results = eda.run(
 ```python
 from adm_central_utility.model_testing_agent import ModelTestingAgent
 
-model = ModelTestingAgent.load_model("/path/to/your_model.joblib")
-X, y, feature_names = ModelTestingAgent.load_data("/path/to/your_dataset.csv", label_col="your_label")
+model = ModelTestingAgent.load_model(r"C:\path\to\your_model.joblib")
+X, y, feature_names = ModelTestingAgent.load_data(r"C:\path\to\your_dataset.csv", label_col="your_label")
 
 agent = ModelTestingAgent(output_dir="./output")
 results = agent.run(model=model, X=X, y=y, feature_names=feature_names)
@@ -225,8 +239,8 @@ agent.run_interactive(model=model, X=X, y=y, feature_names=list(X.columns))
 from adm_central_utility import model_testing_agent_pyspark
 
 agent = model_testing_agent_pyspark.ModelTestingAgentSpark(output_dir="./output_spark")
-model = agent.load_model("/path/to/your_model.joblib")
-df, label_col, feature_cols = agent.load_data("/path/to/your_dataset.csv", label_col="your_label")
+model = agent.load_model(r"C:\path\to\your_model.joblib")
+df, label_col, feature_cols = agent.load_data(r"C:\path\to\your_dataset.csv", label_col="your_label")
 
 results = agent.run(model=model, df=df, label_col=label_col, feature_cols=feature_cols)
 agent.generate_report(results)
