@@ -404,5 +404,6 @@ Each matrix section includes result-aware text explanations based on the compute
 
 ## EDA Performance Notes
 
-- Plots are generated at 120 DPI with smaller figure sizes by default for faster rendering.
+- If you do not specify columns, EDA analyzes the top 5 numeric columns (by variance) and top 5 categorical columns (by unique count).
+- Plots are generated at 80 DPI with smaller figure sizes by default for faster rendering.
 - Time-series plots run only if the time column can be parsed successfully (>= 90% valid).

@@ -41,9 +41,9 @@ class EDA:
         time_col: Optional[str] = None,
         id_cols: Optional[List[str]] = None,
         tag: str = "eda",
-        plot_dpi: int = 120,
-        fig_size: Tuple[float, float] = (6.5, 4.0),
-        heatmap_size: Tuple[float, float] = (7.0, 5.0),
+        plot_dpi: int = 80,
+        fig_size: Tuple[float, float] = (6.0, 3.6),
+        heatmap_size: Tuple[float, float] = (6.5, 4.5),
         time_parse_min_ratio: float = 0.9,
     ):
         self.output_dir = output_dir
@@ -94,9 +94,19 @@ class EDA:
             elif sec == "missingness":
                 results["missingness"] = self.missingness(df_sec)
             elif sec == "numeric":
-                results["numeric"] = self.numeric(df_sec)
+                use_top_cols = cols is None
+                results["numeric"] = self.numeric(
+                    df_sec,
+                    max_cols=5 if use_top_cols else None,
+                    max_plots=5 if use_top_cols else None,
+                )
             elif sec == "categorical":
-                results["categorical"] = self.categorical(df_sec)
+                use_top_cols = cols is None
+                results["categorical"] = self.categorical(
+                    df_sec,
+                    max_cols=5 if use_top_cols else None,
+                    max_plots=5 if use_top_cols else None,
+                )
             elif sec == "correlation":
                 results["correlation"] = self.correlation(df_sec, target_col=target_col)
             elif sec == "target":
@@ -185,7 +195,12 @@ class EDA:
 
         return {"metrics": metrics, "plots": {"missingness": plot_path}, "summary": summary}
 
-    def numeric(self, df: pd.DataFrame, max_plots: int = 12) -> Dict[str, Any]:
+    def numeric(
+        self,
+        df: pd.DataFrame,
+        max_plots: Optional[int] = 12,
+        max_cols: Optional[int] = None,
+    ) -> Dict[str, Any]:
         """Numeric feature statistics and distributions."""
         num = df.select_dtypes(include=[np.number])
         metrics = {"numeric_stats": num.describe().round(6).to_dict()}
@@ -195,18 +210,32 @@ class EDA:
             summary.append("No numeric columns found.")
             return {"metrics": metrics, "plots": {}, "summary": summary}
 
-        summary.append(f"Numeric columns analyzed: {list(num.columns)}.")
+        if max_cols:
+            variances = num.var().sort_values(ascending=False)
+            keep_cols = list(variances.head(max_cols).index)
+            num = num[keep_cols]
+            metrics = {"numeric_stats": num.describe().round(6).to_dict()}
+            summary.append(f"Numeric columns analyzed (top {max_cols} by variance): {list(num.columns)}.")
+        else:
+            summary.append(f"Numeric columns analyzed: {list(num.columns)}.")
 
         # Plot histograms for up to max_plots columns
         plot_paths = {}
-        for col in list(num.columns)[:max_plots]:
+        plot_cols = list(num.columns) if max_plots is None else list(num.columns)[:max_plots]
+        for col in plot_cols:
             path = os.path.join(self.output_dir, f"hist_{col}.png")
             self._plot_hist(num[col], path, title=f"Distribution: {col}")
             plot_paths[f"hist_{col}"] = path
 
         return {"metrics": metrics, "plots": plot_paths, "summary": summary}
 
-    def categorical(self, df: pd.DataFrame, top_k: int = 10, max_plots: int = 12) -> Dict[str, Any]:
+    def categorical(
+        self,
+        df: pd.DataFrame,
+        top_k: int = 10,
+        max_plots: Optional[int] = 12,
+        max_cols: Optional[int] = None,
+    ) -> Dict[str, Any]:
         """Categorical feature distributions."""
         cat = df.select_dtypes(include=["object", "string", "category", "bool"])
         metrics = {}
@@ -216,13 +245,21 @@ class EDA:
             summary.append("No categorical columns found.")
             return {"metrics": metrics, "plots": {}, "summary": summary}
 
+        if max_cols:
+            nunique = cat.nunique(dropna=True).sort_values(ascending=False)
+            keep_cols = list(nunique.head(max_cols).index)
+            cat = cat[keep_cols]
+            summary.append(f"Categorical columns analyzed (top {max_cols} by unique count): {list(cat.columns)}.")
+        else:
+            summary.append(f"Categorical columns analyzed: {list(cat.columns)}.")
+
         plot_paths = {}
         for col in cat.columns:
             counts = cat[col].value_counts(dropna=False).head(top_k)
             metrics[col] = counts.to_dict()
-        summary.append(f"Categorical columns analyzed: {list(cat.columns)}.")
 
-        for col in list(cat.columns)[:max_plots]:
+        plot_cols = list(cat.columns) if max_plots is None else list(cat.columns)[:max_plots]
+        for col in plot_cols:
             counts = cat[col].value_counts(dropna=False).head(top_k)
             path = os.path.join(self.output_dir, f"cat_{col}.png")
             self._plot_bar(counts, path, title=f"Top {top_k} Categories: {col}", ylabel="Count")

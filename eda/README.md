@@ -105,5 +105,6 @@ eda-agent --data ./data/synthetic_bank_aml_200k.csv --target-col is_suspicious -
 - You can also pass a pandas DataFrame to `EDA.run(df=...)`.
 - You can set `EDA_DATA_PATH` to point to a dataset and omit `--data`.
 - The EDA runner auto-detects column types and will list numeric/categorical/time columns in the report.
-- Plots are generated at 120 DPI with smaller figure sizes by default to speed up rendering.
+- If you do not specify columns, EDA analyzes the top 5 numeric columns (by variance) and top 5 categorical columns (by unique count).
+- Plots are generated at 80 DPI with smaller figure sizes by default to speed up rendering.
 - Time-series plots run only if the time column can be parsed successfully (>= 90% valid).
