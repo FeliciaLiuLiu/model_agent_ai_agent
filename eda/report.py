@@ -92,12 +92,29 @@ class EDAReportBuilder:
         return elements
 
     def _build_table(self, headers: List[str], rows: List[List[Any]]) -> Table:
+        col_count = len(headers) if headers else 0
+        if not col_count:
+            for row in rows:
+                if isinstance(row, (list, tuple)) and row:
+                    col_count = max(col_count, len(row))
+            if col_count == 0:
+                return Table([[Paragraph("No data available.", self.styles["Small"])]])
+
         data: List[List[Any]] = []
         if headers:
             data.append([Paragraph(str(h), self.styles["Small"]) for h in headers])
+
         for row in rows[:200]:
-            data.append([Paragraph(str(cell), self.styles["Small"]) for cell in row])
-        table = Table(data, repeatRows=1, hAlign="LEFT")
+            if not isinstance(row, (list, tuple)):
+                row = [row]
+            if len(row) < col_count:
+                row = list(row) + [""] * (col_count - len(row))
+            if len(row) > col_count:
+                row = list(row)[:col_count]
+            cleaned = ["" if cell is None else cell for cell in row]
+            data.append([Paragraph(str(cell), self.styles["Small"]) for cell in cleaned])
+
+        table = Table(data, repeatRows=1 if headers else 0, hAlign="LEFT")
         style = TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
