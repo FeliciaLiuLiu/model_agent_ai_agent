@@ -603,27 +603,33 @@ class EDASpark:
 
         numeric_cols = self._select_numeric(df, col_types, selected_cols)
         categorical_cols = self._select_categorical(df, col_types, selected_cols)
+        chart_paths: List[Dict[str, str]] = []
 
+        def summarize_cols(cols: List[str], limit: int = 12) -> str:
+            if not cols:
+                return "None"
+            if len(cols) <= limit:
+                return ", ".join(cols)
+            extra = len(cols) - limit
+            return ", ".join(cols[:limit]) + f" (+{extra} more)"
+
+        summary = [
+            f"Numeric columns analyzed: {summarize_cols(numeric_cols)}",
+            f"Categorical columns analyzed: {summarize_cols(categorical_cols)}",
+        ]
+
+        stats = None
         if numeric_cols:
             stats = df.select(numeric_cols).describe().toPandas()
-            headers = ["stat"] + numeric_cols
-            rows = stats.values.tolist()
-            tables.append({
-                "title": "Numeric Summary Statistics",
-                "headers": headers,
-                "rows": rows,
-            })
             sample = df.select(numeric_cols).limit(self.sample_size).toPandas()
             for col in numeric_cols[: min(self.max_plots, len(numeric_cols))]:
                 path = os.path.join(self.output_dir, f"hist_{col}.png")
                 self._plot_hist(sample[col], path, title=f"Distribution: {col}")
                 plots[f"hist_{col}"] = path
-            summary.append(f"Numeric columns analyzed: {numeric_cols}.")
-        else:
-            summary.append("No numeric columns selected for univariate analysis.")
+                chart_paths.append({"title": f"{col} distribution", "path": path, "kind": "hist"})
 
+        topk_by_col: Dict[str, List[Dict[str, Any]]] = {}
         if categorical_cols:
-            rows = []
             total = df.count()
             for col in categorical_cols:
                 counts = (
@@ -633,23 +639,86 @@ class EDASpark:
                     .limit(self.top_k_categories)
                     .toPandas()
                 )
+                topk_by_col[col] = []
                 for _, r in counts.iterrows():
-                    rows.append([col, str(r[col]), int(r["count"]), round(float(r["count"] / total), 6)])
+                    topk_by_col[col].append(
+                        {"category": str(r[col]), "count": int(r["count"]), "rate": float(r["count"] / total)}
+                    )
                 if col in categorical_cols[: min(self.max_plots, len(categorical_cols))]:
                     path = os.path.join(self.output_dir, f"cat_{col}.png")
                     series = counts.set_index(col)["count"]
                     self._plot_bar(series, path, title=f"Top {self.top_k_categories}: {col}", ylabel="Count")
                     plots[f"cat_{col}"] = path
-            tables.append({
-                "title": "Categorical Frequency (Top K)",
-                "headers": ["Column", "Category", "Count", "Rate"],
-                "rows": rows,
-            })
-            summary.append(f"Categorical columns analyzed: {categorical_cols}.")
-        else:
-            summary.append("No categorical columns selected for univariate analysis.")
+                    chart_paths.append({"title": f"{col} top {self.top_k_categories}", "path": path, "kind": "bar"})
+            for col, rows in topk_by_col.items():
+                table_rows = [[r["category"], r["count"], r["rate"]] for r in rows]
+                tables.append({
+                    "title": f"Top K: {col}",
+                    "headers": ["Category", "Count", "Rate"],
+                    "rows": table_rows,
+                    "style": "categorical_topk",
+                    "col_widths": [3.0, 0.9, 0.9],
+                })
 
-        return {"metrics": metrics, "tables": tables, "plots": plots, "summary": summary}
+        numeric_summary_rows = []
+        if numeric_cols and stats is not None:
+            stats_idx = list(stats.index)
+            stat_map = {row[0]: row[1:] for row in stats.values.tolist()}
+            for col in numeric_cols:
+                col_vals = [stat_map[s][numeric_cols.index(col)] for s in stats_idx]
+                stat_dict = dict(zip(stats_idx, col_vals))
+                numeric_summary_rows.append(
+                    {
+                        "column": col,
+                        "count": float(stat_dict.get("count", 0) or 0),
+                        "mean": float(stat_dict.get("mean", 0) or 0),
+                        "std": float(stat_dict.get("stddev", 0) or 0),
+                        "min": float(stat_dict.get("min", 0) or 0),
+                        "p25": float(stat_dict.get("25%", 0) or 0),
+                        "p50": float(stat_dict.get("50%", 0) or 0),
+                        "p75": float(stat_dict.get("75%", 0) or 0),
+                        "max": float(stat_dict.get("max", 0) or 0),
+                    }
+                )
+
+        if numeric_summary_rows:
+            table_rows = [
+                [
+                    r.get("column", ""),
+                    r.get("count", None),
+                    r.get("mean", None),
+                    r.get("std", None),
+                    r.get("min", None),
+                    r.get("p25", None),
+                    r.get("p50", None),
+                    r.get("p75", None),
+                    r.get("max", None),
+                ]
+                for r in numeric_summary_rows
+            ]
+            tables.append({
+                "title": "Numeric Summary Statistics",
+                "headers": ["Column", "Count", "Mean", "Std", "Min", "25%", "50%", "75%", "Max"],
+                "rows": table_rows,
+                "style": "wide_numeric_stats",
+                "col_widths": [1.45, 0.65, 0.75, 0.75, 0.70, 0.65, 0.65, 0.65, 0.75],
+            })
+
+        univariate_payload = {
+            "numeric_columns": numeric_cols,
+            "categorical_columns": categorical_cols,
+            "numeric_summary_rows": numeric_summary_rows,
+            "categorical_topk_by_column": topk_by_col if categorical_cols else {},
+            "chart_paths": chart_paths,
+        }
+
+        return {
+            "metrics": metrics,
+            "tables": tables,
+            "plots": plots,
+            "summary": summary,
+            "univariate_payload": univariate_payload,
+        }
 
     def _section_bivariate_target(self, context: Dict[str, Any], selected_cols: Optional[List[str]]) -> Dict[str, Any]:
         from pyspark.sql import functions as F
