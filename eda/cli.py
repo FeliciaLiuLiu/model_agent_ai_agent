@@ -58,7 +58,7 @@ def main():
         try:
             from .spark_runner import EDASpark  # type: ignore
         except Exception as exc:
-            raise RuntimeError(\"PySpark is required for --spark. Install pyspark and retry.\") from exc
+            raise RuntimeError("PySpark is required for --spark. Install pyspark and retry.") from exc
         eda = EDASpark(
             output_dir=args.output,
             target_col=args.target_col,
