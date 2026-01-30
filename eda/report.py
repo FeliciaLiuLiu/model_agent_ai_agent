@@ -9,7 +9,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.utils import ImageReader
-from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, PageBreak, Paragraph, Preformatted, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
 class EDAReportBuilder:
@@ -52,7 +52,7 @@ class EDAReportBuilder:
 
             for table_def in payload.get("tables", []):
                 elements.append(Paragraph(table_def.get("title", "Table"), self.styles["SubHeader"]))
-                elements.append(self._build_table(table_def.get("headers", []), table_def.get("rows", [])))
+                elements.append(self._safe_table(table_def.get("headers", []), table_def.get("rows", [])))
                 elements.append(Spacer(1, 6))
 
             plots = payload.get("plots", {})
@@ -64,14 +64,14 @@ class EDAReportBuilder:
         elements.append(Paragraph("Skipped Sections", self.styles["SectionHeader"]))
         if skipped_sections:
             rows = [[s.get("section", ""), s.get("reason", "")] for s in skipped_sections]
-            elements.append(self._build_table(["Section", "Reason"], rows))
+            elements.append(self._safe_table(["Section", "Reason"], rows))
         else:
             elements.append(Paragraph("No sections were skipped.", self.styles["Normal"]))
 
         elements.append(Spacer(1, 8))
         elements.append(Paragraph("Run Configuration", self.styles["SubHeader"]))
         config_rows = [[k, str(v)] for k, v in config.items()]
-        elements.append(self._build_table(["Key", "Value"], config_rows))
+        elements.append(self._safe_table(["Key", "Value"], config_rows))
 
         doc.build(elements)
         return pdf_path
@@ -125,6 +125,24 @@ class EDAReportBuilder:
         )
         table.setStyle(style)
         return table
+
+    def _safe_table(self, headers: List[str], rows: List[List[Any]]) -> Any:
+        try:
+            table = self._build_table(headers, rows)
+            table.wrap(500, 700)
+            return table
+        except Exception:
+            lines: List[str] = []
+            if headers:
+                lines.append(" | ".join([str(h) for h in headers]))
+            for row in rows[:50]:
+                if not isinstance(row, (list, tuple)):
+                    row = [row]
+                cleaned = ["" if cell is None else str(cell) for cell in row]
+                lines.append(" | ".join(cleaned))
+            if not lines:
+                lines = ["No data available."]
+            return Preformatted("\n".join(lines), self.styles["Small"])
 
     def _image_grid(self, image_paths: List[str], cols: int = 2) -> List[Any]:
         images: List[Image] = []
