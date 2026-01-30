@@ -5,7 +5,7 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -13,6 +13,17 @@ import pandas as pd
 
 SUPPORTED_EXTS = [".csv", ".parquet"]
 TIMESTAMP_RE = re.compile(r"(?:^|_)(\d{8}_\d{6})(?:_|\\.|$)")
+
+DEFAULT_NULL_LIKE_VALUES = [
+    "na",
+    "n/a",
+    "null",
+    "none",
+    "",
+    "unknown",
+    "?",
+    "-",
+]
 
 
 def _resolve_data_dir(data_dir: str) -> Path:
@@ -179,6 +190,52 @@ def safe_select_columns(df: pd.DataFrame, cols: Optional[List[str]]) -> pd.DataF
     if missing:
         raise ValueError(f"Missing columns in dataset: {missing}")
     return df.loc[:, cols]
+
+
+def detect_null_like_values(
+    df: pd.DataFrame,
+    null_like_values: Optional[List[str]] = None,
+    max_examples: int = 3,
+) -> List[Dict[str, Any]]:
+    """Detect null-like placeholder values in string-like columns."""
+    null_like_values = null_like_values or DEFAULT_NULL_LIKE_VALUES
+    null_set = {str(v).strip().lower() for v in null_like_values}
+
+    results: List[Dict[str, Any]] = []
+    str_cols = [
+        col
+        for col in df.columns
+        if pd.api.types.is_object_dtype(df[col])
+        or pd.api.types.is_string_dtype(df[col])
+        or pd.api.types.is_categorical_dtype(df[col])
+    ]
+
+    total_rows = len(df)
+    if total_rows == 0:
+        return results
+
+    for col in str_cols:
+        series = df[col]
+        non_null = series[series.notna()]
+        if non_null.empty:
+            continue
+        normalized = non_null.astype(str).str.strip().str.lower()
+        mask = normalized.isin(null_set) | (normalized == "")
+        count = int(mask.sum())
+        if count <= 0:
+            continue
+        rate = float(count) / float(total_rows)
+        examples = list(normalized[mask].dropna().unique())[:max_examples]
+        results.append(
+            {
+                "column": col,
+                "null_like_count": count,
+                "null_like_rate": rate,
+                "examples": examples,
+            }
+        )
+
+    return results
 
 
 def pick_time_column(

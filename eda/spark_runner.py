@@ -491,6 +491,7 @@ class EDASpark:
 
     def _section_data_quality(self, context: Dict[str, Any]) -> Dict[str, Any]:
         from pyspark.sql import functions as F
+        from pyspark.sql.types import StringType
 
         df = context["df"]
         col_types = context["col_types"]
@@ -509,16 +510,37 @@ class EDASpark:
 
         missing_exprs = [F.sum(F.when(F.col(c).isNull(), 1).otherwise(0)).alias(c) for c in df.columns]
         missing_counts = df.agg(*missing_exprs).collect()[0].asDict()
-        missing_rows = []
+        missing_columns = []
+        non_missing_columns = []
         for col, cnt in missing_counts.items():
-            rate = float(cnt) / max(1, rows)
-            missing_rows.append([col, int(cnt), round(rate, 6)])
-        missing_rows.sort(key=lambda x: x[2], reverse=True)
-        tables.append({
-            "title": "Missingness",
-            "headers": ["Column", "Missing Count", "Missing Rate"],
-            "rows": missing_rows,
-        })
+            if cnt > 0:
+                rate = float(cnt) / max(1, rows)
+                missing_columns.append(
+                    {
+                        "column": col,
+                        "missing_count": int(cnt),
+                        "missing_rate": round(rate, 6),
+                    }
+                )
+            else:
+                non_missing_columns.append(col)
+        metrics["missingness_payload"] = {
+            "missing_columns": missing_columns,
+            "non_missing_columns": non_missing_columns,
+        }
+        if missing_columns:
+            missing_rows = [
+                [row["column"], row["missing_count"], row["missing_rate"]]
+                for row in missing_columns
+            ]
+            tables.append({
+                "title": "Missingness",
+                "headers": ["Column", "Missing Count", "Missing Rate"],
+                "rows": missing_rows,
+                "style": "missingness",
+            })
+        else:
+            metrics["missingness_skipped_reason"] = "No columns with missing values."
 
         type_rows = []
         for type_name in ["numeric", "categorical", "datetime", "boolean", "text", "other"]:
@@ -533,6 +555,37 @@ class EDASpark:
 
         summary.append(f"Dataset has {rows} rows and {cols} columns.")
         summary.append(f"Duplicate row ratio: {duplicate_ratio:.2%}.")
+
+        null_like_payload: List[Dict[str, Any]] = []
+        string_cols = [f.name for f in df.schema.fields if isinstance(f.dataType, StringType)]
+        if not string_cols:
+            metrics["null_like_skipped_reason"] = "No string-like columns available."
+        else:
+            default_nulls = ["na", "n/a", "null", "none", "", "unknown", "?", "-"]
+            total = rows
+            for col in string_cols:
+                norm = F.lower(F.trim(F.col(col)))
+                cond = norm.isin(default_nulls)
+                count = df.select(F.sum(F.when(cond, 1).otherwise(0)).alias("cnt")).collect()[0]["cnt"]
+                if count and count > 0:
+                    rate = float(count) / max(1, total)
+                    examples = (
+                        df.select(norm.alias("val"))
+                        .where(cond)
+                        .distinct()
+                        .limit(3)
+                        .toPandas()["val"]
+                        .tolist()
+                    )
+                    null_like_payload.append(
+                        {
+                            "column": col,
+                            "null_like_count": int(count),
+                            "null_like_rate": rate,
+                            "examples": examples,
+                        }
+                    )
+        metrics["null_like_payload"] = null_like_payload
 
         return {"metrics": metrics, "tables": tables, "plots": plots, "summary": summary}
 

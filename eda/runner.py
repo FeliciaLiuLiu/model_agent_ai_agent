@@ -11,6 +11,7 @@ import pandas as pd
 from .report import EDAReportBuilder
 from .utils import (
     detect_latest_dataset,
+    detect_null_like_values,
     ensure_datetime,
     infer_column_types,
     is_time_col_clean,
@@ -432,21 +433,40 @@ class EDA:
 
         missing_count = df.isna().sum()
         missing_rate = (missing_count / max(1, len(df))).round(6)
-        missing_table = [
-            [col, int(missing_count[col]), float(missing_rate[col])]
+        missing_columns = [
+            {
+                "column": col,
+                "missing_count": int(missing_count[col]),
+                "missing_rate": float(missing_rate[col]),
+            }
             for col in missing_rate.sort_values(ascending=False).index
+            if missing_count[col] > 0
         ]
-        tables.append({
-            "title": "Missingness",
-            "headers": ["Column", "Missing Count", "Missing Rate"],
-            "rows": missing_table,
-        })
+        non_missing_columns = [col for col in df.columns if missing_count[col] == 0]
+        missingness_payload = {
+            "missing_columns": missing_columns,
+            "non_missing_columns": non_missing_columns,
+        }
+        metrics["missingness_payload"] = missingness_payload
 
-        if not missing_rate.empty:
-            top_missing = missing_rate.head(min(20, len(missing_rate)))
-            path = os.path.join(self.output_dir, "missingness.png")
-            self._plot_bar(top_missing, path, title="Missing Rate (Top)", ylabel="Missing Rate")
-            plots["missingness"] = path
+        if missing_columns:
+            missing_table = [
+                [row["column"], row["missing_count"], row["missing_rate"]]
+                for row in missing_columns
+            ]
+            tables.append({
+                "title": "Missingness",
+                "headers": ["Column", "Missing Count", "Missing Rate"],
+                "rows": missing_table,
+                "style": "missingness",
+            })
+            top_missing = missing_rate[missing_rate > 0].head(min(20, len(missing_columns)))
+            if not top_missing.empty:
+                path = os.path.join(self.output_dir, "missingness.png")
+                self._plot_bar(top_missing, path, title="Missing Rate (Top)", ylabel="Missing Rate")
+                plots["missingness"] = path
+        else:
+            metrics["missingness_skipped_reason"] = "No columns with missing values."
 
         type_rows = []
         for type_name in ["numeric", "categorical", "datetime", "boolean", "text", "other"]:
@@ -474,6 +494,14 @@ class EDA:
             })
             summary.append("Some numeric columns contain negative values where non-negative is expected.")
 
+        null_like_payload = []
+        string_cols = col_types.get("categorical", []) + col_types.get("text", [])
+        if string_cols:
+            null_like_payload = detect_null_like_values(df)
+        else:
+            metrics["null_like_skipped_reason"] = "No string-like columns available."
+        metrics["null_like_payload"] = null_like_payload
+
         outlier_rows = []
         for col in self._select_numeric(df, col_types, None):
             q1 = df[col].quantile(0.25)
@@ -497,7 +525,9 @@ class EDA:
         if rows := context.get("rows_original"):
             if rows > df.shape[0]:
                 summary.append(f"Rows limited to {df.shape[0]} from {rows} for analysis.")
-        if missing_rate.max() > 0:
+        if not missing_columns:
+            summary.append("No columns with missing values were detected.")
+        else:
             summary.append(
                 f"Highest missing rate is {missing_rate.max():.2%} in '{missing_rate.idxmax()}'."
             )

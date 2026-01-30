@@ -105,3 +105,5 @@ python -m eda.cli \
 - Time-series and drift sections run only if a time column is detected and parse success is >= 90%.
 - Column type classification is shown as a table (numeric, categorical, datetime, boolean, text).
 - Tables are styled with headers, zebra striping, and numeric alignment.
+- Missingness table includes only columns with missing values; zero-missing columns are summarized in text.
+- Null-like placeholder values (e.g., "NA", "N/A", "NULL", empty strings, "UNKNOWN") are detected and reported.

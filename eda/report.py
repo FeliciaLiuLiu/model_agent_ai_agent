@@ -155,6 +155,9 @@ class EDAReportBuilder:
             if idx > 0:
                 elements.append(PageBreak())
 
+            if sec_key == "data_quality":
+                self._render_data_quality_section(elements, payload, doc.width)
+                continue
             if sec_key == "univariate":
                 self._render_univariate_summary(elements, payload, doc.width)
                 continue
@@ -239,6 +242,101 @@ class EDAReportBuilder:
             ]
             elements.append(self._summary_list(info) or Spacer(1, 1))
         return elements
+
+    def _render_data_quality_section(self, elements: List[Any], payload: Dict[str, Any], doc_width: float) -> None:
+        elements.append(Paragraph("Data Quality", self.styles["SectionHeaderStyle"]))
+        elements.append(Spacer(1, 6))
+
+        summary_flow = self._summary_list(payload.get("summary", []))
+        if summary_flow:
+            elements.append(summary_flow)
+            elements.append(Spacer(1, 8))
+
+        missingness_payload = payload.get("metrics", {}).get("missingness_payload", {})
+        missing_cols = missingness_payload.get("missing_columns", []) or []
+        non_missing_cols = missingness_payload.get("non_missing_columns", []) or []
+
+        elements.append(Paragraph("Missingness", self.styles["SubHeaderStyle"]))
+        if missing_cols:
+            rows = [
+                [r["column"], r["missing_count"], r["missing_rate"]]
+                for r in missing_cols
+            ]
+            table_def = {
+                "title": "Missingness",
+                "headers": ["Column", "Missing Count", "Missing Rate"],
+                "rows": rows,
+                "style": "missingness",
+            }
+            table = self._table_from_def(table_def)
+            if table is not None:
+                elements.append(table)
+            elements.append(Spacer(1, 6))
+
+            if non_missing_cols:
+                non_missing_text = self._truncate_columns(non_missing_cols, max_cols=10)
+                elements.append(
+                    Paragraph(
+                        f"The following columns have no missing values: {non_missing_text} "
+                        f"({len(non_missing_cols)} columns total).",
+                        self.styles["BodyTextStyle"],
+                    )
+                )
+        else:
+            elements.append(
+                Paragraph(
+                    "No columns with missing values were detected in this dataset.",
+                    self.styles["BodyTextStyle"],
+                )
+            )
+
+        elements.append(Spacer(1, 10))
+        elements.append(Paragraph("Null-like / Placeholder Values", self.styles["SubHeaderStyle"]))
+        elements.append(
+            Paragraph(
+                "These values are not nulls but may represent missing or invalid data placeholders.",
+                self.styles["SmallNoteStyle"],
+            )
+        )
+
+        null_like_payload = payload.get("metrics", {}).get("null_like_payload", []) or []
+        null_like_skip = payload.get("metrics", {}).get("null_like_skipped_reason")
+        if null_like_skip:
+            elements.append(Paragraph(null_like_skip, self.styles["BodyTextStyle"]))
+        elif not null_like_payload:
+            elements.append(Paragraph("No null-like placeholder values were detected.", self.styles["BodyTextStyle"]))
+        else:
+            rows = [
+                [r["column"], r["null_like_count"], r["null_like_rate"], ", ".join(r.get("examples", []))]
+                for r in null_like_payload
+            ]
+            table_def = {
+                "title": "Null-like / Placeholder Values",
+                "headers": ["Column", "Null-like Count", "Null-like Rate", "Example Values"],
+                "rows": rows,
+                "style": "null_like",
+            }
+            table = self._table_from_def(table_def)
+            if table is not None:
+                elements.append(table)
+
+        elements.append(Spacer(1, 12))
+
+        for table_def in payload.get("tables", []):
+            if table_def.get("title") in ("Missingness", "Null-like / Placeholder Values"):
+                continue
+            table = self._table_from_def(table_def)
+            if table is None:
+                continue
+            elements.append(Paragraph(table_def.get("title", "Table"), self.styles["SubHeaderStyle"]))
+            elements.append(table)
+            elements.append(Spacer(1, 8))
+
+        plot_paths = list(payload.get("plots", {}).values())
+        if plot_paths:
+            elements.append(Spacer(1, 8))
+            elements.append(Paragraph("Charts", self.styles["SubHeaderStyle"]))
+            elements.append(self._chart_grid(plot_paths, doc_width))
 
     def _summary_list(self, lines: Sequence[str]) -> Optional[ListFlowable]:
         items = [line for line in lines if line]
