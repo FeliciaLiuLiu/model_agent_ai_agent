@@ -35,10 +35,6 @@ htmlcov/
 .mpl_cache/
 
 # Large/generated artifacts
-/data/
-/models/
-/output/
-/output_eda/
 /output_pandas_py39/
 /output_spark/
 /spark_tmp/
