@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -24,6 +24,15 @@ class EDAReportBuilder:
         self.styles.add(ParagraphStyle(name="SectionHeader", fontSize=14, leading=18, spaceAfter=6, spaceBefore=10))
         self.styles.add(ParagraphStyle(name="SubHeader", fontSize=11, leading=14, spaceAfter=4, spaceBefore=6))
         self.styles.add(ParagraphStyle(name="Small", fontSize=8, leading=10))
+        self.styles.add(
+            ParagraphStyle(
+                name="SmallWrap",
+                fontSize=8,
+                leading=10,
+                wordWrap="CJK",
+                splitLongWords=True,
+            )
+        )
 
     def build(
         self,
@@ -52,11 +61,12 @@ class EDAReportBuilder:
                 elements.append(Spacer(1, 8))
 
             for table_def in payload.get("tables", []):
-                elements.append(Paragraph(table_def.get("title", "Table"), self.styles["SubHeader"]))
                 table = self._safe_table(table_def.get("headers", []), table_def.get("rows", []))
-                if table is not None:
-                    elements.append(table)
-                    elements.append(Spacer(1, 6))
+                if table is None:
+                    continue
+                elements.append(Paragraph(table_def.get("title", "Table"), self.styles["SubHeader"]))
+                elements.append(table)
+                elements.append(Spacer(1, 6))
 
             plots = payload.get("plots", {})
             if plots:
@@ -101,7 +111,7 @@ class EDAReportBuilder:
             elements.append(Paragraph(f"Time column: {config.get('time_col', '')}", self.styles["Small"]))
         return elements
 
-    def _build_table(self, headers: List[str], rows: List[List[Any]]) -> Table | None:
+    def _build_table(self, headers: List[str], rows: List[List[Any]]) -> Optional[Table]:
         if not headers and not rows:
             return None
         if headers and not rows:
@@ -117,7 +127,7 @@ class EDAReportBuilder:
 
         data: List[List[Any]] = []
         if headers:
-            data.append([Paragraph(str(h), self.styles["Small"]) for h in headers])
+            data.append([Paragraph(str(h), self.styles["SmallWrap"]) for h in headers])
 
         for row in rows[: self.max_table_rows]:
             if not isinstance(row, (list, tuple)):
@@ -127,15 +137,19 @@ class EDAReportBuilder:
             if len(row) > col_count:
                 row = list(row)[:col_count]
             cleaned = ["" if cell is None else cell for cell in row]
-            data.append([Paragraph(str(cell), self.styles["Small"]) for cell in cleaned])
+            data.append([Paragraph(str(cell), self.styles["SmallWrap"]) for cell in cleaned])
 
-        table = Table(data, repeatRows=1 if headers else 0, hAlign="LEFT")
+        available_width = A4[0] - 72
+        col_width = available_width / max(1, col_count)
+        col_widths = [col_width] * col_count
+        table = Table(data, colWidths=col_widths, repeatRows=1 if headers else 0, hAlign="LEFT")
         style = TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
                 ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("WORDWRAP", (0, 0), (-1, -1), "CJK"),
             ]
         )
         table.setStyle(style)

@@ -405,6 +405,18 @@ Limit rows for faster PDF:
 eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --max-rows 5000
 ```
 
+Sample 5% for faster PDF:
+
+```bash
+eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --sample-frac 0.05 --sample-seed 42
+```
+
+Change sample ratio (e.g., 10%):
+
+```bash
+eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --sample-frac 0.10 --sample-seed 42
+```
+
 ### Model Testing Agent - CLI
 
 ```bash

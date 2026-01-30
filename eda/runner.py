@@ -448,14 +448,11 @@ class EDA:
             self._plot_bar(top_missing, path, title="Missing Rate (Top)", ylabel="Missing Rate")
             plots["missingness"] = path
 
-        type_rows = [
-            ["numeric", ", ".join(col_types["numeric"]) or "-"],
-            ["categorical", ", ".join(col_types["categorical"]) or "-"],
-            ["datetime", ", ".join(col_types["datetime"]) or "-"],
-            ["boolean", ", ".join(col_types["boolean"]) or "-"],
-            ["text", ", ".join(col_types["text"]) or "-"],
-            ["other", ", ".join(col_types["other"]) or "-"],
-        ]
+        type_rows = []
+        for type_name in ["numeric", "categorical", "datetime", "boolean", "text", "other"]:
+            cols = col_types.get(type_name, [])
+            for col in cols:
+                type_rows.append([type_name, col])
         tables.append({
             "title": "Column Type Classification",
             "headers": ["Type", "Columns"],
