@@ -1,4 +1,9 @@
 """EDA module."""
 from .runner import EDA
 
-__all__ = ["EDA"]
+try:
+    from .spark_runner import EDASpark
+except Exception:
+    EDASpark = None
+
+__all__ = ["EDA", "EDASpark"]

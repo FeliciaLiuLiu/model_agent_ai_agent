@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import os
+import re
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -9,31 +11,72 @@ import numpy as np
 import pandas as pd
 
 
-SUPPORTED_EXTS = [".csv", ".parquet", ".xlsx", ".xls"]
+SUPPORTED_EXTS = [".csv", ".parquet"]
+TIMESTAMP_RE = re.compile(r"(?:^|_)(\d{8}_\d{6})(?:_|\\.|$)")
 
 
-def auto_detect_data_path(
+def _resolve_data_dir(data_dir: str) -> Path:
+    """Resolve data directory relative to cwd or package root."""
+    p = Path(data_dir)
+    if p.is_absolute():
+        return p
+    if p.exists():
+        return p
+    pkg_root = Path(__file__).resolve().parents[1]
+    candidate = pkg_root / data_dir
+    return candidate if candidate.exists() else p
+
+
+def parse_timestamp_from_filename(name: str) -> Optional[datetime]:
+    """Parse YYYYMMDD_HHMMSS timestamp from a filename."""
+    match = TIMESTAMP_RE.search(name)
+    if not match:
+        return None
+    try:
+        return datetime.strptime(match.group(1), "%Y%m%d_%H%M%S")
+    except ValueError:
+        return None
+
+
+def detect_latest_dataset(
     data_dir: str = "./data",
+    allowed_ext: Optional[List[str]] = None,
     env_var: str = "EDA_DATA_PATH",
 ) -> str:
-    """Find the most recently modified dataset in the data directory."""
+    """Detect the latest dataset by timestamp in filename, else by mtime."""
     env_path = os.environ.get(env_var)
     if env_path:
         return env_path
 
-    base = Path(data_dir)
+    allowed_ext = allowed_ext or SUPPORTED_EXTS
+    base = _resolve_data_dir(data_dir)
     if not base.exists():
         raise FileNotFoundError(f"Data directory not found: {data_dir}")
 
-    candidates = []
-    for ext in SUPPORTED_EXTS:
+    candidates: List[Path] = []
+    for ext in allowed_ext:
         candidates.extend(base.rglob(f"*{ext}"))
 
     if not candidates:
-        raise FileNotFoundError(f"No dataset found in {data_dir} (extensions: {SUPPORTED_EXTS})")
+        raise FileNotFoundError(f"No dataset found in {base} (extensions: {allowed_ext})")
+
+    timestamped: List[Tuple[datetime, Path]] = []
+    for path in candidates:
+        ts = parse_timestamp_from_filename(path.name)
+        if ts:
+            timestamped.append((ts, path))
+
+    if timestamped:
+        timestamped.sort(key=lambda x: x[0], reverse=True)
+        return str(timestamped[0][1])
 
     candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     return str(candidates[0])
+
+
+def auto_detect_data_path(data_dir: str = "./data", env_var: str = "EDA_DATA_PATH") -> str:
+    """Backward-compatible alias for detect_latest_dataset."""
+    return detect_latest_dataset(data_dir=data_dir, env_var=env_var)
 
 
 def load_data(path: str) -> pd.DataFrame:
@@ -43,27 +86,27 @@ def load_data(path: str) -> pd.DataFrame:
         return pd.read_csv(path)
     if ext == ".parquet":
         return pd.read_parquet(path)
-    if ext in [".xlsx", ".xls"]:
-        return pd.read_excel(path)
     raise ValueError(f"Unsupported file extension: {ext}")
 
 
-def detect_column_types(
+def infer_column_types(
     df: pd.DataFrame,
     id_cols: Optional[List[str]] = None,
     text_len_threshold: int = 30,
     text_unique_ratio: float = 0.5,
+    datetime_sample_size: int = 500,
+    datetime_min_ratio: float = 0.8,
 ) -> Dict[str, List[str]]:
     """Classify columns into numeric, categorical, datetime, text, boolean, and other."""
     id_cols = set(id_cols or [])
     cols = [c for c in df.columns if c not in id_cols]
 
-    numeric_cols = []
-    bool_cols = []
-    datetime_cols = []
-    categorical_cols = []
-    text_cols = []
-    other_cols = []
+    numeric_cols: List[str] = []
+    bool_cols: List[str] = []
+    datetime_cols: List[str] = []
+    categorical_cols: List[str] = []
+    text_cols: List[str] = []
+    other_cols: List[str] = []
 
     for col in cols:
         s = df[col]
@@ -77,7 +120,6 @@ def detect_column_types(
             numeric_cols.append(col)
             continue
 
-        # Object/string/category types
         if pd.api.types.is_categorical_dtype(s) or pd.api.types.is_object_dtype(s) or pd.api.types.is_string_dtype(s):
             non_null = s.dropna().astype(str)
             if non_null.empty:
@@ -85,6 +127,14 @@ def detect_column_types(
                 continue
             avg_len = float(non_null.str.len().mean())
             unique_ratio = non_null.nunique() / max(1, len(non_null))
+            name_hint = str(col).lower()
+            if any(tok in name_hint for tok in ["date", "time", "ts", "timestamp"]):
+                sample = non_null.head(datetime_sample_size)
+                parsed = pd.to_datetime(sample, errors="coerce")
+                ratio = float(parsed.notna().mean())
+                if ratio >= datetime_min_ratio:
+                    datetime_cols.append(col)
+                    continue
             if avg_len >= text_len_threshold or unique_ratio >= text_unique_ratio:
                 text_cols.append(col)
             else:
@@ -129,3 +179,21 @@ def safe_select_columns(df: pd.DataFrame, cols: Optional[List[str]]) -> pd.DataF
     if missing:
         raise ValueError(f"Missing columns in dataset: {missing}")
     return df.loc[:, cols]
+
+
+def pick_time_column(
+    df: pd.DataFrame,
+    col_types: Dict[str, List[str]],
+    min_valid_ratio: float = 0.9,
+) -> Optional[str]:
+    """Pick a likely time column if not provided."""
+    candidates = col_types.get("datetime", [])
+    if candidates:
+        return candidates[0]
+    for col in df.columns:
+        name_hint = str(col).lower()
+        if any(tok in name_hint for tok in ["date", "time", "ts", "timestamp"]):
+            clean, ratio = is_time_col_clean(df, col, min_valid_ratio=min_valid_ratio)
+            if clean:
+                return col
+    return None

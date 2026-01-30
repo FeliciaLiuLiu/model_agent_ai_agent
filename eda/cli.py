@@ -13,26 +13,27 @@ def _parse_list(value: Optional[str]) -> Optional[List[str]]:
 
 def main():
     parser = argparse.ArgumentParser(description="EDA Agent")
-    parser.add_argument("--data", default=None, help="Data file (.csv, .parquet, .xlsx). If omitted, auto-detects from ./data.")
+    parser.add_argument("--data", default=None, help="Data file (.csv, .parquet). If omitted, auto-detects from ./data.")
     parser.add_argument("--output", default="./output_eda", help="Output directory")
     parser.add_argument("--target-col", default=None, help="Target column name")
     parser.add_argument("--time-col", default=None, help="Time column name")
     parser.add_argument("--id-cols", default=None, help="Comma-separated ID columns to exclude")
     parser.add_argument("--sections", default=None, help="Comma-separated EDA sections to run")
     parser.add_argument("--columns", default=None, help="Comma-separated columns for all sections")
-    parser.add_argument("--columns-overview", default=None, help="Columns for overview section")
-    parser.add_argument("--columns-missingness", default=None, help="Columns for missingness section")
-    parser.add_argument("--columns-numeric", default=None, help="Columns for numeric section")
-    parser.add_argument("--columns-categorical", default=None, help="Columns for categorical section")
-    parser.add_argument("--columns-correlation", default=None, help="Columns for correlation section")
-    parser.add_argument("--columns-outliers", default=None, help="Columns for outliers section")
-    parser.add_argument("--columns-time", default=None, help="Columns for time section")
+    parser.add_argument("--columns-data-quality", default=None, help="Columns for data quality section")
+    parser.add_argument("--columns-target", default=None, help="Columns for target section")
+    parser.add_argument("--columns-univariate", default=None, help="Columns for univariate section")
+    parser.add_argument("--columns-bivariate-target", default=None, help="Columns for bivariate target section")
+    parser.add_argument("--columns-feature-vs-feature", default=None, help="Columns for feature vs feature section")
+    parser.add_argument("--columns-time-drift", default=None, help="Columns for time series and drift section")
+    parser.add_argument("--columns-summary", default=None, help="Columns for summary section")
     parser.add_argument("--no-report", action="store_true", help="Skip PDF report generation")
     parser.add_argument("--no-json", action="store_true", help="Skip JSON output")
     parser.add_argument("--report-name", default="EDA_Report.pdf", help="PDF report filename")
     parser.add_argument("--max-rows", type=int, default=None, help="Use only the first N rows for analysis")
     parser.add_argument("--interactive", action="store_true", help="Interactive selection mode")
     parser.add_argument("--list-functions", action="store_true", help="List available EDA functions and exit")
+    parser.add_argument("--spark", action="store_true", help="Use Spark implementation (requires pyspark)")
     args = parser.parse_args()
 
     if args.list_functions:
@@ -44,21 +45,33 @@ def main():
     columns = _parse_list(args.columns)
 
     section_columns: Dict[str, List[str]] = {
-        "overview": _parse_list(args.columns_overview),
-        "missingness": _parse_list(args.columns_missingness),
-        "numeric": _parse_list(args.columns_numeric),
-        "categorical": _parse_list(args.columns_categorical),
-        "correlation": _parse_list(args.columns_correlation),
-        "outliers": _parse_list(args.columns_outliers),
-        "time": _parse_list(args.columns_time),
+        "data_quality": _parse_list(args.columns_data_quality),
+        "target": _parse_list(args.columns_target),
+        "univariate": _parse_list(args.columns_univariate),
+        "bivariate_target": _parse_list(args.columns_bivariate_target),
+        "feature_vs_feature": _parse_list(args.columns_feature_vs_feature),
+        "time_drift": _parse_list(args.columns_time_drift),
+        "summary": _parse_list(args.columns_summary),
     }
 
-    eda = EDA(
-        output_dir=args.output,
-        target_col=args.target_col,
-        time_col=args.time_col,
-        id_cols=id_cols,
-    )
+    if args.spark:
+        try:
+            from .spark_runner import EDASpark  # type: ignore
+        except Exception as exc:
+            raise RuntimeError(\"PySpark is required for --spark. Install pyspark and retry.\") from exc
+        eda = EDASpark(
+            output_dir=args.output,
+            target_col=args.target_col,
+            time_col=args.time_col,
+            id_cols=id_cols,
+        )
+    else:
+        eda = EDA(
+            output_dir=args.output,
+            target_col=args.target_col,
+            time_col=args.time_col,
+            id_cols=id_cols,
+        )
 
     if args.interactive:
         eda.run_interactive(

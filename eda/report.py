@@ -1,124 +1,144 @@
-"""EDA PDF report generation."""
+"""EDA PDF report generation using ReportLab."""
 from __future__ import annotations
 
 import os
 import time
-import textwrap
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.utils import ImageReader
+from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
 class EDAReportBuilder:
     """Build PDF reports from EDA results."""
 
-    def __init__(self, output_dir: str = "./output_eda", tag: str = "eda"):
+    def __init__(self, output_dir: str = "./output_eda", tag: str = "eda") -> None:
         self.output_dir = output_dir
         self.tag = tag
         os.makedirs(output_dir, exist_ok=True)
+        self.styles = getSampleStyleSheet()
+        self.styles.add(ParagraphStyle(name="SectionHeader", fontSize=14, leading=18, spaceAfter=6, spaceBefore=10))
+        self.styles.add(ParagraphStyle(name="SubHeader", fontSize=11, leading=14, spaceAfter=4, spaceBefore=6))
+        self.styles.add(ParagraphStyle(name="Small", fontSize=8, leading=10))
 
-    def build(self, results: Dict[str, Any], filename: str = "EDA_Report.pdf") -> str:
+    def build(
+        self,
+        results: Dict[str, Any],
+        skipped_sections: List[Dict[str, Any]],
+        config: Dict[str, Any],
+        filename: str = "EDA_Report.pdf",
+    ) -> str:
         """Build PDF report."""
-        from matplotlib.backends.backend_pdf import PdfPages
-        import matplotlib.image as mpimg
-
         pdf_path = os.path.join(self.output_dir, filename)
-        section_order = [
-            "overview",
-            "missingness",
-            "numeric",
-            "categorical",
-            "correlation",
-            "outliers",
-            "time",
-        ]
-        ordered = [(k, results.get(k)) for k in section_order if k in results]
+        doc = SimpleDocTemplate(pdf_path, pagesize=A4, title="EDA Report")
 
-        with PdfPages(pdf_path) as pdf:
-            # Cover
-            fig = plt.figure(figsize=(8.27, 11.69))
-            fig.text(0.5, 0.96, "EDA Report", ha="center", fontsize=18, weight="bold")
-            fig.text(0.1, 0.90, f"Experiment: {self.tag}", fontsize=11)
-            fig.text(0.1, 0.86, f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}", fontsize=11)
-            pdf.savefig(fig)
-            plt.close(fig)
+        elements: List[Any] = []
+        elements.extend(self._cover_page(config))
 
-            for sec_key, payload in ordered:
-                if not payload:
-                    continue
-                title = sec_key.replace("_", " ").title()
-                metrics = payload.get("metrics", {})
-                plots = payload.get("plots", {})
-                summary = payload.get("summary", [])
+        for sec_key, payload in results.items():
+            if not payload:
+                continue
+            elements.append(PageBreak())
+            elements.append(Paragraph(sec_key.replace("_", " ").title(), self.styles["SectionHeader"]))
 
-                # Metrics pages
-                lines = self._flatten_metrics(metrics)
-                self._write_text_pages(pdf, f"{title} - Metrics", lines)
+            summary = payload.get("summary", [])
+            if summary:
+                for line in summary:
+                    elements.append(Paragraph(f"- {line}", self.styles["Normal"]))
+                elements.append(Spacer(1, 8))
 
-                # Summary pages
-                if summary:
-                    self._write_text_pages(pdf, f"{title} - Explanation", summary)
+            for table_def in payload.get("tables", []):
+                elements.append(Paragraph(table_def.get("title", "Table"), self.styles["SubHeader"]))
+                elements.append(self._build_table(table_def.get("headers", []), table_def.get("rows", [])))
+                elements.append(Spacer(1, 6))
 
-                # Plot pages
-                for plot_key, img_path in self._collect_images(plots):
-                    try:
-                        img = mpimg.imread(img_path)
-                        fig = plt.figure(figsize=(8.27, 11.69))
-                        ax = fig.add_axes([0.05, 0.05, 0.90, 0.90])
-                        ax.axis("off")
-                        ax.imshow(img)
-                        pdf.savefig(fig)
-                        plt.close(fig)
-                    except Exception:
-                        continue
+            plots = payload.get("plots", {})
+            if plots:
+                elements.append(Paragraph("Charts", self.styles["SubHeader"]))
+                elements.extend(self._image_grid(list(plots.values())))
 
+        elements.append(PageBreak())
+        elements.append(Paragraph("Skipped Sections", self.styles["SectionHeader"]))
+        if skipped_sections:
+            rows = [[s.get("section", ""), s.get("reason", "")] for s in skipped_sections]
+            elements.append(self._build_table(["Section", "Reason"], rows))
+        else:
+            elements.append(Paragraph("No sections were skipped.", self.styles["Normal"]))
+
+        elements.append(Spacer(1, 8))
+        elements.append(Paragraph("Run Configuration", self.styles["SubHeader"]))
+        config_rows = [[k, str(v)] for k, v in config.items()]
+        elements.append(self._build_table(["Key", "Value"], config_rows))
+
+        doc.build(elements)
         return pdf_path
 
-    def _flatten_metrics(self, metrics: Dict[str, Any]) -> List[str]:
-        """Flatten nested metrics into lines."""
-        lines: List[str] = []
+    def _cover_page(self, config: Dict[str, Any]) -> List[Any]:
+        elements: List[Any] = []
+        elements.append(Paragraph("EDA Report", self.styles["Title"]))
+        elements.append(Paragraph(f"Experiment: {self.tag}", self.styles["Normal"]))
+        elements.append(Paragraph(f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}", self.styles["Normal"]))
+        if config:
+            elements.append(Spacer(1, 10))
+            elements.append(Paragraph("Dataset", self.styles["SubHeader"]))
+            data_path = config.get("data_path", "")
+            elements.append(Paragraph(f"Data path: {data_path}", self.styles["Small"]))
+            elements.append(Paragraph(f"Rows used: {config.get('rows_used', '')}", self.styles["Small"]))
+            elements.append(Paragraph(f"Target column: {config.get('target_col', '')}", self.styles["Small"]))
+            elements.append(Paragraph(f"Time column: {config.get('time_col', '')}", self.styles["Small"]))
+        return elements
 
-        def add_line(prefix: str, value: Any) -> None:
-            if isinstance(value, dict):
-                for k, v in value.items():
-                    add_line(f"{prefix}{k}.", v)
-                return
-            if isinstance(value, list):
-                joined = ", ".join([str(x) for x in value])
-                lines.append(f"{prefix[:-1]}: {joined}")
-                return
-            lines.append(f"{prefix[:-1]}: {value}")
+    def _build_table(self, headers: List[str], rows: List[List[Any]]) -> Table:
+        data: List[List[Any]] = []
+        if headers:
+            data.append([Paragraph(str(h), self.styles["Small"]) for h in headers])
+        for row in rows[:200]:
+            data.append([Paragraph(str(cell), self.styles["Small"]) for cell in row])
+        table = Table(data, repeatRows=1, hAlign="LEFT")
+        style = TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+                ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]
+        )
+        table.setStyle(style)
+        return table
 
-        for k, v in metrics.items():
-            add_line(f"{k}.", v)
-        return lines
+    def _image_grid(self, image_paths: List[str], cols: int = 2) -> List[Any]:
+        images: List[Image] = []
+        for path in image_paths:
+            if not os.path.exists(path):
+                continue
+            images.append(self._scaled_image(path, max_width=220))
 
-    def _write_text_pages(self, pdf, title: str, lines: List[str]) -> None:
-        """Render wrapped text lines across one or more pages."""
-        idx = 0
-        while idx < len(lines):
-            fig = plt.figure(figsize=(8.27, 11.69))
-            fig.text(0.5, 0.96, title, ha="center", fontsize=14, weight="bold")
-            y = 0.90
-            while idx < len(lines) and y > 0.08:
-                line = lines[idx]
-                for wrapped in textwrap.wrap(line, width=110):
-                    if y <= 0.08:
-                        break
-                    fig.text(0.06, y, f"- {wrapped}", fontsize=9)
-                    y -= 0.018
-                idx += 1
-            pdf.savefig(fig)
-            plt.close(fig)
+        if not images:
+            return [Paragraph("No charts available.", self.styles["Normal"])]
 
-    def _collect_images(self, plots: Dict[str, Any], prefix: str = "") -> List[Tuple[str, str]]:
-        imgs: List[Tuple[str, str]] = []
-        for k, v in plots.items():
-            key = f"{prefix}{k}" if prefix else k
-            if isinstance(v, str) and v.endswith(".png"):
-                imgs.append((key, v))
-            elif isinstance(v, dict):
-                imgs.extend(self._collect_images(v, prefix=f"{key}."))
-        return imgs
+        rows: List[List[Any]] = []
+        row: List[Any] = []
+        for img in images:
+            row.append(img)
+            if len(row) == cols:
+                rows.append(row)
+                row = []
+        if row:
+            while len(row) < cols:
+                row.append(Spacer(1, 1))
+            rows.append(row)
+
+        table = Table(rows, hAlign="LEFT")
+        table.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
+        return [table]
+
+    def _scaled_image(self, path: str, max_width: int = 240) -> Image:
+        img = ImageReader(path)
+        width, height = img.getSize()
+        if width == 0:
+            return Image(path)
+        scale = max_width / float(width)
+        return Image(path, width=width * scale, height=height * scale)

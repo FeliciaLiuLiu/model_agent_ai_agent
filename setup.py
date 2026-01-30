@@ -11,6 +11,7 @@ setup(
         "pandas>=1.3.0",
         "scikit-learn>=1.0.0",
         "matplotlib>=3.4.0",
+        "reportlab>=3.6.0",
         "joblib>=1.1.0",
         "scipy>=1.7.0",
     ],
