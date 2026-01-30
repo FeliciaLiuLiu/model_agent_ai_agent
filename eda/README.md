@@ -123,12 +123,27 @@ eda-agent --data ./path/to/your_dataset.csv --output ./output_eda_spark --spark
 eda-agent --output ./output_eda --target-col your_target
 ```
 
+### Sampling for Faster Reports
+
+If the dataset filename matches `synthetic_aml_200k_*.csv`, the runner will auto-sample 5% by default.
+You can also set a custom sample fraction:
+
+```bash
+eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --sample-frac 0.05 --sample-seed 42
+```
+
 ## CLI Usage (Windows PowerShell)
 
 ### Non-Interactive (Pandas)
 
 ```powershell
 eda-agent --data C:\path\to\your_dataset.csv --output .\output_eda --target-col your_target
+```
+
+### Sampling for Faster Reports
+
+```powershell
+eda-agent --data C:\path\to\your_dataset.csv --output .\output_eda --sample-frac 0.05 --sample-seed 42
 ```
 
 ### Interactive (Pandas)

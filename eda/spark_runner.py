@@ -77,6 +77,8 @@ class EDASpark:
         max_plots: int = 10,
         top_k_categories: int = 10,
         sample_size: int = 5000,
+        sample_frac: Optional[float] = None,
+        sample_seed: int = 42,
         spark=None,
     ) -> None:
         from pyspark.sql import SparkSession
@@ -94,6 +96,8 @@ class EDASpark:
         self.max_plots = max_plots
         self.top_k_categories = top_k_categories
         self.sample_size = sample_size
+        self.sample_frac = sample_frac
+        self.sample_seed = sample_seed
         os.makedirs(output_dir, exist_ok=True)
         self.report_builder = EDAReportBuilder(output_dir=output_dir, tag=tag)
         self.spark = spark or SparkSession.builder.getOrCreate()
@@ -113,6 +117,8 @@ class EDASpark:
         report_name: str = "EDA_Report.pdf",
         data_dir: str = "./data",
         return_payload: bool = False,
+        sample_frac: Optional[float] = None,
+        sample_seed: Optional[int] = None,
     ) -> Dict[str, Any]:
         from pyspark.sql import functions as F
 
@@ -122,6 +128,14 @@ class EDASpark:
         else:
             path = file_path
 
+        sample_frac = sample_frac if sample_frac is not None else self.sample_frac
+        sample_seed = sample_seed if sample_seed is not None else self.sample_seed
+        if sample_frac is None and path and "synthetic_aml_200k_" in os.path.basename(path):
+            sample_frac = 0.05
+        if sample_frac is not None:
+            if not (0 < sample_frac <= 1):
+                raise ValueError(f"sample_frac must be in (0, 1], got {sample_frac}")
+            df = df.sample(withReplacement=False, fraction=sample_frac, seed=sample_seed)
         if max_rows:
             df = df.limit(max_rows)
 
@@ -186,6 +200,7 @@ class EDASpark:
                 "target_col": target_col or "",
                 "time_col": time_col or "",
                 "time_parse_ratio": round(float(time_ratio), 4),
+                "sample_frac": sample_frac if sample_frac is not None else "",
             },
         }
 
@@ -218,6 +233,8 @@ class EDASpark:
         report_name: str = "EDA_Report.pdf",
         data_dir: str = "./data",
         return_payload: bool = False,
+        sample_frac: Optional[float] = None,
+        sample_seed: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Interactive selection of sections and columns (Spark)."""
         if df is None:
@@ -226,6 +243,14 @@ class EDASpark:
         else:
             path = file_path
 
+        sample_frac = sample_frac if sample_frac is not None else self.sample_frac
+        sample_seed = sample_seed if sample_seed is not None else self.sample_seed
+        if sample_frac is None and path and "synthetic_aml_200k_" in os.path.basename(path):
+            sample_frac = 0.05
+        if sample_frac is not None:
+            if not (0 < sample_frac <= 1):
+                raise ValueError(f"sample_frac must be in (0, 1], got {sample_frac}")
+            df = df.sample(withReplacement=False, fraction=sample_frac, seed=sample_seed)
         if max_rows:
             df = df.limit(max_rows)
 
@@ -273,6 +298,8 @@ class EDASpark:
             report_name=report_name,
             data_dir=data_dir,
             return_payload=return_payload,
+            sample_frac=sample_frac,
+            sample_seed=sample_seed,
         )
 
     @classmethod

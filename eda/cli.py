@@ -31,6 +31,8 @@ def main():
     parser.add_argument("--no-json", action="store_true", help="Skip JSON output")
     parser.add_argument("--report-name", default="EDA_Report.pdf", help="PDF report filename")
     parser.add_argument("--max-rows", type=int, default=None, help="Use only the first N rows for analysis")
+    parser.add_argument("--sample-frac", type=float, default=None, help="Random sample fraction (0-1) for faster reports")
+    parser.add_argument("--sample-seed", type=int, default=42, help="Random seed for sampling")
     parser.add_argument("--interactive", action="store_true", help="Interactive selection mode")
     parser.add_argument("--list-functions", action="store_true", help="List available EDA functions and exit")
     parser.add_argument("--spark", action="store_true", help="Use Spark implementation (requires pyspark)")
@@ -83,6 +85,8 @@ def main():
             save_json=not args.no_json,
             generate_report=not args.no_report,
             report_name=args.report_name,
+            sample_frac=args.sample_frac,
+            sample_seed=args.sample_seed,
         )
     else:
         eda.run(
@@ -97,6 +101,8 @@ def main():
             save_json=not args.no_json,
             generate_report=not args.no_report,
             report_name=args.report_name,
+            sample_frac=args.sample_frac,
+            sample_seed=args.sample_seed,
         )
 
     if not args.no_report:
