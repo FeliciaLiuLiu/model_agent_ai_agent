@@ -85,20 +85,117 @@ flowchart TD
   MTA --> CLI[runner/cli.py]
 ```
 
-## Installation
+## Installation (dbConda + IDE)
+
+### Step 1 - Create a dbConda environment
+
+1) Open a dbConda terminal.
+2) Create a virtual environment:
 
 ```bash
-# Base dependencies
+conda create --name <env_name> python=<version>
+# Example
+conda create --name adm_central_utility python=3.11
+```
+
+3) Activate the environment:
+
+```bash
+conda activate adm_central_utility
+```
+
+4) If activation succeeds, the prompt should show:
+
+```
+(adm_central_utility) C:\>
+```
+
+5) Install pip inside the environment:
+
+```bash
+conda install pip
+```
+
+### Step 2 - Configure the IDE interpreter (example: PyCharm)
+
+1) In the dbConda terminal, activate the environment and run:
+
+```bash
+where python
+```
+
+Note the full path to `python.exe` for this environment.
+
+2) Open your IDE (e.g., PyCharm), then go to:
+
+```
+Settings | Project: <Path to Project location> | Project Interpreter
+```
+
+3) Click the gear icon and choose **Add Interpreter**.
+4) Select **Conda Environment** and set the **Conda Executable** path so the IDE can load dbConda. A common location is:
+
+```
+C:\Users\<username>\dev\dbConda-2023_09-py311-r36\Scripts\conda.exe
+```
+
+Alternatively:
+
+```
+C:\Users\<username>\dev\dbConda-2023_09-py311-r36\condabin\conda.bat
+```
+
+5) Click **Load Environments** to read the dbConda environment list.
+6) Choose **Existing environment** and select your environment (e.g., `adm_central_utility`).
+7) If it does not appear, set the Interpreter path manually, for example:
+
+```
+C:\Users\<username>\dev\dbConda-2023_09-py311-r36\envs\adm_central_utility\python.exe
+```
+
+8) Apply the interpreter settings to the current project.
+
+### Step 3 - Activate the environment in the IDE terminal
+
+1) Open the IDE terminal.
+2) If conda is already initialized, activate the environment:
+
+```bash
+conda activate adm_central_utility
+```
+
+3) If the terminal cannot find `conda`, run this once in system PowerShell:
+
+```powershell
+C:\Users\<username>\dev\dbConda-2023_09-py311-r36\condabin\conda.bat init powershell
+```
+
+Then reopen the IDE terminal and activate the environment again:
+
+```bash
+conda activate adm_central_utility
+```
+
+### Step 4 - Install project dependencies
+
+After the environment and interpreter are set up, confirm the terminal prefix is the active environment, then:
+
+1) In the IDE terminal, `cd` to the project root (e.g., `adm_central_utility`).
+2) Install required packages:
+
+```bash
 pip install -r requirements.txt
+```
 
-# From Bitbucket (SSH)
-pip install git+ssh://git@bitbucket.org/YOUR_COMPANY/adm_central_utility.git
+3) Optional: if `pip install` fails, try one of the following in **Command Prompt (cmd.exe)**:
 
-# From Bitbucket (HTTPS)
-pip install git+https://bitbucket.org/YOUR_COMPANY/adm_central_utility.git
+```bat
+for /f %i in (requirements.txt) do conda install %i -y
+```
 
-# For full features (SHAP, LIME)
-pip install "adm_central_utility[full] @ git+ssh://git@bitbucket.org/YOUR_COMPANY/adm_central_utility.git"
+```bat
+conda install -y -c conda-forge ^
+  numpy pandas scikit-learn matplotlib reportlab joblib scipy shap numba llvmlite lime pytest
 ```
 
 ## How To Run on Windows (Developer / Repo Owner)
