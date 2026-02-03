@@ -131,6 +131,11 @@ The PDF will be saved to:
 ./output_eda/EDA_Report.pdf
 ```
 
+Target column notes:
+- The target column can be any label you want EDA to analyze (binary or numeric).
+- If omitted, target-dependent sections are skipped.
+- For the mixed bank + fintech dataset from `scripts/07_generate_synthetic_aml_mixed_bank_fintech.py`, use `--target-col sar_actual`.
+
 ## Auto-Detection
 
 - If `--data` is not provided, the pipeline finds the latest file in `./data` (by timestamp in filename, otherwise by mtime).

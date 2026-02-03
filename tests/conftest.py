@@ -33,3 +33,18 @@ def df_no_string():
         "a": [1, 2, 3],
         "b": [4.0, 5.0, 6.0],
     })
+
+
+@pytest.fixture()
+def df_mixed_types():
+    return pd.DataFrame({
+        "num": [1.5, 2.5, 3.0],
+        "cat": ["alpha", "beta", "gamma"],
+        "flag": [True, False, True],
+        "ts": pd.to_datetime(["2024-01-01", "2024-01-02", "2024-01-03"]),
+        "text": [
+            "Customer reported unexpected transfer pattern after device change.",
+            "Recurring payments observed with merchant mismatch to profile.",
+            "Device location shift not consistent with historical behavior.",
+        ],
+    })

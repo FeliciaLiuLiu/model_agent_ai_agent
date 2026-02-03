@@ -65,6 +65,10 @@ agent.generate_report(results)
 - `scripts/`: synthetic dataset generation and model training.
   - `scripts/03_generate_bank_aml_dataset.py`: generates AML dataset.
   - `scripts/04_train_bank_aml_gbt_pipeline.py`: trains model and saves test set.
+  - `scripts/05_generate_synthetic_aml_200k_timeseries.py`: generates time-series synthetic AML data.
+  - `scripts/06_train_synthetic_aml_logreg_pipeline.py`: trains a Spark ML pipeline on synthetic data.
+  - `scripts/07_generate_synthetic_aml_mixed_bank_fintech.py`: generates mixed bank + fintech AML data (target `sar_actual`).
+  - `scripts/08_train_mlp_mixed_aml.py`: trains an MLP model on the mixed AML dataset.
 - `examples/`: example usage.
 - `requirements.txt`, `setup.py`: dependency and packaging definitions.
 
@@ -467,6 +471,11 @@ results = eda.run(
 ```bash
 eda-agent --data ./data/synthetic_bank_aml_200k.csv --target-col is_suspicious --output ./output_eda
 ```
+
+Target column notes:
+- The target column can be any label you want EDA to analyze (binary or numeric).
+- If omitted, target-dependent sections are skipped.
+- For the mixed bank + fintech dataset from `scripts/07_generate_synthetic_aml_mixed_bank_fintech.py`, use `--target-col sar_actual`.
 
 List functions and interactive selection:
 
