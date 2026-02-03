@@ -10,8 +10,8 @@ def _context(df):
     }
 
 
-def test_univariate_payload_structure(df_null_like):
-    eda = EDA()
+def test_univariate_payload_structure(df_null_like, local_tmp_path):
+    eda = EDA(output_dir=str(local_tmp_path))
     result = eda._section_univariate(_context(df_null_like), selected_cols=None)
     payload = result.get("univariate_payload")
 

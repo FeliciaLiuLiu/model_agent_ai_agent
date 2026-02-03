@@ -10,8 +10,8 @@ def _context(df):
     }
 
 
-def test_missingness_payload_shape(df_missing):
-    eda = EDA()
+def test_missingness_payload_shape(df_missing, local_tmp_path):
+    eda = EDA(output_dir=str(local_tmp_path))
     result = eda._section_data_quality(_context(df_missing))
     payload = result["metrics"]["missingness_payload"]
 
@@ -22,8 +22,8 @@ def test_missingness_payload_shape(df_missing):
         assert 0 <= row["missing_rate"] <= 1
 
 
-def test_null_like_payload_shape(df_null_like):
-    eda = EDA()
+def test_null_like_payload_shape(df_null_like, local_tmp_path):
+    eda = EDA(output_dir=str(local_tmp_path))
     result = eda._section_data_quality(_context(df_null_like))
     payload = result["metrics"]["null_like_payload"]
 

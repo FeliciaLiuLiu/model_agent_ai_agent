@@ -10,8 +10,8 @@ def _context(df):
     }
 
 
-def test_missingness_includes_only_missing(df_missing):
-    eda = EDA()
+def test_missingness_includes_only_missing(df_missing, local_tmp_path):
+    eda = EDA(output_dir=str(local_tmp_path))
     result = eda._section_data_quality(_context(df_missing))
     payload = result["metrics"]["missingness_payload"]
 
@@ -21,8 +21,8 @@ def test_missingness_includes_only_missing(df_missing):
     assert payload["non_missing_columns"] == ["b"]
 
 
-def test_missingness_rate(df_missing):
-    eda = EDA()
+def test_missingness_rate(df_missing, local_tmp_path):
+    eda = EDA(output_dir=str(local_tmp_path))
     result = eda._section_data_quality(_context(df_missing))
     payload = result["metrics"]["missingness_payload"]
 
@@ -31,8 +31,8 @@ def test_missingness_rate(df_missing):
     assert abs(rate - 0.25) < 1e-6
 
 
-def test_no_missing_columns(df_no_missing):
-    eda = EDA()
+def test_no_missing_columns(df_no_missing, local_tmp_path):
+    eda = EDA(output_dir=str(local_tmp_path))
     result = eda._section_data_quality(_context(df_no_missing))
     payload = result["metrics"]["missingness_payload"]
 
