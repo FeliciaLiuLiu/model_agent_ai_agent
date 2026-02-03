@@ -187,7 +187,7 @@ After the environment and interpreter are set up, confirm the terminal prefix is
 pip install -r requirements.txt
 ```
 
-3) Optional: if `pip install` fails, try one of the following in **Command Prompt (cmd.exe)**:
+3) Optional: if `pip install` fails, try one of the following in the **IDE terminal**:
 
 ```bat
 for /f %i in (requirements.txt) do conda install %i -y
