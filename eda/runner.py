@@ -16,6 +16,7 @@ from .utils import (
     infer_column_types,
     is_time_col_clean,
     load_data,
+    pick_target_column,
     pick_time_column,
 )
 
@@ -128,8 +129,8 @@ class EDA:
         if max_rows and rows_original > max_rows:
             df = df.head(max_rows).copy()
 
-        target_col = target_col or self.target_col
         col_types = infer_column_types(df, id_cols=self.id_cols)
+        target_col = target_col or self.target_col or pick_target_column(df, col_types, id_cols=self.id_cols)
         time_col = time_col or self.time_col or pick_time_column(df, col_types, self.time_parse_min_ratio)
         section_columns = section_columns or {}
 
@@ -231,8 +232,8 @@ class EDA:
         if max_rows and len(df) > max_rows:
             df = df.head(max_rows).copy()
 
-        target_col = target_col or self.target_col
         col_types = infer_column_types(df, id_cols=self.id_cols)
+        target_col = target_col or self.target_col or pick_target_column(df, col_types, id_cols=self.id_cols)
         time_col = time_col or self.time_col or pick_time_column(df, col_types, self.time_parse_min_ratio)
 
         time_clean, time_ratio = (False, 0.0)

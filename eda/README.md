@@ -118,11 +118,16 @@ conda install -y -c conda-forge ^
 ## Quick Start (Pandas)
 
 ```bash
-# 1) Generate a synthetic AML dataset (optional)
-python scripts/05_generate_synthetic_aml_200k_timeseries.py --out-dir ./data --rows 200000 --seed 7 --suspicious-rate 0.04 --label-noise 0.02
+# 1) Optional: generate a synthetic AML dataset (example only)
+python scripts/05_generate_synthetic_aml_200k_timeseries.py --out-dir ./data
+```
 
+`05_generate_synthetic_aml_200k_timeseries.py` is only an example generator. You can use other data generators
+or place your dataset directly under `./data`.
+
+```bash
 # 2) Run EDA (auto-detect latest dataset)
-python -m eda.cli --output ./output_eda --target-col is_suspicious
+python -m eda.cli --output ./output_eda
 ```
 
 The PDF will be saved to:
@@ -133,8 +138,9 @@ The PDF will be saved to:
 
 Target column notes:
 - The target column can be any label you want EDA to analyze (binary or numeric).
-- If omitted, target-dependent sections are skipped.
-- For the mixed bank + fintech dataset from `scripts/07_generate_synthetic_aml_mixed_bank_fintech.py`, use `--target-col sar_actual`.
+- If not provided, EDA will attempt to auto-detect a likely target by name and binary values.
+- If auto-detection fails, target-dependent sections are skipped.
+- For the mixed bank + fintech dataset from `scripts/07_generate_synthetic_aml_mixed_bank_fintech.py`, the target is `sar_actual`.
 
 ## Auto-Detection
 

@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from .report import EDAReportBuilder
-from .utils import detect_latest_dataset
+from .utils import detect_latest_dataset, pick_target_column_from_names
 
 
 class EDASpark:
@@ -125,7 +125,7 @@ class EDASpark:
         if max_rows:
             df = df.limit(max_rows)
 
-        target_col = target_col or self.target_col
+        target_col = target_col or self.target_col or pick_target_column_from_names(df.columns)
         col_types = self._infer_column_types(df)
         time_col = time_col or self.time_col or self._pick_time_column(col_types)
 
@@ -229,7 +229,7 @@ class EDASpark:
         if max_rows:
             df = df.limit(max_rows)
 
-        target_col = target_col or self.target_col
+        target_col = target_col or self.target_col or pick_target_column_from_names(df.columns)
         col_types = self._infer_column_types(df)
         time_col = time_col or self.time_col or self._pick_time_column(col_types)
 

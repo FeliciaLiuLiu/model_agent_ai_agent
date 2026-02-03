@@ -469,13 +469,14 @@ results = eda.run(
 ### EDA CLI
 
 ```bash
-eda-agent --data ./data/synthetic_bank_aml_200k.csv --target-col is_suspicious --output ./output_eda
+eda-agent --data ./data/synthetic_bank_aml_200k.csv --output ./output_eda
 ```
 
 Target column notes:
 - The target column can be any label you want EDA to analyze (binary or numeric).
-- If omitted, target-dependent sections are skipped.
-- For the mixed bank + fintech dataset from `scripts/07_generate_synthetic_aml_mixed_bank_fintech.py`, use `--target-col sar_actual`.
+- If not provided, EDA will attempt to auto-detect a likely target by name and binary values.
+- If auto-detection fails, target-dependent sections are skipped.
+- For the mixed bank + fintech dataset from `scripts/07_generate_synthetic_aml_mixed_bank_fintech.py`, the target is `sar_actual`.
 
 List functions and interactive selection:
 

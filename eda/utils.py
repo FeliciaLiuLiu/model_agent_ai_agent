@@ -25,6 +25,23 @@ DEFAULT_NULL_LIKE_VALUES = [
     "-",
 ]
 
+TARGET_NAME_HINTS = [
+    "sar_actual",
+    "is_suspicious",
+    "suspicious",
+    "sar",
+    "fraud",
+    "aml",
+    "is_fraud",
+    "fraud_flag",
+    "alert",
+    "flag",
+    "target",
+    "label",
+    "class",
+    "y",
+]
+
 
 def _resolve_data_dir(data_dir: str) -> Path:
     """Resolve data directory relative to cwd or package root."""
@@ -162,6 +179,58 @@ def infer_column_types(
         "boolean": bool_cols,
         "other": other_cols,
     }
+
+
+def _score_target_name(name: str) -> int:
+    lowered = name.lower()
+    score = 0
+    for hint in TARGET_NAME_HINTS:
+        if lowered == hint:
+            score = max(score, 3)
+        elif hint in lowered:
+            score = max(score, 2)
+    if lowered.startswith("is_") or lowered.endswith("_flag"):
+        score = max(score, 1)
+    return score
+
+
+def pick_target_column_from_names(names: List[str]) -> Optional[str]:
+    best_name = None
+    best_score = 0
+    for name in names:
+        score = _score_target_name(name)
+        if score > best_score:
+            best_score = score
+            best_name = name
+    return best_name if best_score > 0 else None
+
+
+def pick_target_column(
+    df: pd.DataFrame,
+    col_types: Dict[str, List[str]],
+    id_cols: Optional[List[str]] = None,
+) -> Optional[str]:
+    """Pick a likely target column from a dataframe."""
+    id_cols = set(id_cols or [])
+    candidates = [c for c in df.columns if c not in id_cols and c not in col_types.get("datetime", [])]
+
+    by_name = pick_target_column_from_names(candidates)
+    if by_name:
+        return by_name
+
+    # Fallback: choose a binary numeric/boolean column.
+    fallback_cols = col_types.get("boolean", []) + col_types.get("numeric", [])
+    for col in fallback_cols:
+        if col in id_cols:
+            continue
+        series = df[col].dropna()
+        if series.empty:
+            continue
+        unique = pd.unique(series)
+        if len(unique) <= 2:
+            return col
+
+    return None
 
 
 def ensure_datetime(df: pd.DataFrame, time_col: str) -> pd.Series:
