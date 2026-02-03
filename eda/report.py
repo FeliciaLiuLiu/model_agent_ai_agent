@@ -238,7 +238,6 @@ class EDAReportBuilder:
                 f"Rows used: {config.get('rows_used', '')}",
                 f"Target column: {config.get('target_col', '')}",
                 f"Time column: {config.get('time_col', '')}",
-                f"Sample fraction: {config.get('sample_frac', '')}",
             ]
             elements.append(self._summary_list(info) or Spacer(1, 1))
         return elements

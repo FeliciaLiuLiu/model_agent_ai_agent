@@ -27,6 +27,25 @@ def _generate_ip_addresses(rng: np.random.Generator, rows: int) -> np.ndarray:
     return np.array([f"10.{x}.{y}.{z}" for x, y, z in zip(a, b, c)], dtype=object)
 
 
+def _generate_text_notes(rng: np.random.Generator, rows: int, prefix: str) -> np.ndarray:
+    templates = np.array(
+        [
+            "Customer reported unexpected transfer pattern after device change.",
+            "Transaction flagged for manual review due to high velocity behavior.",
+            "Recurring payments observed with merchant mismatch to profile.",
+            "Multiple small transfers aggregated into a single payout request.",
+            "Counterparty linked to prior alerts; escalating for review.",
+            "New account activity with elevated risk score and overseas destination.",
+            "Chargeback history detected; verify supporting documentation.",
+            "Device location shift not consistent with historical behavior.",
+        ],
+        dtype=object,
+    )
+    base = rng.choice(templates, size=rows)
+    refs = rng.integers(100000, 999999, size=rows)
+    return np.array([f"{prefix}: {note} Ref-{ref}" for note, ref in zip(base, refs)], dtype=object)
+
+
 def _inject_numeric_missing(df: pd.DataFrame, rng: np.random.Generator, rate: float) -> None:
     numeric_cols = [
         "account_age_days",
@@ -39,6 +58,8 @@ def _inject_numeric_missing(df: pd.DataFrame, rng: np.random.Generator, rate: fl
         "sum_amount_24h",
         "velocity_score",
         "ip_risk_score",
+        "geo_lat",
+        "geo_lon",
     ]
     for col in numeric_cols:
         mask = rng.random(len(df)) < rate
@@ -47,7 +68,15 @@ def _inject_numeric_missing(df: pd.DataFrame, rng: np.random.Generator, rate: fl
 
 
 def _inject_boolean_missing(df: pd.DataFrame, rng: np.random.Generator, rate: float) -> None:
-    bool_cols = ["is_international", "is_new_device", "is_high_risk_country", "is_crypto_related"]
+    bool_cols = [
+        "is_international",
+        "is_new_device",
+        "is_high_risk_country",
+        "is_crypto_related",
+        "is_pep",
+        "sanctions_match",
+        "is_business_account",
+    ]
     for col in bool_cols:
         mask = rng.random(len(df)) < rate
         if mask.any():
@@ -58,7 +87,12 @@ def _inject_string_missing(df: pd.DataFrame, rng: np.random.Generator, rate: flo
     string_cols = [
         "merchant_name",
         "merchant_category",
+        "merchant_description",
         "payment_memo",
+        "case_status",
+        "case_notes",
+        "device_fingerprint",
+        "payment_reference",
         "device_id",
         "app_version",
         "counterparty_id",
@@ -180,6 +214,15 @@ def generate_dataset(
     risk_segment = rng.choice(["low", "mid", "high"], size=rows, p=[0.6, 0.3, 0.1])
     kyc_level = rng.choice(["basic", "standard", "enhanced"], size=rows, p=[0.4, 0.45, 0.15])
 
+    case_status = rng.choice(["open", "closed", "escalated", "monitoring"], size=rows, p=[0.4, 0.35, 0.15, 0.1])
+    case_notes = _generate_text_notes(rng, rows, prefix="CaseNote")
+    merchant_description = _generate_text_notes(rng, rows, prefix="MerchantDesc")
+    device_fingerprint = np.array(
+        [f"fp_{rng.integers(0, 16**12):012x}" for _ in range(rows)],
+        dtype=object,
+    )
+    payment_reference = np.array([f"REF{rng.integers(0, 99999999):08d}" for _ in range(rows)], dtype=object)
+
     account_age_days = rng.integers(30, 3650, size=rows)
     customer_tenure_days = rng.integers(10, 5000, size=rows)
 
@@ -192,12 +235,17 @@ def generate_dataset(
     sum_amount_24h = txn_amount * np.maximum(1, num_txn_24h) * rng.uniform(0.6, 1.5, size=rows)
     velocity_score = np.clip((num_txn_24h * 0.35 + sum_amount_24h / 6000) + rng.normal(0, 0.35, size=rows), 0, None)
     ip_risk_score = np.clip(rng.normal(loc=0.4, scale=0.2, size=rows), 0, 1)
+    geo_lat = rng.uniform(-85.0, 85.0, size=rows)
+    geo_lon = rng.uniform(-170.0, 170.0, size=rows)
 
     is_international = origin_country != dest_country
     is_new_device = rng.random(size=rows) < 0.12
     high_risk_countries = {"NG", "RU", "PK"}
     is_high_risk_country = np.array([(o in high_risk_countries) or (d in high_risk_countries) for o, d in zip(origin_country, dest_country)])
     is_crypto_related = np.array([t == "crypto_trade" or r == "crypto" for t, r in zip(txn_type, payment_rail)])
+    is_pep = rng.random(size=rows) < 0.03
+    sanctions_match = rng.random(size=rows) < 0.01
+    is_business_account = rng.random(size=rows) < 0.25
 
     features = {
         "rows": rows,
@@ -214,10 +262,20 @@ def generate_dataset(
         flip = rng.random(size=rows) < label_noise
         sar_actual = np.where(flip, 1 - sar_actual, sar_actual)
 
+    settle_offsets = rng.integers(60, 3600 * 48, size=rows).astype("timedelta64[s]")
+    settlement_time = txn_ts + settle_offsets
+    dob_start = datetime(1950, 1, 1)
+    dob_offsets = rng.integers(0, 56 * 365, size=rows)
+    customer_birth_date = np.array(
+        [dob_start + timedelta(days=int(d)) for d in dob_offsets],
+        dtype="datetime64[ns]",
+    )
+
     df = pd.DataFrame(
         {
             "txn_id": [f"TXN{idx:010d}" for idx in range(rows)],
             "txn_ts": txn_ts,
+            "settlement_time": settlement_time,
             "platform": platform,
             "channel": channel,
             "payment_rail": payment_rail,
@@ -228,17 +286,23 @@ def generate_dataset(
             "counterparty_id": [f"CP{idx % 60000:07d}" for idx in range(rows)],
             "merchant_name": rng.choice(merchant_names, size=rows),
             "merchant_category": rng.choice(merchant_category, size=rows),
+            "merchant_description": merchant_description,
             "payment_memo": rng.choice(payment_memo, size=rows),
+            "payment_reference": payment_reference,
             "origin_country": origin_country,
             "dest_country": dest_country,
             "currency": currency,
             "device_type": device_type,
             "device_id": device_id,
+            "device_fingerprint": device_fingerprint,
             "ip_address": ip_address,
             "app_version": app_version,
             "account_type": account_type,
             "kyc_level": kyc_level,
             "risk_segment": risk_segment,
+            "case_status": case_status,
+            "case_notes": case_notes,
+            "customer_birth_date": customer_birth_date,
             "account_age_days": account_age_days,
             "customer_tenure_days": customer_tenure_days,
             "txn_amount": txn_amount.round(2),
@@ -249,10 +313,15 @@ def generate_dataset(
             "sum_amount_24h": sum_amount_24h.round(2),
             "velocity_score": velocity_score.round(3),
             "ip_risk_score": ip_risk_score.round(3),
+            "geo_lat": geo_lat.round(5),
+            "geo_lon": geo_lon.round(5),
             "is_international": is_international,
             "is_new_device": is_new_device,
             "is_high_risk_country": is_high_risk_country,
             "is_crypto_related": is_crypto_related,
+            "is_pep": is_pep,
+            "sanctions_match": sanctions_match,
+            "is_business_account": is_business_account,
             "sar_actual": sar_actual,
         }
     )

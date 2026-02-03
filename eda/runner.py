@@ -85,8 +85,6 @@ class EDA:
         max_categorical_cols: int = 10,
         max_plots: int = 10,
         top_k_categories: int = 10,
-        sample_frac: Optional[float] = None,
-        sample_seed: int = 42,
     ) -> None:
         self.output_dir = output_dir
         self.target_col = target_col
@@ -100,8 +98,6 @@ class EDA:
         self.max_categorical_cols = max_categorical_cols
         self.max_plots = max_plots
         self.top_k_categories = top_k_categories
-        self.sample_frac = sample_frac
-        self.sample_seed = sample_seed
         os.makedirs(output_dir, exist_ok=True)
         self.report_builder = EDAReportBuilder(output_dir=output_dir, tag=tag)
 
@@ -120,8 +116,6 @@ class EDA:
         report_name: str = "EDA_Report.pdf",
         data_dir: str = "./data",
         return_payload: bool = False,
-        sample_frac: Optional[float] = None,
-        sample_seed: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Run EDA on a dataset and optionally generate a report."""
         if df is None:
@@ -131,14 +125,6 @@ class EDA:
             path = file_path
 
         rows_original = int(df.shape[0])
-        sample_frac = sample_frac if sample_frac is not None else self.sample_frac
-        sample_seed = sample_seed if sample_seed is not None else self.sample_seed
-        if sample_frac is None and path and "synthetic_aml_200k_" in os.path.basename(path):
-            sample_frac = 0.05
-        if sample_frac is not None:
-            if not (0 < sample_frac <= 1):
-                raise ValueError(f"sample_frac must be in (0, 1], got {sample_frac}")
-            df = df.sample(frac=sample_frac, random_state=sample_seed)
         if max_rows and rows_original > max_rows:
             df = df.head(max_rows).copy()
 
@@ -199,14 +185,13 @@ class EDA:
             "skipped_sections": skipped,
             "config": {
                 "data_path": path or "",
-            "rows_original": rows_original,
-            "rows_used": int(df.shape[0]),
-            "target_col": target_col or "",
-            "time_col": time_col or "",
-            "time_parse_ratio": round(float(time_ratio), 4),
-            "sample_frac": sample_frac if sample_frac is not None else "",
-        },
-    }
+                "rows_original": rows_original,
+                "rows_used": int(df.shape[0]),
+                "target_col": target_col or "",
+                "time_col": time_col or "",
+                "time_parse_ratio": round(float(time_ratio), 4),
+            },
+        }
 
         if save_json:
             json_path = os.path.join(self.output_dir, "eda_results.json")
@@ -235,8 +220,6 @@ class EDA:
         report_name: str = "EDA_Report.pdf",
         data_dir: str = "./data",
         return_payload: bool = False,
-        sample_frac: Optional[float] = None,
-        sample_seed: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Interactive selection of sections and columns."""
         if df is None:
@@ -245,14 +228,6 @@ class EDA:
         else:
             path = file_path
 
-        sample_frac = sample_frac if sample_frac is not None else self.sample_frac
-        sample_seed = sample_seed if sample_seed is not None else self.sample_seed
-        if sample_frac is None and path and "synthetic_aml_200k_" in os.path.basename(path):
-            sample_frac = 0.05
-        if sample_frac is not None:
-            if not (0 < sample_frac <= 1):
-                raise ValueError(f"sample_frac must be in (0, 1], got {sample_frac}")
-            df = df.sample(frac=sample_frac, random_state=sample_seed)
         if max_rows and len(df) > max_rows:
             df = df.head(max_rows).copy()
 
@@ -306,8 +281,6 @@ class EDA:
             report_name=report_name,
             data_dir=data_dir,
             return_payload=return_payload,
-            sample_frac=sample_frac,
-            sample_seed=sample_seed,
         )
 
     @classmethod
