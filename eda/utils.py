@@ -15,14 +15,11 @@ SUPPORTED_EXTS = [".csv", ".parquet"]
 TIMESTAMP_RE = re.compile(r"(?:^|_)(\d{8}_\d{6})(?:_|\\.|$)")
 
 DEFAULT_NULL_LIKE_VALUES = [
-    "na",
-    "n/a",
-    "null",
-    "none",
     "",
-    "unknown",
-    "?",
-    "-",
+    "NA",
+    "N/A",
+    "NULL",
+    "UNKNOWN",
 ]
 
 TARGET_NAME_HINTS = [
@@ -71,7 +68,7 @@ def detect_latest_dataset(
     allowed_ext: Optional[List[str]] = None,
     env_var: str = "EDA_DATA_PATH",
 ) -> str:
-    """Detect the latest dataset by timestamp in filename, else by mtime."""
+    """Detect the latest dataset by file modification time (mtime)."""
     env_path = os.environ.get(env_var)
     if env_path:
         return env_path
@@ -87,16 +84,6 @@ def detect_latest_dataset(
 
     if not candidates:
         raise FileNotFoundError(f"No dataset found in {base} (extensions: {allowed_ext})")
-
-    timestamped: List[Tuple[datetime, Path]] = []
-    for path in candidates:
-        ts = parse_timestamp_from_filename(path.name)
-        if ts:
-            timestamped.append((ts, path))
-
-    if timestamped:
-        timestamped.sort(key=lambda x: x[0], reverse=True)
-        return str(timestamped[0][1])
 
     candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     return str(candidates[0])

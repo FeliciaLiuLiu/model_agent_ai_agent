@@ -10,6 +10,7 @@ import pandas as pd
 
 from .report import EDAReportBuilder
 from .utils import (
+    DEFAULT_NULL_LIKE_VALUES,
     detect_latest_dataset,
     detect_null_like_values,
     ensure_datetime,
@@ -386,6 +387,25 @@ class EDA:
         nunique = df[categorical].nunique(dropna=True).sort_values(ascending=False)
         return list(nunique.head(self.max_categorical_cols).index)
 
+    def _missing_counts(self, df: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
+        null_set = {str(v).strip().lower() for v in DEFAULT_NULL_LIKE_VALUES}
+        missing_counts: Dict[str, int] = {}
+        for col in df.columns:
+            series = df[col]
+            missing = series.isna()
+            if (
+                pd.api.types.is_object_dtype(series)
+                or pd.api.types.is_string_dtype(series)
+                or pd.api.types.is_categorical_dtype(series)
+            ):
+                normalized = series.astype(str).str.strip().str.lower()
+                null_like_mask = normalized.isin(null_set) & ~missing
+                missing = missing | null_like_mask
+            missing_counts[col] = int(missing.sum())
+        missing_count = pd.Series(missing_counts)
+        missing_rate = (missing_count / max(1, len(df))).round(6)
+        return missing_count, missing_rate
+
     def _section_data_quality(self, context: Dict[str, Any]) -> Dict[str, Any]:
         df = context["df"]
         col_types = context["col_types"]
@@ -405,8 +425,7 @@ class EDA:
                 dup_ids = df.duplicated(subset=id_cols).mean()
                 metrics["duplicate_id_ratio"] = round(float(dup_ids), 6)
 
-        missing_count = df.isna().sum()
-        missing_rate = (missing_count / max(1, len(df))).round(6)
+        missing_count, missing_rate = self._missing_counts(df)
         missing_columns = [
             {
                 "column": col,
@@ -471,7 +490,7 @@ class EDA:
         null_like_payload = []
         string_cols = col_types.get("categorical", []) + col_types.get("text", [])
         if string_cols:
-            null_like_payload = detect_null_like_values(df)
+            null_like_payload = detect_null_like_values(df, null_like_values=DEFAULT_NULL_LIKE_VALUES)
         else:
             metrics["null_like_skipped_reason"] = "No string-like columns available."
         metrics["null_like_payload"] = null_like_payload
@@ -493,6 +512,11 @@ class EDA:
                 "headers": ["Column", "Outlier Ratio"],
                 "rows": outlier_rows[: min(20, len(outlier_rows))],
             })
+            top_outliers = outlier_rows[: min(20, len(outlier_rows))]
+            outlier_series = pd.Series({row[0]: row[1] for row in top_outliers})
+            path = os.path.join(self.output_dir, "outlier_iqr.png")
+            self._plot_bar(outlier_series, path, title="Outlier Ratio (IQR)", ylabel="Outlier Ratio")
+            plots["outlier_iqr"] = path
 
         summary.append(f"Dataset has {df.shape[0]} rows and {df.shape[1]} columns.")
         summary.append(f"Duplicate row ratio: {duplicate_ratio:.2%}.")
@@ -838,7 +862,8 @@ class EDA:
         col_types = context["col_types"]
         summary: List[str] = []
 
-        missing_rate = df.isna().mean().sort_values(ascending=False)
+        _, missing_rate = self._missing_counts(df)
+        missing_rate = missing_rate.sort_values(ascending=False)
         high_missing = missing_rate[missing_rate > 0.2]
         if not high_missing.empty:
             summary.append(f"High missingness columns: {list(high_missing.index[:5])}.")

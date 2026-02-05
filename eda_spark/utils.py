@@ -12,14 +12,11 @@ SUPPORTED_EXTS = [".csv"]
 TIMESTAMP_RE = re.compile(r"(?:^|_)(\d{8}_\d{6})(?:_|\\.|$)")
 
 DEFAULT_NULL_LIKE_VALUES = [
-    "na",
-    "n/a",
-    "null",
-    "none",
     "",
-    "unknown",
-    "?",
-    "-",
+    "NA",
+    "N/A",
+    "NULL",
+    "UNKNOWN",
 ]
 
 TARGET_NAME_HINTS = [

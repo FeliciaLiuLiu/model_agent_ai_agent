@@ -152,6 +152,7 @@ class EDASpark:
         return_payload: bool = False,
     ) -> Dict[str, Any]:
         from pyspark.sql import functions as F
+        from pyspark.sql.types import StringType
 
         if df is None:
             path = file_path or detect_latest_dataset(data_dir=data_dir)
@@ -442,6 +443,8 @@ class EDASpark:
 
     def _section_data_quality(self, context: Dict[str, Any]) -> Dict[str, Any]:
         from pyspark.sql import functions as F
+        from pyspark.sql.types import StringType
+        import pandas as pd
 
         df = context["df"]
         col_types = context["col_types"]
@@ -458,7 +461,17 @@ class EDASpark:
         metrics["columns"] = int(cols)
         metrics["duplicate_ratio"] = round(float(duplicate_ratio), 6)
 
-        missing_exprs = [F.sum(F.when(F.col(c).isNull(), 1).otherwise(0)).alias(c) for c in df.columns]
+        null_set = [str(v).strip().lower() for v in DEFAULT_NULL_LIKE_VALUES]
+        string_cols = {f.name for f in df.schema.fields if isinstance(f.dataType, StringType)}
+        missing_exprs = []
+        for c in df.columns:
+            if c in string_cols:
+                norm = F.lower(F.trim(F.col(c)))
+                missing_exprs.append(
+                    F.sum(F.when(F.col(c).isNull() | norm.isin(null_set), 1).otherwise(0)).alias(c)
+                )
+            else:
+                missing_exprs.append(F.sum(F.when(F.col(c).isNull(), 1).otherwise(0)).alias(c))
         missing_counts = df.agg(*missing_exprs).collect()[0].asDict()
         missing_columns = []
         non_missing_columns = []
@@ -489,6 +502,13 @@ class EDASpark:
                 "rows": missing_rows,
                 "style": "missingness",
             })
+            missing_columns.sort(key=lambda x: x["missing_rate"], reverse=True)
+            missing_series = pd.Series({row["column"]: row["missing_rate"] for row in missing_columns})
+            top_missing = missing_series.head(min(20, len(missing_series)))
+            if not top_missing.empty:
+                path = os.path.join(self.output_dir, "missingness.png")
+                self._plot_bar(top_missing, path, title="Missing Rate (Top)", ylabel="Missing Rate")
+                plots["missingness"] = path
         else:
             metrics["missingness_skipped_reason"] = "No columns with missing values."
 
@@ -513,6 +533,33 @@ class EDASpark:
         if not null_like_payload:
             metrics["null_like_skipped_reason"] = "No string-like columns available or no null-like values detected."
         metrics["null_like_payload"] = null_like_payload
+
+        outlier_rows = []
+        numeric_cols = self._select_numeric(df, col_types, None)
+        for col in numeric_cols:
+            try:
+                q1, q3 = df.approxQuantile(col, [0.25, 0.75], 0.01)
+            except Exception:
+                continue
+            iqr = q3 - q1
+            if iqr == 0:
+                continue
+            lower, upper = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+            out_cnt = df.filter((F.col(col) < lower) | (F.col(col) > upper)).count()
+            ratio = float(out_cnt) / max(1, rows)
+            outlier_rows.append([col, round(ratio, 6)])
+        if outlier_rows:
+            outlier_rows.sort(key=lambda x: x[1], reverse=True)
+            tables.append({
+                "title": "Outlier Ratio (IQR)",
+                "headers": ["Column", "Outlier Ratio"],
+                "rows": outlier_rows[: min(20, len(outlier_rows))],
+            })
+            top_outliers = outlier_rows[: min(20, len(outlier_rows))]
+            outlier_series = pd.Series({row[0]: row[1] for row in top_outliers})
+            path = os.path.join(self.output_dir, "outlier_iqr.png")
+            self._plot_bar(outlier_series, path, title="Outlier Ratio (IQR)", ylabel="Outlier Ratio")
+            plots["outlier_iqr"] = path
 
         return {"metrics": metrics, "tables": tables, "plots": plots, "summary": summary}
 
@@ -709,6 +756,8 @@ class EDASpark:
 
     def _section_bivariate_target(self, context: Dict[str, Any], selected_cols: Optional[List[str]]) -> Dict[str, Any]:
         from pyspark.sql import functions as F
+        from pyspark.ml.feature import QuantileDiscretizer
+        import pandas as pd
 
         df = context["df"]
         target_col = context.get("target_col")
@@ -726,24 +775,41 @@ class EDASpark:
 
         rows = []
         for col in numeric_cols:
-            quantiles = df.approxQuantile(col, [0.0, 0.2, 0.4, 0.6, 0.8, 1.0], 0.01)
-            quantiles = sorted(set(quantiles))
-            if len(quantiles) < 3:
-                continue
-            buckets = df.withColumn("bucket", F.when(F.col(col) <= quantiles[1], f"<= {quantiles[1]:.4f}"))
-            for idx in range(1, len(quantiles) - 1):
-                lower = quantiles[idx]
-                upper = quantiles[idx + 1]
-                buckets = buckets.withColumn(
-                    "bucket",
-                    F.when(
-                        (F.col(col) > lower) & (F.col(col) <= upper),
-                        f"({lower:.4f}, {upper:.4f}]",
-                    ).otherwise(F.col("bucket")),
+            try:
+                discretizer = QuantileDiscretizer(
+                    numBuckets=5,
+                    inputCol=col,
+                    outputCol="bucket",
+                    handleInvalid="skip",
                 )
-            grouped = buckets.groupBy("bucket").agg(F.mean(target_col).alias("rate")).collect()
-            for g in grouped:
-                rows.append([col, g["bucket"], round(float(g["rate"]), 6)])
+                model = discretizer.fit(df)
+                binned = model.transform(df)
+            except Exception:
+                continue
+
+            grouped = (
+                binned.groupBy("bucket")
+                .agg(F.mean(target_col).alias("rate"))
+                .orderBy("bucket")
+            )
+
+            if col == numeric_cols[0]:
+                pdf = grouped.toPandas()
+                if not pdf.empty:
+                    pdf["bucket"] = pdf["bucket"].astype(int)
+                    series = pd.Series(
+                        pdf["rate"].values,
+                        index=[f"bin_{i}" for i in pdf["bucket"].tolist()],
+                    )
+                    path = os.path.join(self.output_dir, f"target_rate_bins_{col}.png")
+                    self._plot_bar(series, path, title=f"Target Rate by {col} bins", ylabel="Rate")
+                    plots[f"target_rate_bins_{col}"] = path
+
+            for g in grouped.collect():
+                if g["bucket"] is None:
+                    continue
+                rows.append([col, f"bin_{int(g['bucket'])}", round(float(g["rate"]), 6)])
+
         if rows:
             tables.append({
                 "title": "Numeric vs Target (Binned)",

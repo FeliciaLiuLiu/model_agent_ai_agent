@@ -396,6 +396,7 @@ class EDAReportBuilder:
         style.add("BACKGROUND", (0, 0), (-1, 0), header_bg)
         style.add("TEXTCOLOR", (0, 0), (-1, 0), header_fg)
         style.add("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold")
+        style.add("ALIGN", (0, 0), (-1, 0), "CENTER")
         style.add("GRID", (0, 0), (-1, -1), 0.3, colors.lightgrey)
         style.add("VALIGN", (0, 0), (-1, -1), "TOP")
         style.add("LEFTPADDING", (0, 0), (-1, -1), 4)
