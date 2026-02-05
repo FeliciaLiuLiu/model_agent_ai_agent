@@ -636,6 +636,13 @@ class EDASpark:
                     "headers": [col, "Target Rate" if is_classification else "Target Mean"],
                     "rows": rows,
                 })
+                series = pd.Series(
+                    [float(r["rate"]) for r in rates],
+                    index=[str(r[col]) for r in rates],
+                )
+                path = os.path.join(self.output_dir, f"target_rate_by_{col}.png")
+                self._plot_bar(series, path, title=f"Target Rate by {col}", ylabel="Rate")
+                plots[f"target_rate_by_{col}"] = path
 
         summary.append("Target analysis completed.")
         metrics["target_column"] = target_col

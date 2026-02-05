@@ -594,6 +594,9 @@ class EDA:
                     "headers": [col, "Target Rate"],
                     "rows": rows,
                 })
+                path = os.path.join(self.output_dir, f"target_rate_by_{col}.png")
+                self._plot_bar(rates, path, title=f"Target Rate by {col}", ylabel="Rate")
+                plots[f"target_rate_by_{col}"] = path
 
         metrics["target_column"] = target_col
         return {"metrics": metrics, "tables": tables, "plots": plots, "summary": summary}
