@@ -577,6 +577,7 @@ class EDASpark:
 
     def _section_univariate(self, context: Dict[str, Any], selected_cols: Optional[List[str]]) -> Dict[str, Any]:
         from pyspark.sql import functions as F
+        import pandas as pd
 
         df = context["df"]
         col_types = context["col_types"]
@@ -646,11 +647,13 @@ class EDASpark:
 
         numeric_summary_rows = []
         if numeric_cols and stats is not None:
-            stats_idx = list(stats.index)
-            stat_map = {row[0]: row[1:] for row in stats.values.tolist()}
+            if "summary" in stats.columns:
+                stats = stats.set_index("summary")
             for col in numeric_cols:
-                col_vals = [stat_map[s][numeric_cols.index(col)] for s in stats_idx]
-                stat_dict = dict(zip(stats_idx, col_vals))
+                if col not in stats.columns:
+                    continue
+                series = pd.to_numeric(stats[col], errors="coerce")
+                stat_dict = series.to_dict()
                 numeric_summary_rows.append(
                     {
                         "column": col,
