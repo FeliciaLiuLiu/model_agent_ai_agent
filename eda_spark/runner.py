@@ -538,14 +538,15 @@ class EDASpark:
         numeric_cols = self._select_numeric(df, col_types, None)
         for col in numeric_cols:
             try:
-                q1, q3 = df.approxQuantile(col, [0.25, 0.75], 0.01)
+                col_series = F.col(col).cast("double")
+                q1, q3 = df.select(col_series.alias(col)).approxQuantile(col, [0.25, 0.75], 0.005)
             except Exception:
                 continue
             iqr = q3 - q1
             if iqr == 0:
                 continue
             lower, upper = q1 - 1.5 * iqr, q3 + 1.5 * iqr
-            out_cnt = df.filter((F.col(col) < lower) | (F.col(col) > upper)).count()
+            out_cnt = df.filter((col_series < lower) | (col_series > upper)).count()
             ratio = float(out_cnt) / max(1, rows)
             outlier_rows.append([col, round(ratio, 6)])
         if outlier_rows:
