@@ -1,0 +1,65 @@
+{
+  "model": "MLPClassifier (scikit-learn)",
+  "data_path": "data/synthetic_aml_mixed_50k_20260204_153242.csv",
+  "label_col": "sar_actual",
+  "test_size": 0.3,
+  "metrics": {
+    "auc_roc": 0.5160554059166652,
+    "accuracy": 0.937,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+  },
+  "class_balance": {
+    "0": 0.93698,
+    "1": 0.06302
+  },
+  "features": {
+    "numeric": [
+      "account_age_days",
+      "customer_tenure_days",
+      "txn_amount",
+      "fee_amount",
+      "account_balance",
+      "num_txn_1h",
+      "num_txn_24h",
+      "sum_amount_24h",
+      "velocity_score",
+      "ip_risk_score",
+      "geo_lat",
+      "geo_lon",
+      "txn_hour",
+      "txn_dow",
+      "txn_month"
+    ],
+    "boolean": [
+      "is_international",
+      "is_new_device",
+      "is_high_risk_country",
+      "is_crypto_related"
+    ],
+    "categorical": [
+      "platform",
+      "channel",
+      "payment_rail",
+      "txn_type",
+      "txn_direction",
+      "merchant_name",
+      "merchant_category",
+      "payment_memo",
+      "origin_country",
+      "dest_country",
+      "currency",
+      "device_type",
+      "app_version",
+      "account_type",
+      "kyc_level",
+      "risk_segment",
+      "case_status",
+      "is_pep",
+      "sanctions_match",
+      "is_business_account"
+    ]
+  },
+  "timestamp": "20260204_154059"
+}

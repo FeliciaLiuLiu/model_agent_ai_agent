@@ -1,5 +1,4 @@
 """Generate a mixed bank + fintech AML dataset for EDA and modeling demos."""
-"""Generate a mixed bank + fintech AML dataset for EDA and modeling demos."""
 from __future__ import annotations
 
 import argparse
@@ -79,10 +78,10 @@ def _inject_boolean_missing(df: pd.DataFrame, rng: np.random.Generator, rate: fl
         "is_business_account",
     ]
     for col in bool_cols:
+        df[col] = df[col].astype("boolean")
         mask = rng.random(len(df)) < rate
         if mask.any():
             df.loc[mask, col] = pd.NA
-        df[col] = df[col].astype("boolean")
 
 
 def _inject_string_missing(df: pd.DataFrame, rng: np.random.Generator, rate: float) -> None:

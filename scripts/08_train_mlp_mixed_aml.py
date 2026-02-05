@@ -131,6 +131,7 @@ if __name__ == "__main__":
     parser.add_argument("--test-size", type=float, default=float(os.environ.get("TEST_SIZE", "0.3")))
     parser.add_argument("--seed", type=int, default=int(os.environ.get("SEED", "42")))
     parser.add_argument("--max-rows", type=int, default=None)
+    parser.add_argument("--max-categories", type=int, default=200)
     parser.add_argument("--no-save-test", action="store_true")
     args = parser.parse_args()
 
@@ -180,6 +181,13 @@ if __name__ == "__main__":
 
     y = df[label_col].astype(int)
     X = df.drop(columns=[label_col])
+
+    if args.max_categories is not None:
+        object_cols = X.select_dtypes(include=["object", "category", "string"]).columns
+        high_card = [c for c in object_cols if X[c].nunique(dropna=True) > args.max_categories]
+        if high_card:
+            print("Dropping high-cardinality columns:", ", ".join(high_card))
+            X = X.drop(columns=high_card)
 
     numeric_cols = X.select_dtypes(include=["number"]).columns.tolist()
     categorical_cols = X.select_dtypes(include=["object", "category", "string"]).columns.tolist()
