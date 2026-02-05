@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import os
 import re
+from urllib.parse import urlparse
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-SUPPORTED_EXTS = [".csv", ".parquet"]
+SUPPORTED_EXTS = [".csv"]
 TIMESTAMP_RE = re.compile(r"(?:^|_)(\d{8}_\d{6})(?:_|\\.|$)")
 
 DEFAULT_NULL_LIKE_VALUES = [
@@ -106,12 +107,31 @@ def detect_latest_dataset(
 
 def load_data_spark(spark, path: str):
     """Load dataset using Spark."""
-    ext = Path(path).suffix.lower()
+    local_uri = to_local_file_uri(path)
+    ext = _extract_suffix(path)
     if ext == ".csv":
-        return spark.read.option("header", True).option("inferSchema", True).csv(path)
+        return spark.read.option("header", True).option("inferSchema", True).csv(local_uri)
     if ext == ".parquet":
-        return spark.read.parquet(path)
+        return spark.read.parquet(local_uri)
     raise ValueError(f"Unsupported file extension: {ext}")
+
+
+def to_local_file_uri(path: str) -> str:
+    """Force local filesystem access for Spark by returning file:// URI."""
+    lowered = path.lower()
+    if lowered.startswith(("file://", "hdfs://", "s3://", "s3a://", "gs://", "abfs://", "abfss://")):
+        return path
+    resolved = Path(path).expanduser()
+    if not resolved.is_absolute():
+        resolved = resolved.resolve()
+    return f"file://{resolved}"
+
+
+def _extract_suffix(path: str) -> str:
+    if "://" in path:
+        parsed = urlparse(path)
+        return Path(parsed.path).suffix.lower()
+    return Path(path).suffix.lower()
 
 
 def _score_target_name(name: str) -> int:

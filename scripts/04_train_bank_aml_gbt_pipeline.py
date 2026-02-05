@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser.add_argument('--test-size', type=float, default=float(os.environ.get('TEST_SIZE', 0.3)))
     parser.add_argument('--seed', type=int, default=int(os.environ.get('SEED', 42)))
     parser.add_argument('--test-path', default=os.environ.get('TEST_PATH', None))
-    parser.add_argument('--no-save-test', action='store_true')
+    parser.add_argument('--save-test', action='store_true', help='Save test split to CSV (disabled by default).')
     parser.add_argument('--use-encoded-cats', action='store_true', default=True,
                         help='Use *_code columns for categorical features (default).')
     parser.add_argument('--use-raw-cats', action='store_true',
@@ -111,7 +111,7 @@ if __name__ == '__main__':
     print('AUC(ROC)=', auc)
 
     test_path = None
-    if not args.no_save_test:
+    if args.save_test:
         if args.test_path:
             test_path = args.test_path
         else:

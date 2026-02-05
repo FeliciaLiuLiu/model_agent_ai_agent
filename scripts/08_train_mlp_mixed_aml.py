@@ -132,7 +132,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=int(os.environ.get("SEED", "42")))
     parser.add_argument("--max-rows", type=int, default=None)
     parser.add_argument("--max-categories", type=int, default=200)
-    parser.add_argument("--no-save-test", action="store_true")
+    parser.add_argument("--save-test", action="store_true", help="Save test split to CSV (disabled by default).")
     args = parser.parse_args()
 
     base_dir = Path(__file__).resolve().parents[1]
@@ -288,7 +288,7 @@ if __name__ == "__main__":
     print("AUC(ROC)=", auc_roc)
     print("Wrote metrics to:", metrics_path)
 
-    if not args.no_save_test:
+    if args.save_test:
         data_dir = data_path.parent
         stem = data_path.stem
         test_path = data_dir / f"{stem}_test.csv"

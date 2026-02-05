@@ -86,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument("--no-time-split", action="store_true", help="Disable time-based split.")
     parser.add_argument("--max-rows", type=int, default=None)
     parser.add_argument("--model-type", default="logreg", choices=["logreg", "gbt", "rf"])
-    parser.add_argument("--no-save-test", action="store_true")
+    parser.add_argument("--save-test", action="store_true", help="Save test split (disabled by default).")
     parser.add_argument("--format", default="parquet", choices=["csv", "parquet"])
     args = parser.parse_args()
 
@@ -272,7 +272,7 @@ if __name__ == "__main__":
     with open(meta_path, "wb") as f:
         pickle.dump(metrics, f)
 
-    if not args.no_save_test:
+    if args.save_test:
         test_path = run_dir / f"test.{args.format}"
         if args.format == "parquet":
             test_df.write.mode("overwrite").parquet(str(test_path))

@@ -1,8 +1,16 @@
 """Spark EDA command-line interface."""
 import argparse
+import os
+import sys
 from typing import Dict, List, Optional
 
-from .runner import EDASpark
+try:
+    from .runner import EDASpark
+except ImportError:  # allow running as a script: python eda_spark/cli.py
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+    from eda_spark.runner import EDASpark
 
 
 def _parse_list(value: Optional[str]) -> Optional[List[str]]:

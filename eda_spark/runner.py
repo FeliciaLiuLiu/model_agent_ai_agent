@@ -2,21 +2,38 @@
 from __future__ import annotations
 
 import os
+import sys
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from .report import EDAReportBuilder
-from .utils import (
-    DEFAULT_NULL_LIKE_VALUES,
-    detect_latest_dataset,
-    detect_null_like_values,
-    infer_column_types,
-    load_data_spark,
-    pick_target_column,
-    pick_time_column,
-    time_parse_ratio,
-)
+try:
+    from .report import EDAReportBuilder
+    from .utils import (
+        DEFAULT_NULL_LIKE_VALUES,
+        detect_latest_dataset,
+        detect_null_like_values,
+        infer_column_types,
+        load_data_spark,
+        pick_target_column,
+        pick_time_column,
+        time_parse_ratio,
+    )
+except ImportError:  # allow running as a script: python eda_spark/runner.py
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+    from eda_spark.report import EDAReportBuilder
+    from eda_spark.utils import (
+        DEFAULT_NULL_LIKE_VALUES,
+        detect_latest_dataset,
+        detect_null_like_values,
+        infer_column_types,
+        load_data_spark,
+        pick_target_column,
+        pick_time_column,
+        time_parse_ratio,
+    )
 
 
 class EDASpark:
