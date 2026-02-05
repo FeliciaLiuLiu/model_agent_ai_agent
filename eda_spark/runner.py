@@ -518,6 +518,7 @@ class EDASpark:
 
     def _section_target(self, context: Dict[str, Any]) -> Dict[str, Any]:
         from pyspark.sql import functions as F
+        import pandas as pd
 
         df = context["df"]
         target_col = context.get("target_col")
@@ -561,7 +562,10 @@ class EDASpark:
             df_time = df_time.withColumn("time_bucket", F.date_trunc("month", F.col("time_ts")))
             if is_classification:
                 rate = df_time.groupBy("time_bucket").agg(F.mean(target_col).alias("rate")).orderBy("time_bucket")
+                rate = rate.withColumn("time_bucket", F.col("time_bucket").cast("string"))
                 pdf = rate.toPandas()
+                if "time_bucket" in pdf.columns:
+                    pdf["time_bucket"] = pd.to_datetime(pdf["time_bucket"], errors="coerce")
                 if not pdf.empty:
                     path = os.path.join(self.output_dir, "target_rate_over_time.png")
                     self._plot_line(pdf.set_index("time_bucket")["rate"], path, "Target Rate Over Time", "Rate")
@@ -809,6 +813,7 @@ class EDASpark:
     def _section_time_drift(self, context: Dict[str, Any], selected_cols: Optional[List[str]]) -> Dict[str, Any]:
         from pyspark.ml.feature import Bucketizer
         from pyspark.sql import functions as F
+        import pandas as pd
 
         df = context["df"]
         col_types = context["col_types"]
@@ -824,7 +829,10 @@ class EDASpark:
         df_time = df.withColumn("time_ts", F.to_timestamp(F.col(time_col)))
         df_time = df_time.dropna(subset=["time_ts"])
         df_time = df_time.withColumn("time_bucket", F.date_trunc("month", F.col("time_ts")))
-        counts = df_time.groupBy("time_bucket").count().orderBy("time_bucket").toPandas()
+        counts = df_time.groupBy("time_bucket").count().orderBy("time_bucket")
+        counts = counts.withColumn("time_bucket", F.col("time_bucket").cast("string")).toPandas()
+        if "time_bucket" in counts.columns:
+            counts["time_bucket"] = pd.to_datetime(counts["time_bucket"], errors="coerce")
         if not counts.empty:
             path = os.path.join(self.output_dir, "time_volume.png")
             self._plot_line(counts.set_index("time_bucket")["count"], path, "Transaction Volume Over Time", "Count")
@@ -837,8 +845,10 @@ class EDASpark:
                 df_time.groupBy("time_bucket")
                 .agg(F.mean(amount_col).alias("mean_amount"))
                 .orderBy("time_bucket")
-                .toPandas()
             )
+            amount = amount.withColumn("time_bucket", F.col("time_bucket").cast("string")).toPandas()
+            if "time_bucket" in amount.columns:
+                amount["time_bucket"] = pd.to_datetime(amount["time_bucket"], errors="coerce")
             if not amount.empty:
                 path = os.path.join(self.output_dir, "time_amount_mean.png")
                 self._plot_line(amount.set_index("time_bucket")["mean_amount"], path, f"{amount_col} Mean Over Time", "Mean")
