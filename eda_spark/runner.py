@@ -76,12 +76,6 @@ class EDASpark:
             "description": "Time bucket trends, PSI drift, and categorical drift (requires time column).",
             "applicable_columns": "time_col/numeric/categorical",
         },
-        {
-            "key": "summary",
-            "title": "Summary and Recommendations",
-            "description": "Highlights of quality issues and recommended next steps.",
-            "applicable_columns": "all",
-        },
     ]
 
     SECTION_KEYS = [s["key"] for s in SECTION_INFO]
@@ -215,8 +209,6 @@ class EDASpark:
                 results[sec] = self._section_feature_vs_feature(context, cols)
             elif sec == "time_drift":
                 results[sec] = self._section_time_drift(context, cols)
-            elif sec == "summary":
-                results[sec] = self._section_summary(context)
 
         rows_used = int(df.count())
         payload = {
@@ -403,7 +395,7 @@ class EDASpark:
         numeric = col_types["numeric"]
         categorical = col_types["categorical"] + col_types["boolean"]
         text = col_types.get("text", [])
-        if section in ("data_quality", "summary"):
+        if section in ("data_quality",):
             return list(df.columns)
         if section in ("univariate", "bivariate_target", "time_drift"):
             cols = list(dict.fromkeys(numeric + categorical + text))
@@ -622,7 +614,7 @@ class EDASpark:
 
         categorical = self._select_categorical(df, col_types, None)
         if categorical:
-            for col in categorical[: min(3, len(categorical))]:
+            for col in categorical[: min(self.max_plots, len(categorical))]:
                 rates = (
                     df.groupBy(col)
                     .agg(F.mean(target_col).alias("rate"))

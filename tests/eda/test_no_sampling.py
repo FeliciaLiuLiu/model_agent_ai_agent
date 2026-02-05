@@ -17,7 +17,7 @@ def test_no_auto_sampling_for_synthetic_pattern():
         payload = eda.run(
             df=df,
             file_path="synthetic_aml_200k_20240101_000000.csv",
-            sections=["summary"],
+            sections=["data_quality"],
             return_payload=True,
             generate_report=False,
             save_json=False,
