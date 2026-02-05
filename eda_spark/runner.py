@@ -571,6 +571,7 @@ class EDASpark:
         df = context["df"]
         target_col = context.get("target_col")
         time_col = context.get("time_col")
+        col_types = context["col_types"]
         metrics: Dict[str, Any] = {}
         tables: List[Dict[str, Any]] = []
         plots: Dict[str, str] = {}
@@ -618,6 +619,23 @@ class EDASpark:
                     path = os.path.join(self.output_dir, "target_rate_over_time.png")
                     self._plot_line(pdf.set_index("time_bucket")["rate"], path, "Target Rate Over Time", "Rate")
                     plots["target_rate_over_time"] = path
+
+        categorical = self._select_categorical(df, col_types, None)
+        if categorical:
+            for col in categorical[: min(3, len(categorical))]:
+                rates = (
+                    df.groupBy(col)
+                    .agg(F.mean(target_col).alias("rate"))
+                    .orderBy(F.desc("rate"))
+                    .limit(self.top_k_categories)
+                    .collect()
+                )
+                rows = [[str(r[col]), round(float(r["rate"]), 6)] for r in rates]
+                tables.append({
+                    "title": f"Target Rate by {col}",
+                    "headers": [col, "Target Rate" if is_classification else "Target Mean"],
+                    "rows": rows,
+                })
 
         summary.append("Target analysis completed.")
         metrics["target_column"] = target_col
