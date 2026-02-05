@@ -294,35 +294,29 @@ def infer_column_types(
 def detect_null_like_values(
     df,
     null_like_values: Optional[List[str]] = None,
-    max_examples: int = 3,
+    max_examples: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     """Detect null-like placeholder values in string columns (Spark)."""
     from pyspark.sql import functions as F
-    from pyspark.sql.types import StringType
 
     null_like_values = null_like_values or DEFAULT_NULL_LIKE_VALUES
     null_set = {str(v).strip().lower() for v in null_like_values}
 
     results: List[Dict[str, Any]] = []
-    string_cols = [f.name for f in df.schema.fields if isinstance(f.dataType, StringType)]
     total_rows = df.count()
-    if total_rows == 0 or not string_cols:
+    if total_rows == 0:
         return results
 
-    for col in string_cols:
-        norm = F.lower(F.trim(F.col(col)))
+    for col in df.columns:
+        norm = F.lower(F.trim(F.col(col).cast("string")))
         cond = norm.isin(list(null_set)) | (norm == "")
         count = df.select(F.sum(F.when(cond, 1).otherwise(0)).alias("cnt")).collect()[0]["cnt"]
         if count and count > 0:
             rate = float(count) / max(1, total_rows)
-            examples = (
-                df.select(norm.alias("val"))
-                .where(cond)
-                .distinct()
-                .limit(max_examples)
-                .toPandas()["val"]
-                .tolist()
-            )
+            query = df.select(norm.alias("val")).where(cond).distinct()
+            if max_examples is not None:
+                query = query.limit(max_examples)
+            examples = query.toPandas()["val"].tolist()
             results.append(
                 {
                     "column": col,

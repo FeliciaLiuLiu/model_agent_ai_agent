@@ -113,6 +113,26 @@ def infer_column_types(
     datetime_min_ratio: float = 0.8,
 ) -> Dict[str, List[str]]:
     """Classify columns into numeric, categorical, datetime, text, boolean, and other."""
+    def _is_boolean_like(series: pd.Series) -> bool:
+        if pd.api.types.is_bool_dtype(series):
+            return True
+        s = series.dropna()
+        if s.empty:
+            return False
+        if pd.api.types.is_numeric_dtype(s):
+            unique = pd.unique(s)
+            return len(unique) <= 2 and set(map(float, unique)).issubset({0.0, 1.0})
+        if (
+            pd.api.types.is_object_dtype(s)
+            or pd.api.types.is_string_dtype(s)
+            or pd.api.types.is_categorical_dtype(s)
+        ):
+            normalized = s.astype(str).str.strip().str.lower()
+            unique = set(normalized.unique())
+            truthy = {"true", "false", "0", "1", "yes", "no", "y", "n"}
+            return unique.issubset(truthy)
+        return False
+
     id_cols = set(id_cols or [])
     cols = [c for c in df.columns if c not in id_cols]
 
@@ -125,7 +145,7 @@ def infer_column_types(
 
     for col in cols:
         s = df[col]
-        if pd.api.types.is_bool_dtype(s):
+        if _is_boolean_like(s):
             bool_cols.append(col)
             continue
         if pd.api.types.is_datetime64_any_dtype(s):
@@ -251,7 +271,7 @@ def safe_select_columns(df: pd.DataFrame, cols: Optional[List[str]]) -> pd.DataF
 def detect_null_like_values(
     df: pd.DataFrame,
     null_like_values: Optional[List[str]] = None,
-    max_examples: int = 3,
+    max_examples: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     """Detect null-like placeholder values in string-like columns."""
     null_like_values = null_like_values or DEFAULT_NULL_LIKE_VALUES
@@ -281,7 +301,9 @@ def detect_null_like_values(
         if count <= 0:
             continue
         rate = float(count) / float(total_rows)
-        examples = list(normalized[mask].dropna().unique())[:max_examples]
+        examples = list(normalized[mask].dropna().unique())
+        if max_examples is not None:
+            examples = examples[:max_examples]
         results.append(
             {
                 "column": col,
