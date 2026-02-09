@@ -15,6 +15,9 @@ from .utils import detect_latest_dataset
 
 
 SUPPORTED_EXTS = {".csv", ".tsv", ".parquet", ".json", ".xlsx", ".xls", ".feather"}
+AUTO_EXEC_EXTS = {".sql", ".py", ".ipynb"}
+AUTO_DB_EXTS = {".db", ".sqlite", ".sqlite3"}
+PREFERRED_SQL_TABLES = ("aml_dataset", "eda_dataset", "eda_input")
 
 
 def _flatten(items: Iterable[Iterable[str]]) -> List[str]:
@@ -53,6 +56,28 @@ def _expand_paths(data: Sequence[str], recursive: bool = False) -> List[Path]:
             continue
         paths.append(p)
     return [p for p in paths if p.exists()]
+
+
+def _resolve_data_dir(data_dir: str) -> Path:
+    p = Path(data_dir)
+    if p.is_absolute():
+        return p
+    if p.exists():
+        return p
+    pkg_root = Path(__file__).resolve().parents[1]
+    candidate = pkg_root / data_dir
+    return candidate if candidate.exists() else p
+
+
+def _scan_dir_for_exts(data_dir: str, exts: Sequence[str], recursive: bool) -> List[Path]:
+    base = _resolve_data_dir(data_dir)
+    if not base.exists():
+        return []
+    paths: List[Path] = []
+    for ext in exts:
+        pattern = f"**/*{ext}" if recursive else f"*{ext}"
+        paths.extend(base.glob(pattern))
+    return sorted(paths, key=lambda p: p.stat().st_mtime, reverse=True)
 
 
 def _read_single(path: Path) -> pd.DataFrame:
@@ -167,6 +192,76 @@ def _load_sql(sql: str, db: str) -> pd.DataFrame:
     return pd.read_sql_query(sql, engine)
 
 
+def _clean_sql_lines(sql_text: str) -> List[str]:
+    lines: List[str] = []
+    for raw in sql_text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith("--"):
+            continue
+        lines.append(line)
+    return lines
+
+
+def _is_select_only(sql_text: str) -> bool:
+    lines = _clean_sql_lines(sql_text)
+    if not lines:
+        return False
+    head = lines[0].lower()
+    if not (head.startswith("select") or head.startswith("with")):
+        return False
+    return ";" not in sql_text.strip().rstrip(";")
+
+
+def _sqlite_objects(conn: sqlite3.Connection) -> List[Tuple[str, str]]:
+    rows = conn.execute(
+        "SELECT name, type FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%'"
+    ).fetchall()
+    return [(str(name), str(obj_type)) for name, obj_type in rows]
+
+
+def _pick_sql_table(objects: List[Tuple[str, str]]) -> Optional[str]:
+    names = [name for name, _ in objects]
+    for preferred in PREFERRED_SQL_TABLES:
+        if preferred in names:
+            return preferred
+    if len(names) == 1:
+        return names[0]
+    return None
+
+
+def _load_sql_auto(sql_files: List[Path], db_files: List[Path]) -> List[pd.DataFrame]:
+    if not sql_files:
+        return []
+    texts = [p.read_text(encoding="utf-8") for p in sql_files]
+    if db_files and all(_is_select_only(t) for t in texts):
+        db_path = str(db_files[0])
+        conn = sqlite3.connect(db_path)
+        try:
+            frames = [pd.read_sql_query(t, conn) for t in texts]
+        finally:
+            conn.close()
+        return frames
+
+    conn = sqlite3.connect(":memory:")
+    try:
+        for text in texts:
+            conn.executescript(text)
+        objects = _sqlite_objects(conn)
+        table = _pick_sql_table(objects)
+        if not table:
+            raise ValueError(
+                "SQL auto-exec produced multiple tables/views. "
+                "Create a single table/view or name it one of: "
+                f"{', '.join(PREFERRED_SQL_TABLES)}."
+            )
+        frame = pd.read_sql_query(f"SELECT * FROM {table}", conn)
+        return [frame]
+    finally:
+        conn.close()
+
+
 class DataLoader:
     """Unified loader that returns a pandas DataFrame and a data_source string."""
 
@@ -180,6 +275,7 @@ class DataLoader:
         nb: Optional[str] = None,
         data_dir: str = "./data",
         recursive: bool = False,
+        auto_exec: bool = False,
     ) -> None:
         self.data = _as_list(data)
         self.sql = sql
@@ -189,6 +285,7 @@ class DataLoader:
         self.nb = nb
         self.data_dir = data_dir
         self.recursive = recursive
+        self.auto_exec = auto_exec
 
     def load(self) -> Tuple[pd.DataFrame, str]:
         mode = self._detect_mode()
@@ -225,6 +322,38 @@ class DataLoader:
             data_source = ";".join(str(p) for p in paths)
             return df, data_source
 
+        if mode == "auto":
+            data_paths = _expand_paths([self.data_dir], recursive=self.recursive)
+            data_frames = [_read_single(p) for p in data_paths] if data_paths else []
+            sql_files = _scan_dir_for_exts(self.data_dir, [".sql"], self.recursive)
+            py_files = _scan_dir_for_exts(self.data_dir, [".py"], self.recursive)
+            nb_files = _scan_dir_for_exts(self.data_dir, [".ipynb"], self.recursive)
+            db_files = _scan_dir_for_exts(self.data_dir, list(AUTO_DB_EXTS), self.recursive)
+
+            frames: List[pd.DataFrame] = []
+            sources: List[str] = []
+            if data_frames:
+                frames.extend(data_frames)
+                sources.extend(str(p) for p in data_paths)
+            if sql_files:
+                sql_frames = _load_sql_auto(sql_files, db_files)
+                frames.extend(sql_frames)
+                sources.extend(str(p) for p in sql_files)
+            if py_files:
+                for p in py_files:
+                    frames.append(_load_python_file(str(p)))
+                    sources.append(str(p))
+            if nb_files:
+                for p in nb_files:
+                    frames.append(_load_notebook(str(p)))
+                    sources.append(str(p))
+
+            if not frames:
+                raise FileNotFoundError("No supported data/auto-exec files found in ./data.")
+
+            df = _concat_frames(frames)
+            return df, ";".join(sources)
+
         raise ValueError("No valid data input provided.")
 
     def _detect_mode(self) -> str:
@@ -238,6 +367,8 @@ class DataLoader:
         active = [k for k, v in provided.items() if v]
         if len(active) > 1:
             raise ValueError(f"Only one input mode is allowed. Provided: {active}")
+        if not active and self.auto_exec:
+            return "auto"
         if self.sql:
             return "sql"
         if self.py:

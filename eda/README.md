@@ -144,7 +144,7 @@ Target column notes:
 
 ## Auto-Detection
 
-- If no input is provided, the pipeline finds the latest supported file in `./data` by modification time.
+- If no input is provided, the pipeline scans `./data` and auto-loads any supported files.
 - Supported file types: `.csv`, `.tsv`, `.parquet`, `.json`, `.xlsx`, `.xls`, `.feather` (Excel requires `openpyxl`).
 - You can override the auto-detected path with `EDA_DATA_PATH`.
 
@@ -159,6 +159,18 @@ EDA accepts exactly one input mode and loads everything into a pandas DataFrame:
 5) Notebook: `nb` (`.ipynb`) with `load()` or `df` in code cells.
 
 Note: Python/Notebook modes execute code. Use trusted inputs only.
+
+### Auto-Exec (no input flags)
+
+If you run `python -m eda.cli --output ./output_eda` with no input flags, EDA will auto-scan `./data` and:
+
+- Load any supported data files and concatenate them.
+- Execute any `.py` / `.ipynb` files that define `df` or `load()` and concatenate them.
+- Execute any `.sql` files:
+  - If a `.db`/`.sqlite` file exists and the SQL is a single `SELECT`/`WITH` query, it runs against that DB.
+  - Otherwise, the SQL is executed in a temporary SQLite DB and must create a single table/view (or name it `aml_dataset`, `eda_dataset`, or `eda_input`).
+
+Use `--auto-exec` to explicitly enable this behavior when desired.
 
 ## API Usage (Pandas)
 
@@ -220,6 +232,12 @@ eda.run(file_path="./path/to/your_dataset.csv")
 
 ```bash
 python -m eda.cli --data ./path/to/your_dataset.csv --output ./output_eda --target-col your_target
+```
+
+Auto-run from `./data` (one-line):
+
+```bash
+python -m eda.cli --output ./output_eda
 ```
 
 Multiple files (repeatable):

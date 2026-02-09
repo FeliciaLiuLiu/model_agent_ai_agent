@@ -107,6 +107,7 @@ class EDA:
         py_code: Optional[str] = None,
         nb: Optional[str] = None,
         recursive: bool = False,
+        auto_exec: Optional[bool] = None,
         sections: Optional[List[str]] = None,
         columns: Optional[List[str]] = None,
         section_columns: Optional[Dict[str, List[str]]] = None,
@@ -121,6 +122,9 @@ class EDA:
     ) -> Dict[str, Any]:
         """Run EDA on a dataset and optionally generate a report."""
         if df is None:
+            if auto_exec is None:
+                has_explicit = any([file_path, data, sql, py, py_code, nb])
+                auto_exec = not has_explicit
             loader = DataLoader(
                 data=data or file_path,
                 sql=sql,
@@ -130,6 +134,7 @@ class EDA:
                 nb=nb,
                 data_dir=data_dir,
                 recursive=recursive,
+                auto_exec=bool(auto_exec),
             )
             df, path = loader.load()
         else:
@@ -228,6 +233,7 @@ class EDA:
         py_code: Optional[str] = None,
         nb: Optional[str] = None,
         recursive: bool = False,
+        auto_exec: Optional[bool] = None,
         target_col: Optional[str] = None,
         time_col: Optional[str] = None,
         max_rows: Optional[int] = None,
@@ -239,6 +245,9 @@ class EDA:
     ) -> Dict[str, Any]:
         """Interactive selection of sections and columns."""
         if df is None:
+            if auto_exec is None:
+                has_explicit = any([file_path, data, sql, py, py_code, nb])
+                auto_exec = not has_explicit
             loader = DataLoader(
                 data=data or file_path,
                 sql=sql,
@@ -248,6 +257,7 @@ class EDA:
                 nb=nb,
                 data_dir=data_dir,
                 recursive=recursive,
+                auto_exec=bool(auto_exec),
             )
             df, path = loader.load()
         else:
@@ -303,6 +313,7 @@ class EDA:
             py_code=py_code,
             nb=nb,
             recursive=recursive,
+            auto_exec=auto_exec,
             sections=sections,
             section_columns=section_columns,
             target_col=target_col,

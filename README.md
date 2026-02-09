@@ -513,6 +513,8 @@ eda-agent --output ./output_eda
 
 Supported file types: `.csv`, `.tsv`, `.parquet`, `.json`, `.xlsx`, `.xls`, `.feather` (Excel requires `openpyxl`). Override with `EDA_DATA_PATH`.
 
+Auto-exec: with no input flags, EDA will also execute `.sql`/`.py`/`.ipynb` in `./data` and concatenate results. See `eda/README.md`.
+
 Select sections and columns:
 
 ```bash

@@ -29,7 +29,7 @@ def main():
         "--data",
         action="append",
         default=None,
-        help="Data file/dir/glob. Repeatable. If omitted, auto-detects from ./data.",
+        help="Data file/dir/glob. Repeatable. If omitted, auto-loads from ./data.",
     )
     parser.add_argument("--sql", default=None, help="SQL query to load data")
     parser.add_argument("--db", default=None, help="Database connection string for --sql")
@@ -37,6 +37,11 @@ def main():
     parser.add_argument("--py-code", default=None, help="Inline Python code that defines load() or df")
     parser.add_argument("--nb", default=None, help="Notebook (.ipynb) file with load() or df")
     parser.add_argument("--data-recursive", action="store_true", help="Recursively search directories/globs for data files")
+    parser.add_argument(
+        "--auto-exec",
+        action="store_true",
+        help="Auto-execute .sql/.py/.ipynb in ./data when no input is provided",
+    )
     parser.add_argument("--output", default="./output_eda", help="Output directory")
     parser.add_argument("--target-col", default=None, help="Target column name")
     parser.add_argument("--time-col", default=None, help="Time column name")
@@ -67,6 +72,7 @@ def main():
     sections = _parse_list(args.sections)
     columns = _parse_list(args.columns)
     data_inputs = _parse_multi_data(args.data)
+    auto_exec = True if args.auto_exec else None
 
     section_columns: Dict[str, List[str]] = {
         "data_quality": _parse_list(args.columns_data_quality),
@@ -99,6 +105,8 @@ def main():
         )
 
     if spark_mode:
+        if args.auto_exec:
+            raise RuntimeError("--auto-exec is only supported in pandas mode (no --spark).")
         if args.sql or args.py or args.py_code or args.nb or args.db or args.data_recursive:
             raise RuntimeError("SQL/Python/Notebook inputs are only supported in pandas mode (no --spark).")
         if data_inputs and len(data_inputs) > 1:
@@ -141,6 +149,7 @@ def main():
                 py_code=args.py_code,
                 nb=args.nb,
                 recursive=args.data_recursive,
+                auto_exec=auto_exec,
                 target_col=args.target_col,
                 time_col=args.time_col,
                 max_rows=args.max_rows,
@@ -159,6 +168,7 @@ def main():
                 py_code=args.py_code,
                 nb=args.nb,
                 recursive=args.data_recursive,
+                auto_exec=auto_exec,
                 sections=sections,
                 columns=columns,
                 section_columns=section_columns,
