@@ -20,8 +20,10 @@ The EDA module analyzes a dataset and generates a PDF/JSON report with overview,
 from adm_central_utility import EDA
 
 eda = EDA(output_dir="./output_eda", target_col="your_target")
-results = eda.run(file_path="./path/to/your_dataset.csv")
+results = eda.run(data=["./path/to/your_dataset.csv"])
 ```
+
+Supports files/dirs/globs, SQL, Python, and notebook inputs (pandas mode). See `eda/README.md` for details.
 
 ## Model Testing Agent (High-Level)
 
@@ -292,7 +294,7 @@ pip install -e C:\path\to\adm_central_utility
 from adm_central_utility import EDA
 
 eda = EDA(output_dir="./output_eda", target_col="your_target")
-eda.run(file_path=r"C:\path\to\your_dataset.csv")
+eda.run(data=[r"C:\path\to\your_dataset.csv"])
 ```
 
 Interactive section/column selection:
@@ -304,7 +306,7 @@ eda.print_functions()
 sections = EDA.parse_function_selection("1,2,3")
 
 results = eda.run(
-    file_path=r"C:\path\to\your_dataset.csv",
+    data=[r"C:\path\to\your_dataset.csv"],
     sections=sections,
     section_columns={
         "numeric": ["col_a", "col_b"],
@@ -472,6 +474,24 @@ results = eda.run(
 eda-agent --data ./data/synthetic_bank_aml_200k.csv --output ./output_eda
 ```
 
+Unified data loader (pandas mode):
+
+```bash
+# Multiple files (repeat --data)
+eda-agent --data ./data/part1.csv --data ./data/part2.csv --output ./output_eda
+
+# Directory or glob
+eda-agent --data ./data --output ./output_eda
+eda-agent --data "./data/*.csv" --output ./output_eda
+
+# SQL (SQLite or SQLAlchemy)
+eda-agent --sql "SELECT * FROM transactions" --db "sqlite:///./data/demo.db" --output ./output_eda
+
+# Python file / notebook
+eda-agent --py ./load_data.py --output ./output_eda
+eda-agent --nb ./load_data.ipynb --output ./output_eda
+```
+
 Target column notes:
 - The target column can be any label you want EDA to analyze (binary or numeric).
 - If not provided, EDA will attempt to auto-detect a likely target by name and binary values.
@@ -485,11 +505,13 @@ eda-agent --list-functions
 eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --interactive
 ```
 
-Auto-detect dataset (latest file in `./data`):
+Auto-detect dataset (latest supported file in `./data` by mtime):
 
 ```bash
 eda-agent --output ./output_eda
 ```
+
+Supported file types: `.csv`, `.tsv`, `.parquet`, `.json`, `.xlsx`, `.xls`, `.feather` (Excel requires `openpyxl`). Override with `EDA_DATA_PATH`.
 
 Select sections and columns:
 

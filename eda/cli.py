@@ -11,9 +11,32 @@ def _parse_list(value: Optional[str]) -> Optional[List[str]]:
     return [v.strip() for v in value.split(",") if v.strip()]
 
 
+def _parse_multi_data(value) -> Optional[List[str]]:
+    if not value:
+        return None
+    items: List[str] = []
+    if isinstance(value, list):
+        for v in value:
+            items.extend([item.strip() for item in str(v).split(",") if item.strip()])
+    else:
+        items.extend([item.strip() for item in str(value).split(",") if item.strip()])
+    return items or None
+
+
 def main():
     parser = argparse.ArgumentParser(description="EDA Agent")
-    parser.add_argument("--data", default=None, help="Data file (.csv, .parquet). If omitted, auto-detects from ./data.")
+    parser.add_argument(
+        "--data",
+        action="append",
+        default=None,
+        help="Data file/dir/glob. Repeatable. If omitted, auto-detects from ./data.",
+    )
+    parser.add_argument("--sql", default=None, help="SQL query to load data")
+    parser.add_argument("--db", default=None, help="Database connection string for --sql")
+    parser.add_argument("--py", default=None, help="Python file with load() or df variable")
+    parser.add_argument("--py-code", default=None, help="Inline Python code that defines load() or df")
+    parser.add_argument("--nb", default=None, help="Notebook (.ipynb) file with load() or df")
+    parser.add_argument("--data-recursive", action="store_true", help="Recursively search directories/globs for data files")
     parser.add_argument("--output", default="./output_eda", help="Output directory")
     parser.add_argument("--target-col", default=None, help="Target column name")
     parser.add_argument("--time-col", default=None, help="Time column name")
@@ -43,6 +66,7 @@ def main():
     id_cols = _parse_list(args.id_cols)
     sections = _parse_list(args.sections)
     columns = _parse_list(args.columns)
+    data_inputs = _parse_multi_data(args.data)
 
     section_columns: Dict[str, List[str]] = {
         "data_quality": _parse_list(args.columns_data_quality),
@@ -54,7 +78,8 @@ def main():
         "summary": _parse_list(args.columns_summary),
     }
 
-    if args.spark:
+    spark_mode = args.spark
+    if spark_mode:
         try:
             from .spark_runner import EDASpark  # type: ignore
         except Exception as exc:
@@ -73,31 +98,77 @@ def main():
             id_cols=id_cols,
         )
 
-    if args.interactive:
-        eda.run_interactive(
-            df=None,
-            file_path=args.data,
-            target_col=args.target_col,
-            time_col=args.time_col,
-            max_rows=args.max_rows,
-            save_json=not args.no_json,
-            generate_report=not args.no_report,
-            report_name=args.report_name,
-        )
+    if spark_mode:
+        if args.sql or args.py or args.py_code or args.nb or args.db or args.data_recursive:
+            raise RuntimeError("SQL/Python/Notebook inputs are only supported in pandas mode (no --spark).")
+        if data_inputs and len(data_inputs) > 1:
+            raise RuntimeError("Spark mode supports a single --data path (use a glob or directory).")
+        spark_path = data_inputs[0] if data_inputs else None
+        if args.interactive:
+            eda.run_interactive(
+                df=None,
+                file_path=spark_path,
+                target_col=args.target_col,
+                time_col=args.time_col,
+                max_rows=args.max_rows,
+                save_json=not args.no_json,
+                generate_report=not args.no_report,
+                report_name=args.report_name,
+            )
+        else:
+            eda.run(
+                df=None,
+                file_path=spark_path,
+                sections=sections,
+                columns=columns,
+                section_columns=section_columns,
+                target_col=args.target_col,
+                time_col=args.time_col,
+                max_rows=args.max_rows,
+                save_json=not args.no_json,
+                generate_report=not args.no_report,
+                report_name=args.report_name,
+            )
     else:
-        eda.run(
-            df=None,
-            file_path=args.data,
-            sections=sections,
-            columns=columns,
-            section_columns=section_columns,
-            target_col=args.target_col,
-            time_col=args.time_col,
-            max_rows=args.max_rows,
-            save_json=not args.no_json,
-            generate_report=not args.no_report,
-            report_name=args.report_name,
-        )
+        if args.interactive:
+            eda.run_interactive(
+                df=None,
+                file_path=None,
+                data=data_inputs,
+                sql=args.sql,
+                db=args.db,
+                py=args.py,
+                py_code=args.py_code,
+                nb=args.nb,
+                recursive=args.data_recursive,
+                target_col=args.target_col,
+                time_col=args.time_col,
+                max_rows=args.max_rows,
+                save_json=not args.no_json,
+                generate_report=not args.no_report,
+                report_name=args.report_name,
+            )
+        else:
+            eda.run(
+                df=None,
+                file_path=None,
+                data=data_inputs,
+                sql=args.sql,
+                db=args.db,
+                py=args.py,
+                py_code=args.py_code,
+                nb=args.nb,
+                recursive=args.data_recursive,
+                sections=sections,
+                columns=columns,
+                section_columns=section_columns,
+                target_col=args.target_col,
+                time_col=args.time_col,
+                max_rows=args.max_rows,
+                save_json=not args.no_json,
+                generate_report=not args.no_report,
+                report_name=args.report_name,
+            )
 
     if not args.no_report:
         print(f"PDF: {args.output}/{args.report_name}")

@@ -9,14 +9,13 @@ import numpy as np
 import pandas as pd
 
 from .report import EDAReportBuilder
+from .dataloader import DataLoader
 from .utils import (
     DEFAULT_NULL_LIKE_VALUES,
-    detect_latest_dataset,
     detect_null_like_values,
     ensure_datetime,
     infer_column_types,
     is_time_col_clean,
-    load_data,
     pick_target_column,
     pick_time_column,
 )
@@ -101,6 +100,13 @@ class EDA:
         self,
         df: Optional[pd.DataFrame] = None,
         file_path: Optional[str] = None,
+        data: Optional[List[str]] = None,
+        sql: Optional[str] = None,
+        db: Optional[str] = None,
+        py: Optional[str] = None,
+        py_code: Optional[str] = None,
+        nb: Optional[str] = None,
+        recursive: bool = False,
         sections: Optional[List[str]] = None,
         columns: Optional[List[str]] = None,
         section_columns: Optional[Dict[str, List[str]]] = None,
@@ -115,8 +121,17 @@ class EDA:
     ) -> Dict[str, Any]:
         """Run EDA on a dataset and optionally generate a report."""
         if df is None:
-            path = file_path or detect_latest_dataset(data_dir=data_dir)
-            df = load_data(path)
+            loader = DataLoader(
+                data=data or file_path,
+                sql=sql,
+                db=db,
+                py=py,
+                py_code=py_code,
+                nb=nb,
+                data_dir=data_dir,
+                recursive=recursive,
+            )
+            df, path = loader.load()
         else:
             path = file_path
 
@@ -206,6 +221,13 @@ class EDA:
         self,
         df: Optional[pd.DataFrame] = None,
         file_path: Optional[str] = None,
+        data: Optional[List[str]] = None,
+        sql: Optional[str] = None,
+        db: Optional[str] = None,
+        py: Optional[str] = None,
+        py_code: Optional[str] = None,
+        nb: Optional[str] = None,
+        recursive: bool = False,
         target_col: Optional[str] = None,
         time_col: Optional[str] = None,
         max_rows: Optional[int] = None,
@@ -217,8 +239,17 @@ class EDA:
     ) -> Dict[str, Any]:
         """Interactive selection of sections and columns."""
         if df is None:
-            path = file_path or detect_latest_dataset(data_dir=data_dir)
-            df = load_data(path)
+            loader = DataLoader(
+                data=data or file_path,
+                sql=sql,
+                db=db,
+                py=py,
+                py_code=py_code,
+                nb=nb,
+                data_dir=data_dir,
+                recursive=recursive,
+            )
+            df, path = loader.load()
         else:
             path = file_path
 
@@ -265,6 +296,13 @@ class EDA:
         return self.run(
             df=df,
             file_path=path,
+            data=data,
+            sql=sql,
+            db=db,
+            py=py,
+            py_code=py_code,
+            nb=nb,
+            recursive=recursive,
             sections=sections,
             section_columns=section_columns,
             target_col=target_col,

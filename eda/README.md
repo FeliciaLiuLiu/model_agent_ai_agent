@@ -144,7 +144,21 @@ Target column notes:
 
 ## Auto-Detection
 
-- If `--data` is not provided, the pipeline finds the latest file in `./data` (by timestamp in filename, otherwise by mtime).
+- If no input is provided, the pipeline finds the latest supported file in `./data` by modification time.
+- Supported file types: `.csv`, `.tsv`, `.parquet`, `.json`, `.xlsx`, `.xls`, `.feather` (Excel requires `openpyxl`).
+- You can override the auto-detected path with `EDA_DATA_PATH`.
+
+## Unified Data Loader (Pandas)
+
+EDA accepts exactly one input mode and loads everything into a pandas DataFrame:
+
+1) Files/dirs/globs: `data=[...]` or CLI `--data` (repeatable). Multiple files are concatenated row-wise.
+2) SQL: `sql` + `db` (SQLite URL or SQLAlchemy connection string; non-sqlite requires `sqlalchemy`).
+3) Python file: `py` that defines `load()` or `df`.
+4) Inline Python: `py_code` that defines `load()` or `df`.
+5) Notebook: `nb` (`.ipynb`) with `load()` or `df` in code cells.
+
+Note: Python/Notebook modes execute code. Use trusted inputs only.
 
 ## API Usage (Pandas)
 
@@ -152,7 +166,32 @@ Target column notes:
 from adm_central_utility import EDA
 
 eda = EDA(output_dir="./output_eda", target_col="your_target")
-results = eda.run(file_path="./path/to/your_dataset.csv")
+results = eda.run(data=["./path/to/your_dataset.csv"])
+```
+
+Multiple files:
+
+```python
+eda.run(data=["./data/part1.csv", "./data/part2.csv"])
+```
+
+SQL:
+
+```python
+eda.run(sql="SELECT * FROM transactions", db="sqlite:///./data/demo.db")
+```
+
+Python file / notebook:
+
+```python
+eda.run(py="./load_data.py")
+eda.run(nb="./load_data.ipynb")
+```
+
+Inline Python:
+
+```python
+eda.run(py_code="import pandas as pd\n\ndf = pd.read_csv('./data/demo.csv')")
 ```
 
 Interactive mode:
@@ -161,7 +200,7 @@ Interactive mode:
 from adm_central_utility import EDA
 
 eda = EDA(output_dir="./output_eda", target_col="your_target")
-eda.run_interactive(file_path="./path/to/your_dataset.csv")
+eda.run_interactive(data=["./path/to/your_dataset.csv"])
 ```
 
 ## API Usage (Spark)
@@ -181,6 +220,33 @@ eda.run(file_path="./path/to/your_dataset.csv")
 
 ```bash
 python -m eda.cli --data ./path/to/your_dataset.csv --output ./output_eda --target-col your_target
+```
+
+Multiple files (repeatable):
+
+```bash
+python -m eda.cli --data ./data/part1.csv --data ./data/part2.csv --output ./output_eda
+```
+
+Directory or glob:
+
+```bash
+python -m eda.cli --data ./data --output ./output_eda
+python -m eda.cli --data "./data/*.csv" --output ./output_eda
+python -m eda.cli --data ./data --data-recursive --output ./output_eda
+```
+
+SQL:
+
+```bash
+python -m eda.cli --sql "SELECT * FROM transactions" --db "sqlite:///./data/demo.db" --output ./output_eda
+```
+
+Python / notebook:
+
+```bash
+python -m eda.cli --py ./load_data.py --output ./output_eda
+python -m eda.cli --nb ./load_data.ipynb --output ./output_eda
 ```
 
 ### Interactive (Pandas)

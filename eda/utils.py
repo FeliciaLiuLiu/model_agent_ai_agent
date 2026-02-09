@@ -11,7 +11,15 @@ import numpy as np
 import pandas as pd
 
 
-SUPPORTED_EXTS = [".csv", ".parquet"]
+SUPPORTED_EXTS = [
+    ".csv",
+    ".tsv",
+    ".parquet",
+    ".json",
+    ".xlsx",
+    ".xls",
+    ".feather",
+]
 TIMESTAMP_RE = re.compile(r"(?:^|_)(\d{8}_\d{6})(?:_|\\.|$)")
 
 DEFAULT_NULL_LIKE_VALUES = [
@@ -99,8 +107,22 @@ def load_data(path: str) -> pd.DataFrame:
     ext = Path(path).suffix.lower()
     if ext == ".csv":
         return pd.read_csv(path)
+    if ext == ".tsv":
+        return pd.read_csv(path, sep="\t")
     if ext == ".parquet":
         return pd.read_parquet(path)
+    if ext == ".json":
+        try:
+            return pd.read_json(path)
+        except ValueError:
+            return pd.read_json(path, lines=True)
+    if ext in {".xlsx", ".xls"}:
+        try:
+            return pd.read_excel(path)
+        except ImportError as exc:
+            raise ImportError("Reading Excel requires openpyxl. Install openpyxl to proceed.") from exc
+    if ext == ".feather":
+        return pd.read_feather(path)
     raise ValueError(f"Unsupported file extension: {ext}")
 
 
