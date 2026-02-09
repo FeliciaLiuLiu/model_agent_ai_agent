@@ -155,17 +155,25 @@ python -m eda_spark.cli \
 
 ## Input Examples
 
-Multiple files:
+### One-Line (Auto-Exec from ./data)
+
 ```bash
+python -m eda_spark.cli --output ./output_eda_spark
+```
+
+### Specify File(s)
+
+```bash
+python -m eda_spark.cli --data ./data/your_dataset.csv --output ./output_eda_spark
 python -m eda_spark.cli --data ./data/part1.csv --data ./data/part2.parquet --output ./output_eda_spark
 ```
 
-SQL:
+### SQL Input
 ```bash
 python -m eda_spark.cli --sql "SELECT * FROM aml_dataset" --db "sqlite:///./data/aml.db" --output ./output_eda_spark
 ```
 
-Python / notebook:
+### Python / Notebook Input
 ```bash
 python -m eda_spark.cli --py ./load_data.py --output ./output_eda_spark
 python -m eda_spark.cli --nb ./load_data.ipynb --output ./output_eda_spark

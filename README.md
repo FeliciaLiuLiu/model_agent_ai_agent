@@ -470,24 +470,28 @@ results = eda.run(
 
 ### EDA CLI
 
+One-line (auto-exec from `./data`):
+
 ```bash
-eda-agent --data ./data/synthetic_bank_aml_200k.csv --output ./output_eda
+eda-agent --output ./output_eda
 ```
 
-Unified data loader (pandas mode):
+Specify file(s):
 
 ```bash
-# Multiple files (repeat --data)
+eda-agent --data ./data/synthetic_bank_aml_200k.csv --output ./output_eda
 eda-agent --data ./data/part1.csv --data ./data/part2.csv --output ./output_eda
+```
 
-# Directory or glob
-eda-agent --data ./data --output ./output_eda
-eda-agent --data "./data/*.csv" --output ./output_eda
+SQL input:
 
-# SQL (SQLite or SQLAlchemy)
+```bash
 eda-agent --sql "SELECT * FROM transactions" --db "sqlite:///./data/demo.db" --output ./output_eda
+```
 
-# Python file / notebook
+Python / notebook input:
+
+```bash
 eda-agent --py ./load_data.py --output ./output_eda
 eda-agent --nb ./load_data.ipynb --output ./output_eda
 ```
@@ -503,12 +507,6 @@ List functions and interactive selection:
 ```bash
 eda-agent --list-functions
 eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --interactive
-```
-
-Auto-detect dataset (latest supported file in `./data` by mtime):
-
-```bash
-eda-agent --output ./output_eda
 ```
 
 Supported file types: `.csv`, `.tsv`, `.parquet`, `.json`, `.xlsx`, `.xls`, `.feather` (Excel requires `openpyxl`). Override with `EDA_DATA_PATH`.
@@ -534,6 +532,34 @@ Limit rows for faster PDF:
 
 ```bash
 eda-agent --data ./path/to/your_dataset.csv --output ./output_eda --max-rows 5000
+```
+
+### EDA Spark CLI
+
+One-line (auto-exec from `./data`):
+
+```bash
+python -m eda_spark.cli --output ./output_eda_spark
+```
+
+Specify file(s):
+
+```bash
+python -m eda_spark.cli --data ./data/your_dataset.csv --output ./output_eda_spark
+python -m eda_spark.cli --data ./data/part1.csv --data ./data/part2.parquet --output ./output_eda_spark
+```
+
+SQL input:
+
+```bash
+python -m eda_spark.cli --sql "SELECT * FROM aml_dataset" --db "sqlite:///./data/aml.db" --output ./output_eda_spark
+```
+
+Python / notebook input:
+
+```bash
+python -m eda_spark.cli --py ./load_data.py --output ./output_eda_spark
+python -m eda_spark.cli --nb ./load_data.ipynb --output ./output_eda_spark
 ```
 
 ### Model Testing Agent - CLI

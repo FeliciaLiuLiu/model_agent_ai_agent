@@ -228,21 +228,16 @@ eda.run(file_path="./path/to/your_dataset.csv")
 
 ## CLI Usage
 
-### Non-Interactive (Pandas)
-
-```bash
-python -m eda.cli --data ./path/to/your_dataset.csv --output ./output_eda --target-col your_target
-```
-
-Auto-run from `./data` (one-line):
+### One-Line (Auto-Exec from ./data)
 
 ```bash
 python -m eda.cli --output ./output_eda
 ```
 
-Multiple files (repeatable):
+### Specify File(s)
 
 ```bash
+python -m eda.cli --data ./path/to/your_dataset.csv --output ./output_eda --target-col your_target
 python -m eda.cli --data ./data/part1.csv --data ./data/part2.csv --output ./output_eda
 ```
 
@@ -254,13 +249,13 @@ python -m eda.cli --data "./data/*.csv" --output ./output_eda
 python -m eda.cli --data ./data --data-recursive --output ./output_eda
 ```
 
-SQL:
+### SQL Input
 
 ```bash
 python -m eda.cli --sql "SELECT * FROM transactions" --db "sqlite:///./data/demo.db" --output ./output_eda
 ```
 
-Python / notebook:
+### Python / Notebook Input
 
 ```bash
 python -m eda.cli --py ./load_data.py --output ./output_eda
