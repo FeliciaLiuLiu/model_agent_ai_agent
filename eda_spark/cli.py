@@ -19,6 +19,18 @@ def _parse_list(value: Optional[str]) -> Optional[List[str]]:
     return [v.strip() for v in value.split(",") if v.strip()]
 
 
+def _parse_multi_data(value) -> Optional[List[str]]:
+    if not value:
+        return None
+    items: List[str] = []
+    if isinstance(value, list):
+        for v in value:
+            items.extend([item.strip() for item in str(v).split(",") if item.strip()])
+    else:
+        items.extend([item.strip() for item in str(value).split(",") if item.strip()])
+    return items or None
+
+
 def _parse_spark_conf(values: Optional[List[str]]) -> Optional[Dict[str, str]]:
     if not values:
         return None
@@ -35,8 +47,20 @@ def main():
     parser = argparse.ArgumentParser(description="EDA Agent (Spark)")
     parser.add_argument(
         "--data",
+        action="append",
         default=None,
-        help="Data file (.csv, .parquet). If omitted, auto-detects latest mixed AML dataset from ./data.",
+        help="Data file/dir/glob. Repeatable. If omitted, auto-loads from ./data.",
+    )
+    parser.add_argument("--sql", default=None, help="SQL query to load data")
+    parser.add_argument("--db", default=None, help="Database connection string for --sql")
+    parser.add_argument("--py", default=None, help="Python file with load() or df variable")
+    parser.add_argument("--py-code", default=None, help="Inline Python code that defines load() or df")
+    parser.add_argument("--nb", default=None, help="Notebook (.ipynb) file with load() or df")
+    parser.add_argument("--data-recursive", action="store_true", help="Recursively search directories/globs for data files")
+    parser.add_argument(
+        "--auto-exec",
+        action="store_true",
+        help="Auto-execute .sql/.py/.ipynb in ./data when no input is provided",
     )
     parser.add_argument("--output", default="./output_eda_spark", help="Output directory")
     parser.add_argument("--target-col", default=None, help="Target column name")
@@ -74,6 +98,8 @@ def main():
     id_cols = _parse_list(args.id_cols)
     sections = _parse_list(args.sections)
     columns = _parse_list(args.columns)
+    data_inputs = _parse_multi_data(args.data)
+    auto_exec = True if args.auto_exec else None
 
     section_columns: Dict[str, List[str]] = {
         "data_quality": _parse_list(args.columns_data_quality),
@@ -98,7 +124,15 @@ def main():
     if args.interactive:
         eda.run_interactive(
             df=None,
-            file_path=args.data,
+            file_path=None,
+            data=data_inputs,
+            sql=args.sql,
+            db=args.db,
+            py=args.py,
+            py_code=args.py_code,
+            nb=args.nb,
+            recursive=args.data_recursive,
+            auto_exec=auto_exec,
             target_col=args.target_col,
             time_col=args.time_col,
             max_rows=args.max_rows,
@@ -109,7 +143,15 @@ def main():
     else:
         eda.run(
             df=None,
-            file_path=args.data,
+            file_path=None,
+            data=data_inputs,
+            sql=args.sql,
+            db=args.db,
+            py=args.py,
+            py_code=args.py_code,
+            nb=args.nb,
+            recursive=args.data_recursive,
+            auto_exec=auto_exec,
             sections=sections,
             columns=columns,
             section_columns=section_columns,

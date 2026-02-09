@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-SUPPORTED_EXTS = [".csv"]
+SUPPORTED_EXTS = [".csv", ".tsv", ".parquet", ".json", ".xlsx", ".xls", ".feather"]
 TIMESTAMP_RE = re.compile(r"(?:^|_)(\d{8}_\d{6})(?:_|\\.|$)")
 
 DEFAULT_NULL_LIKE_VALUES = [
@@ -66,9 +66,9 @@ def detect_latest_dataset(
     data_dir: str = "./data",
     allowed_ext: Optional[List[str]] = None,
     env_var: str = "EDA_SPARK_DATA_PATH",
-    prefix: str = DEFAULT_DATASET_PREFIX,
+    prefix: str = "",
 ) -> str:
-    """Detect the latest dataset from the mixed AML generator (07_XXX.py)."""
+    """Detect the latest dataset by file modification time (mtime)."""
     env_path = os.environ.get(env_var)
     if env_path:
         return env_path
@@ -83,20 +83,7 @@ def detect_latest_dataset(
         candidates.extend(base.rglob(f"{prefix}*{ext}"))
 
     if not candidates:
-        raise FileNotFoundError(
-            f"No mixed AML dataset found in {base}. "
-            f"Run scripts/07_generate_synthetic_aml_mixed_bank_fintech.py first or set {env_var}."
-        )
-
-    timestamped: List[Tuple[datetime, Path]] = []
-    for path in candidates:
-        ts = parse_timestamp_from_filename(path.name)
-        if ts:
-            timestamped.append((ts, path))
-
-    if timestamped:
-        timestamped.sort(key=lambda x: x[0], reverse=True)
-        return str(timestamped[0][1])
+        raise FileNotFoundError(f"No dataset found in {base} (extensions: {allowed_ext})")
 
     candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     return str(candidates[0])
@@ -108,8 +95,28 @@ def load_data_spark(spark, path: str):
     ext = _extract_suffix(path)
     if ext == ".csv":
         return spark.read.option("header", True).option("inferSchema", True).csv(local_uri)
+    if ext == ".tsv":
+        return spark.read.option("header", True).option("inferSchema", True).option("sep", "\t").csv(local_uri)
     if ext == ".parquet":
         return spark.read.parquet(local_uri)
+    if ext == ".json":
+        return spark.read.option("multiLine", True).json(local_uri)
+    if ext in {".xlsx", ".xls"}:
+        try:
+            return (
+                spark.read.format("com.crealytics.spark.excel")
+                .option("header", True)
+                .option("inferSchema", True)
+                .load(local_uri)
+            )
+        except Exception as exc:
+            raise ImportError("Reading Excel requires spark-excel or openpyxl via pandas fallback.") from exc
+    if ext == ".feather":
+        try:
+            import pandas as pd  # type: ignore
+        except ImportError as exc:
+            raise ImportError("Reading Feather requires pandas + pyarrow.") from exc
+        return spark.createDataFrame(pd.read_feather(Path(path)))
     raise ValueError(f"Unsupported file extension: {ext}")
 
 

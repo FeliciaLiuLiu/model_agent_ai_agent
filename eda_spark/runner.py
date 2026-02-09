@@ -9,12 +9,11 @@ import numpy as np
 
 try:
     from .report import EDAReportBuilder
+    from .dataloader import DataLoader
     from .utils import (
         DEFAULT_NULL_LIKE_VALUES,
-        detect_latest_dataset,
         detect_null_like_values,
         infer_column_types,
-        load_data_spark,
         pick_target_column,
         pick_time_column,
         time_parse_ratio,
@@ -24,12 +23,11 @@ except ImportError:  # allow running as a script: python eda_spark/runner.py
     if repo_root not in sys.path:
         sys.path.insert(0, repo_root)
     from eda_spark.report import EDAReportBuilder
+    from eda_spark.dataloader import DataLoader
     from eda_spark.utils import (
         DEFAULT_NULL_LIKE_VALUES,
-        detect_latest_dataset,
         detect_null_like_values,
         infer_column_types,
-        load_data_spark,
         pick_target_column,
         pick_time_column,
         time_parse_ratio,
@@ -133,6 +131,14 @@ class EDASpark:
         self,
         df: Optional[Any] = None,
         file_path: Optional[str] = None,
+        data: Optional[List[str]] = None,
+        sql: Optional[str] = None,
+        db: Optional[str] = None,
+        py: Optional[str] = None,
+        py_code: Optional[str] = None,
+        nb: Optional[str] = None,
+        recursive: bool = False,
+        auto_exec: Optional[bool] = None,
         sections: Optional[List[str]] = None,
         columns: Optional[List[str]] = None,
         section_columns: Optional[Dict[str, List[str]]] = None,
@@ -149,8 +155,22 @@ class EDASpark:
         from pyspark.sql.types import StringType
 
         if df is None:
-            path = file_path or detect_latest_dataset(data_dir=data_dir)
-            df = load_data_spark(self.spark, path)
+            if auto_exec is None:
+                has_explicit = any([file_path, data, sql, py, py_code, nb])
+                auto_exec = not has_explicit
+            loader = DataLoader(
+                spark=self.spark,
+                data=data or file_path,
+                sql=sql,
+                db=db,
+                py=py,
+                py_code=py_code,
+                nb=nb,
+                data_dir=data_dir,
+                recursive=recursive,
+                auto_exec=bool(auto_exec),
+            )
+            df, path = loader.load()
         else:
             path = file_path
 
@@ -244,6 +264,14 @@ class EDASpark:
         self,
         df: Optional[Any] = None,
         file_path: Optional[str] = None,
+        data: Optional[List[str]] = None,
+        sql: Optional[str] = None,
+        db: Optional[str] = None,
+        py: Optional[str] = None,
+        py_code: Optional[str] = None,
+        nb: Optional[str] = None,
+        recursive: bool = False,
+        auto_exec: Optional[bool] = None,
         target_col: Optional[str] = None,
         time_col: Optional[str] = None,
         max_rows: Optional[int] = None,
@@ -255,8 +283,22 @@ class EDASpark:
     ) -> Dict[str, Any]:
         """Interactive selection of sections and columns (Spark)."""
         if df is None:
-            path = file_path or detect_latest_dataset(data_dir=data_dir)
-            df = load_data_spark(self.spark, path)
+            if auto_exec is None:
+                has_explicit = any([file_path, data, sql, py, py_code, nb])
+                auto_exec = not has_explicit
+            loader = DataLoader(
+                spark=self.spark,
+                data=data or file_path,
+                sql=sql,
+                db=db,
+                py=py,
+                py_code=py_code,
+                nb=nb,
+                data_dir=data_dir,
+                recursive=recursive,
+                auto_exec=bool(auto_exec),
+            )
+            df, path = loader.load()
         else:
             path = file_path
 
@@ -306,6 +348,14 @@ class EDASpark:
         return self.run(
             df=df,
             file_path=path,
+            data=data,
+            sql=sql,
+            db=db,
+            py=py,
+            py_code=py_code,
+            nb=nb,
+            recursive=recursive,
+            auto_exec=auto_exec,
             sections=sections,
             section_columns=section_columns,
             target_col=target_col,
