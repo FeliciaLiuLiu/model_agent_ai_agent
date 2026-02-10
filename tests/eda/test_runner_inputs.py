@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from adm_central_utility.eda.runner import EDA
+from eda.runner import EDA
 
 
 def _write_csv(tmp_path: Path, name: str = "input.csv", rows: int = 3) -> Path:

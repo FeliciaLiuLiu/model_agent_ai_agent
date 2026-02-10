@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from adm_central_utility.eda.dataloader import DataLoader
+from eda.dataloader import DataLoader
 
 
 def _write_csv(tmp_path: Path, name: str = "input.csv", rows: int = 3) -> Path:

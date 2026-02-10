@@ -8,7 +8,7 @@ import pytest
 pytest.importorskip("pyspark")
 from pyspark.sql import SparkSession
 
-from adm_central_utility.eda_spark.runner import EDASpark
+from eda_spark.runner import EDASpark
 
 
 @pytest.fixture(scope="session")

@@ -1,6 +1,10 @@
 """ADM Central Utility - Model Testing and EDA"""
 from . import eda
-from . import model_testing_agent
+
+try:
+    from . import model_testing_agent
+except Exception:
+    model_testing_agent = None
 from .eda import EDA
 
 try:
