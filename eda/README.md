@@ -130,6 +130,12 @@ or place your dataset directly under `./data`.
 python -m eda.cli --output ./output_eda
 ```
 
+Specify a dataset explicitly:
+
+```bash
+python -m eda.cli --data ./data/your_dataset.csv --output ./output_eda
+```
+
 The PDF will be saved to:
 
 ```
@@ -261,6 +267,15 @@ python -m eda.cli --sql "SELECT * FROM transactions" --db "sqlite:///./data/demo
 python -m eda.cli --py ./load_data.py --output ./output_eda
 python -m eda.cli --nb ./load_data.ipynb --output ./output_eda
 ```
+
+Example loaders in this repo:
+- `data/eda_input_loader.py`
+- `data/eda_input_loader.ipynb`
+
+General usage:
+1. Copy an example loader to your own file, for example `data/eda_input_loader.py` to `data/user.py`.
+2. Edit `load()` (or define a `df`) in your file.
+3. Run with `--py data/user.py` or `--nb data/user.ipynb`.
 
 ### Interactive (Pandas)
 

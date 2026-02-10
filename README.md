@@ -1,14 +1,16 @@
 # ADM Central Utility
 
-This project provides three main APIs:
+This project provides four main programmes/APIs:
 
-- **EDA**: automated exploratory data analysis with PDF and JSON outputs.
+- **EDA (Pandas)**: automated exploratory data analysis with PDF and JSON outputs.
+- **EDA Spark (PySpark)**: Spark-first EDA for large datasets and CML environments.
 - **Model Testing Agent**: comprehensive model evaluation with metrics, plots, and PDF reports.
 - **Model Testing Agent (PySpark)**: Spark-based evaluation for large datasets and CML environments.
 
 See module-specific docs:
 
 - `eda/README.md`
+- `eda_spark/README.md`
 - `model_testing_agent/README.md`
 - `model_testing_agent_pyspark/README.md`
 
@@ -24,6 +26,35 @@ results = eda.run(data=["./path/to/your_dataset.csv"])
 ```
 
 Supports files/dirs/globs, SQL, Python, and notebook inputs (pandas mode). See `eda/README.md` for details.
+
+## EDA and EDA Spark Programmes (One-Line CLI)
+
+EDA (Pandas):
+```bash
+python -m eda.cli --py data/eda_input_loader.py --output ./output_eda_py
+python -m eda.cli --nb data/eda_input_loader.ipynb --output ./output_eda_nb
+```
+
+EDA Spark (PySpark):
+```bash
+python -m eda_spark.cli --py data/eda_spark_input_loader.py --output ./output_eda_spark_py --spark-master "local[*]"
+python -m eda_spark.cli --nb data/eda_spark_input_loader.ipynb --output ./output_eda_spark_nb --spark-master "local[*]"
+```
+
+Specify a dataset explicitly with `--data`:
+```bash
+python -m eda.cli --data ./data/your_dataset.csv --output ./output_eda
+python -m eda_spark.cli --data ./data/your_dataset.csv --output ./output_eda_spark --spark-master "local[*]"
+```
+
+Example loader files:
+- `data/eda_input_loader.py` and `data/eda_input_loader.ipynb` for EDA (Pandas).
+- `data/eda_spark_input_loader.py` and `data/eda_spark_input_loader.ipynb` for EDA Spark.
+
+General usage:
+1. Copy an example loader to your own file, for example `data/eda_input_loader.py` to `data/user.py`.
+2. Edit `load()` (or define a `df`) in your file.
+3. Run with `--py data/user.py` or `--nb data/user.ipynb`.
 
 ## Model Testing Agent (High-Level)
 
@@ -58,6 +89,7 @@ agent.generate_report(results)
   - `eda/runner.py`: `EDA` class entry point.
   - `eda/utils.py`: dataset auto-detection, column type detection, loaders.
   - `eda/report.py`: PDF report builder.
+- `eda_spark/`: EDA Spark module (Spark-first EDA with PDF/JSON outputs).
 - `model_testing_agent/`: Model evaluation module.
   - `model_testing_agent/runner/main.py`: `ModelTestingAgent` (non-interactive).
   - `model_testing_agent/runner/interactive.py`: `InteractiveAgent`.

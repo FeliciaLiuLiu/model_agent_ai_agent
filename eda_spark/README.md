@@ -179,6 +179,18 @@ python -m eda_spark.cli --py ./load_data.py --output ./output_eda_spark
 python -m eda_spark.cli --nb ./load_data.ipynb --output ./output_eda_spark
 ```
 
+Example loaders in this repo:
+- `data/eda_spark_input_loader.py`
+- `data/eda_spark_input_loader.ipynb`
+
+General usage:
+1. Copy an example loader to your own file, for example `data/eda_spark_input_loader.py` to `data/user.py`.
+2. Edit `load()` (or define a `df`) in your file.
+3. Run with `--py data/user.py` or `--nb data/user.ipynb`.
+
+Notes:
+- `load()` can return a Spark DataFrame (recommended) or a pandas DataFrame. Pandas inputs are converted to Spark automatically.
+
 ## Environment Overrides
 
 - `EDA_SPARK_DATA_PATH`: force a specific dataset path.
