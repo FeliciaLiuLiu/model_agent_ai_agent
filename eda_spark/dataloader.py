@@ -142,7 +142,7 @@ def _load_python_file(path: str, spark):
 
 def _load_python_code(code: str, spark):
     local_ns: dict = {}
-    exec(code, {}, local_ns)
+    exec(code, local_ns, local_ns)
     if "load" in local_ns and callable(local_ns["load"]):
         df = local_ns["load"]()
     elif "df" in local_ns:
@@ -164,7 +164,7 @@ def _load_notebook(path: str, spark):
             continue
         source = cell.get("source", [])
         code = "".join(source) if isinstance(source, list) else str(source)
-        exec(code, {}, local_ns)
+        exec(code, local_ns, local_ns)
     if "load" in local_ns and callable(local_ns["load"]):
         df = local_ns["load"]()
     elif "df" in local_ns:
