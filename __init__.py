@@ -1,19 +1,37 @@
-"""ADM Central Utility - Model Testing and EDA"""
-from . import eda
+﻿"""ADM Central Utility - Model Testing and EDA"""
 
 try:
-    from . import model_testing_agent
+    if __package__:
+        from . import eda
+        from .eda import EDA
+    else:
+        import eda
+        from eda import EDA
+except Exception:
+    eda = None
+    EDA = None
+
+try:
+    if __package__:
+        from . import model_testing_agent
+    else:
+        import model_testing_agent
 except Exception:
     model_testing_agent = None
-from .eda import EDA
 
 try:
-    from .eda import EDASpark
+    if __package__:
+        from .eda import EDASpark
+    else:
+        from eda import EDASpark
 except Exception:
     EDASpark = None
 
 try:
-    from . import model_testing_agent_pyspark
+    if __package__:
+        from . import model_testing_agent_pyspark
+    else:
+        import model_testing_agent_pyspark
 except Exception:
     model_testing_agent_pyspark = None
 
