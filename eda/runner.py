@@ -531,7 +531,11 @@ class EDA:
         null_like_payload = []
         string_cols = col_types.get("categorical", []) + col_types.get("text", [])
         if string_cols:
-            null_like_payload = detect_null_like_values(df, null_like_values=DEFAULT_NULL_LIKE_VALUES)
+            null_like_payload = detect_null_like_values(
+                df,
+                null_like_values=DEFAULT_NULL_LIKE_VALUES,
+                max_examples=3,
+            )
         else:
             metrics["null_like_skipped_reason"] = "No string-like columns available."
         metrics["null_like_payload"] = null_like_payload

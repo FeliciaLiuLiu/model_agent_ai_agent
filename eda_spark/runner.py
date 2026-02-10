@@ -571,6 +571,7 @@ class EDASpark:
         null_like_payload = detect_null_like_values(
             df,
             null_like_values=DEFAULT_NULL_LIKE_VALUES,
+            max_examples=3,
         )
         if not null_like_payload:
             metrics["null_like_skipped_reason"] = "No string-like columns available or no null-like values detected."
