@@ -56,6 +56,24 @@ General usage:
 2. Edit `load()` (or define a `df`) in your file.
 3. Run with `--py data/user.py` or `--nb data/user.ipynb`.
 
+## Run EDA Tests
+
+From the repo root:
+```bash
+python -m pytest tests/eda
+```
+
+Run a single file:
+```bash
+python -m pytest tests/eda/test_report_payload_shapes.py
+```
+
+If you see import errors, install the package in editable mode first:
+```bash
+pip install -e .
+python -m pytest tests/eda
+```
+
 ## Model Testing Agent (High-Level)
 
 The Model Testing Agent evaluates a classification model with effectiveness, efficiency, stability, and interpretability matrices. Users can run all matrices or select subsets interactively or via API/CLI.
