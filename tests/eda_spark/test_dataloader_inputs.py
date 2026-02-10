@@ -23,9 +23,9 @@ def spark():
     spark.stop()
 
 
-def _write_csv(tmp_path: Path) -> Path:
-    df = pd.DataFrame({"a": [1, 2, 3], "b": ["x", "y", "z"]})
-    path = tmp_path / "input.csv"
+def _write_csv(tmp_path: Path, name: str = "input.csv", rows: int = 3) -> Path:
+    df = pd.DataFrame({"a": list(range(1, rows + 1)), "b": ["x"] * rows})
+    path = tmp_path / name
     df.to_csv(path, index=False)
     return path
 
@@ -50,6 +50,12 @@ def _write_py_loader(tmp_path: Path) -> Path:
         "    return pd.DataFrame({'a':[1,2],'b':['x','y']})\n",
         encoding="utf-8",
     )
+    return path
+
+
+def _write_sql_file(tmp_path: Path, name: str = "query.sql") -> Path:
+    path = tmp_path / name
+    path.write_text("SELECT * FROM t", encoding="utf-8")
     return path
 
 
@@ -112,3 +118,59 @@ def test_spark_dataloader_notebook(local_tmp_path: Path, spark):
     df, source = loader.load()
     assert df.count() == 3
     assert source.startswith("nb:")
+
+
+def test_spark_dataloader_py_code(spark):
+    code = (
+        "import numpy as np\n"
+        "import pandas as pd\n"
+        "\n"
+        "def load():\n"
+        "    values = np.array([1, 2, 3])\n"
+        "    return pd.DataFrame({'a': values, 'b': ['x', 'y', 'z']})\n"
+    )
+    loader = DataLoader(spark=spark, py_code=code)
+    df, source = loader.load()
+    assert df.count() == 3
+    assert source == "py_code"
+
+
+def test_spark_dataloader_data_dir_and_glob(local_tmp_path: Path, spark):
+    _write_csv(local_tmp_path, name="part1.csv", rows=2)
+    _write_csv(local_tmp_path, name="part2.csv", rows=3)
+    nested_dir = local_tmp_path / "nested"
+    nested_dir.mkdir()
+    _write_csv(nested_dir, name="nested.csv", rows=1)
+
+    loader_dir = DataLoader(spark=spark, data=[str(local_tmp_path)])
+    df_dir, source_dir = loader_dir.load()
+    assert df_dir.count() == 5
+    assert "part1.csv" in source_dir
+    assert "part2.csv" in source_dir
+
+    loader_glob = DataLoader(spark=spark, data=[str(local_tmp_path / "*.csv")])
+    df_glob, source_glob = loader_glob.load()
+    assert df_glob.count() == 5
+    assert "part1.csv" in source_glob
+    assert "part2.csv" in source_glob
+
+    loader_recursive = DataLoader(spark=spark, data=[str(local_tmp_path)], recursive=True)
+    df_recursive, source_recursive = loader_recursive.load()
+    assert df_recursive.count() == 6
+    assert "nested.csv" in source_recursive
+
+
+def test_spark_dataloader_auto_exec(local_tmp_path: Path, spark):
+    _write_csv(local_tmp_path, name="data.csv", rows=3)
+    _write_sqlite_db(local_tmp_path)
+    _write_sql_file(local_tmp_path)
+    _write_py_loader(local_tmp_path)
+    _write_nb_loader(local_tmp_path)
+
+    loader = DataLoader(spark=spark, data_dir=str(local_tmp_path), auto_exec=True)
+    df, source = loader.load()
+    assert df.count() == 10
+    assert "data.csv" in source
+    assert "query.sql" in source
+    assert "loader.py" in source
+    assert "loader.ipynb" in source
