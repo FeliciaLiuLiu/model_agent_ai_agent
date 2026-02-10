@@ -149,7 +149,7 @@ def _load_notebook(path: str) -> pd.DataFrame:
     nb_path = Path(path)
     if not nb_path.exists():
         raise FileNotFoundError(f"Notebook not found: {path}")
-    with open(nb_path, "r", encoding="utf-8") as f:
+    with open(nb_path, "r", encoding="utf-8-sig") as f:
         nb = json.load(f)
     local_ns: dict = {}
     for cell in nb.get("cells", []):
