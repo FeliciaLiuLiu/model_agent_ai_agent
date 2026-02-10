@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import os
 
 import numpy as np
 import pandas as pd
+from pyspark.sql import SparkSession
 
 
 def _random_datetimes(rng: np.random.Generator, rows: int, max_days: int) -> list[str]:
@@ -15,7 +17,14 @@ def _random_datetimes(rng: np.random.Generator, rows: int, max_days: int) -> lis
     return [dt.strftime("%Y-%m-%d %H:%M:%S") for dt in out]
 
 
-def load() -> pd.DataFrame:
+def _get_spark() -> SparkSession:
+    builder = SparkSession.builder.appName("EDA Spark Input Loader")
+    if not os.getenv("SPARK_MASTER"):
+        builder = builder.master("local[*]")
+    return builder.getOrCreate()
+
+
+def load():
     rng = np.random.default_rng(11)
     rows = 1500
 
@@ -42,4 +51,5 @@ def load() -> pd.DataFrame:
 
     miss_idx = rng.choice(df.index, size=int(rows * 0.02), replace=False)
     df.loc[miss_idx, "device_type"] = None
-    return df
+    spark = _get_spark()
+    return spark.createDataFrame(df)
