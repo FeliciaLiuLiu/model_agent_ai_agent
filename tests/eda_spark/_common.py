@@ -95,7 +95,8 @@ def write_json_array(tmp_path: Path, name: str = "input.json", rows: int = 3) ->
 def write_parquet_with_spark(tmp_path: Path, spark, name: str = "input.parquet", rows: int = 3) -> Path:
     path = tmp_path / name
     pdf = pd.DataFrame({"a": list(range(1, rows + 1)), "b": ["x"] * rows})
-    spark.createDataFrame(pdf).write.mode("overwrite").parquet(str(path))
+    # Force local filesystem path in CML/HDFS environments.
+    spark.createDataFrame(pdf).write.mode("overwrite").parquet(path.resolve().as_uri())
     return path
 
 
