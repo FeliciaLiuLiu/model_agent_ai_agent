@@ -191,6 +191,29 @@ General usage:
 Notes:
 - `load()` can return a Spark DataFrame (recommended) or a pandas DataFrame. Pandas inputs are converted to Spark automatically.
 
+## Run EDA Spark Unit Tests
+
+From the repo root (recommended on CML with predefined PySpark):
+```bash
+cd /home/cdsw/<your_project_dir>
+export PYTHONPATH="$PWD:$PYTHONPATH"
+python -m unittest discover -s tests/eda_spark -p '*_unittest.py' -v
+```
+
+Run a single test module:
+```bash
+python -m unittest tests.eda_spark.test_eda_spark_runner_unittest -v
+```
+
+Run a single test class:
+```bash
+python -m unittest tests.eda_spark.test_eda_spark_utils_unittest.TestSparkUtils -v
+```
+
+Notes:
+- `tests/eda_spark` uses `unittest` (not `pytest`).
+- Test temp and Spark local dirs are under `/home/cdsw/.tmp_eda_spark_unittest`.
+
 ## Environment Overrides
 
 - `EDA_SPARK_DATA_PATH`: force a specific dataset path.

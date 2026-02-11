@@ -56,22 +56,36 @@ General usage:
 2. Edit `load()` (or define a `df`) in your file.
 3. Run with `--py data/user.py` or `--nb data/user.ipynb`.
 
-## Run EDA Tests
+## Run EDA / EDA Spark Unit Tests
 
 From the repo root:
 ```bash
-python -m pytest tests/eda
+export PYTHONPATH="$PWD:$PYTHONPATH"
 ```
 
-Run a single file:
+EDA (Pandas, `pytest`):
 ```bash
-python -m pytest tests/eda/test_report_payload_shapes.py
+python -m pytest tests/eda -v
+```
+
+EDA single test file:
+```bash
+python -m pytest tests/eda/test_report_payload_shapes.py -v
+```
+
+EDA Spark (PySpark, `unittest`, CML-friendly):
+```bash
+python -m unittest discover -s tests/eda_spark -p '*_unittest.py' -v
+```
+
+EDA Spark single test module:
+```bash
+python -m unittest tests.eda_spark.test_eda_spark_runner_unittest -v
 ```
 
 If you see import errors, install the package in editable mode first:
 ```bash
 pip install -e .
-python -m pytest tests/eda
 ```
 
 ## Model Testing Agent (High-Level)
