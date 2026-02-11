@@ -9,6 +9,20 @@ from pathlib import Path
 import pandas as pd
 
 
+CML_BASE_DIR = Path("/home/cdsw")
+TEST_TMP_ROOT = CML_BASE_DIR / ".tmp_eda_spark_unittest"
+SPARK_TMP_ROOT = TEST_TMP_ROOT / "spark"
+SPARK_WAREHOUSE_DIR = SPARK_TMP_ROOT / "warehouse"
+SPARK_LOCAL_DIR = SPARK_TMP_ROOT / "local"
+
+
+def _ensure_test_dirs() -> None:
+    TEST_TMP_ROOT.mkdir(parents=True, exist_ok=True)
+    SPARK_TMP_ROOT.mkdir(parents=True, exist_ok=True)
+    SPARK_WAREHOUSE_DIR.mkdir(parents=True, exist_ok=True)
+    SPARK_LOCAL_DIR.mkdir(parents=True, exist_ok=True)
+
+
 class SparkTestCase(unittest.TestCase):
     spark = None
 
@@ -30,10 +44,15 @@ class SparkTestCase(unittest.TestCase):
         except Exception:
             pass
 
+        _ensure_test_dirs()
         cls.spark = (
             SparkSession.builder
             .master("local[1]")
             .appName(f"{cls.__name__}_unittest")
+            .config("spark.sql.warehouse.dir", f"file://{SPARK_WAREHOUSE_DIR}")
+            .config("spark.local.dir", str(SPARK_LOCAL_DIR))
+            .config("spark.driver.extraJavaOptions", f"-Djava.io.tmpdir={SPARK_TMP_ROOT}")
+            .config("spark.executor.extraJavaOptions", f"-Djava.io.tmpdir={SPARK_TMP_ROOT}")
             .getOrCreate()
         )
 
@@ -44,9 +63,8 @@ class SparkTestCase(unittest.TestCase):
             cls.spark = None
 
     def setUp(self):
-        base_tmp = Path.cwd() / ".tmp_eda_spark_unittest"
-        base_tmp.mkdir(parents=True, exist_ok=True)
-        self._tmp = tempfile.TemporaryDirectory(prefix="eda_spark_unittest_", dir=str(base_tmp))
+        _ensure_test_dirs()
+        self._tmp = tempfile.TemporaryDirectory(prefix="eda_spark_unittest_", dir=str(TEST_TMP_ROOT))
         self.tmp_path = Path(self._tmp.name)
 
     def tearDown(self):
