@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 SUPPORTED_EXTS = [".csv", ".tsv", ".parquet", ".json", ".xlsx", ".xls", ".feather"]
-TIMESTAMP_RE = re.compile(r"(?:^|_)(\d{8}_\d{6})(?:_|\\.|$)")
+TIMESTAMP_RE = re.compile(r"(?:^|_)(\d{8}_\d{6})(?:_|\.|$)")
 
 DEFAULT_NULL_LIKE_VALUES = [
     "",
@@ -213,9 +213,11 @@ def pick_time_column(
     """Pick a likely time column from Spark columns."""
     if col_types.get("datetime"):
         return col_types["datetime"][0]
+
+    hint_tokens = ["date", "time", "ts", "timestamp", "_at", "created_at", "updated_at", "event_at"]
     for col in df.columns:
         name_hint = str(col).lower()
-        if any(tok in name_hint for tok in ["date", "time", "ts", "timestamp"]):
+        if any(tok in name_hint for tok in hint_tokens):
             clean, _ = time_parse_ratio(df, col, min_valid_ratio=min_valid_ratio)
             if clean:
                 return col
@@ -268,7 +270,7 @@ def infer_column_types(
         exprs = []
         for col in string_cols:
             exprs.append(F.avg(F.length(F.col(col))).alias(f"{col}__avg_len"))
-            exprs.append(F.approx_count_distinct(F.col(col)).alias(f"{col}__uniq"))
+            exprs.append(F.countDistinct(F.col(col)).alias(f"{col}__uniq"))
             exprs.append(F.count(F.col(col)).alias(f"{col}__count"))
         stats = sample_df.agg(*exprs).collect()[0].asDict()
 
@@ -283,7 +285,7 @@ def infer_column_types(
                 if clean:
                     datetime_cols.append(col)
                     continue
-            if avg_len >= text_len_threshold or unique_ratio >= text_unique_ratio:
+            if avg_len >= text_len_threshold or unique_ratio > text_unique_ratio:
                 text_cols.append(col)
             else:
                 categorical_cols.append(col)

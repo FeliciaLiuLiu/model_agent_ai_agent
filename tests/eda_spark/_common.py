@@ -19,6 +19,17 @@ class SparkTestCase(unittest.TestCase):
         except Exception as exc:
             raise unittest.SkipTest(f"pyspark not available: {exc}")
 
+        try:
+            active = SparkSession.getActiveSession()
+            if active is not None:
+                active.stop()
+            if hasattr(SparkSession, "_instantiatedSession"):
+                SparkSession._instantiatedSession = None
+            if hasattr(SparkSession, "_activeSession"):
+                SparkSession._activeSession = None
+        except Exception:
+            pass
+
         cls.spark = (
             SparkSession.builder
             .master("local[1]")
@@ -33,7 +44,9 @@ class SparkTestCase(unittest.TestCase):
             cls.spark = None
 
     def setUp(self):
-        self._tmp = tempfile.TemporaryDirectory(prefix="eda_spark_unittest_")
+        base_tmp = Path.cwd() / ".tmp_eda_spark_unittest"
+        base_tmp.mkdir(parents=True, exist_ok=True)
+        self._tmp = tempfile.TemporaryDirectory(prefix="eda_spark_unittest_", dir=str(base_tmp))
         self.tmp_path = Path(self._tmp.name)
 
     def tearDown(self):
