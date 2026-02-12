@@ -194,6 +194,26 @@ eda = EDA(output_dir="./output_eda", target_col="your_target")
 results = eda.run(data=["./path/to/your_dataset.csv"])
 ```
 
+## Jupyter Notebook Usage (Pandas EDA)
+
+Use this when running in Jupyter Notebook (without IDE). This import path avoids wrapper import issues in some notebook kernels.
+
+```python
+import warnings
+
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message=".*default of observed=False is deprecated.*"
+)
+
+from eda.runner import EDA
+
+# Example only: replace with your own dataset path
+eda = EDA(output_dir="./output_eda", target_col="sar_actual")
+results = eda.run(data=["./data/synthetic_aml_mixed_50k_20260205_094055.csv"])
+```
+
 Multiple files:
 
 ```python
