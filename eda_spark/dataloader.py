@@ -4,7 +4,9 @@ from __future__ import annotations
 import glob
 import importlib.util
 import json
+import re
 import sqlite3
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -16,6 +18,38 @@ from .utils import detect_latest_dataset, to_local_file_uri
 SUPPORTED_EXTS = {".csv", ".tsv", ".parquet", ".json", ".xlsx", ".xls", ".feather"}
 AUTO_DB_EXTS = {".db", ".sqlite", ".sqlite3"}
 PREFERRED_SQL_TABLES = ("aml_dataset", "eda_dataset", "eda_input")
+KEY_TOKEN_ALIASES = {
+    "cust": "customer",
+    "customer": "customer",
+    "acct": "account",
+    "acc": "account",
+    "account": "account",
+    "txn": "transaction",
+    "trans": "transaction",
+    "tran": "transaction",
+    "client": "customer",
+    "member": "customer",
+    "usr": "user",
+    "uid": "user",
+    "no": "number",
+    "num": "number",
+    "nbr": "number",
+    "identifier": "id",
+    "key": "id",
+}
+KEY_NAME_HINTS = {
+    "id",
+    "account",
+    "customer",
+    "transaction",
+    "user",
+    "client",
+    "member",
+    "number",
+    "code",
+    "key",
+}
+TABLE_SUFFIX_RE = re.compile(r"(?:[_-]?(?:part|chunk|shard|split|batch|seg))?[_-]?\d+$", re.IGNORECASE)
 
 
 def _is_glob(path: str) -> bool:
@@ -130,10 +164,191 @@ def _normalize_keys(value: Any, field_name: str) -> List[str]:
 
 
 def _normalize_no_key_policy(policy: Optional[str]) -> str:
-    value = (policy or "aggregate_only").strip().lower()
+    value = (policy or "error").strip().lower()
     if value not in {"aggregate_only", "error"}:
         raise ValueError("no_key_policy must be one of: aggregate_only, error")
     return value
+
+
+def _normalize_table_name(name: str) -> str:
+    normalized = re.sub(r"[^a-zA-Z0-9_]+", "_", str(name).strip().lower()).strip("_")
+    if not normalized:
+        return "table"
+    normalized = TABLE_SUFFIX_RE.sub("", normalized).strip("_")
+    return normalized or "table"
+
+
+def _table_name_from_path(path: Path) -> str:
+    return _normalize_table_name(path.stem)
+
+
+def _tokenize_name(name: str) -> List[str]:
+    tokens = [tok for tok in re.split(r"[^a-zA-Z0-9]+", str(name).lower()) if tok]
+    return [KEY_TOKEN_ALIASES.get(tok, tok) for tok in tokens]
+
+
+def _is_id_like_name(name: str) -> bool:
+    tokens = set(_tokenize_name(name))
+    if "id" in tokens:
+        return True
+    return bool(tokens.intersection(KEY_NAME_HINTS))
+
+
+def _name_similarity(left_col: str, right_col: str) -> float:
+    left_tokens = set(_tokenize_name(left_col))
+    right_tokens = set(_tokenize_name(right_col))
+    if not left_tokens or not right_tokens:
+        return 0.0
+    jaccard = len(left_tokens.intersection(right_tokens)) / max(1, len(left_tokens.union(right_tokens)))
+    seq = SequenceMatcher(None, left_col.lower(), right_col.lower()).ratio()
+    id_bonus = 0.1 if ("id" in left_tokens and "id" in right_tokens) else 0.0
+    return min(1.0, max(jaccard, 0.8 * seq) + id_bonus)
+
+
+def _type_compatibility(left_type: str, right_type: str) -> float:
+    if left_type == right_type:
+        return 1.0
+    compatible = {
+        ("bool", "numeric"),
+        ("numeric", "bool"),
+        ("string", "numeric"),
+        ("numeric", "string"),
+    }
+    if (left_type, right_type) in compatible:
+        return 0.6
+    if "other" in {left_type, right_type}:
+        return 0.3
+    return 0.0
+
+
+def _series_unique_ratio(series: pd.Series) -> float:
+    non_null = series.dropna()
+    if non_null.empty:
+        return 0.0
+    return float(non_null.nunique(dropna=True) / max(1, len(non_null)))
+
+
+def _value_overlap_score(left: pd.Series, right: pd.Series, max_unique: int = 2000) -> float:
+    left_vals = left.dropna().astype(str).str.strip()
+    right_vals = right.dropna().astype(str).str.strip()
+    if left_vals.empty or right_vals.empty:
+        return 0.0
+    left_set = set(left_vals.drop_duplicates().head(max_unique).tolist())
+    right_set = set(right_vals.drop_duplicates().head(max_unique).tolist())
+    if not left_set or not right_set:
+        return 0.0
+    inter = left_set.intersection(right_set)
+    return float(len(inter) / max(1, min(len(left_set), len(right_set))))
+
+
+def _spark_type_family(df, col: str) -> str:
+    from pyspark.sql.types import BooleanType, DateType, NumericType, StringType, TimestampType
+
+    field_map = {field.name: field.dataType for field in df.schema.fields}
+    dtype = field_map.get(col)
+    if dtype is None:
+        return "other"
+    if isinstance(dtype, BooleanType):
+        return "bool"
+    if isinstance(dtype, NumericType):
+        return "numeric"
+    if isinstance(dtype, (DateType, TimestampType)):
+        return "datetime"
+    if isinstance(dtype, StringType):
+        return "string"
+    return "other"
+
+
+def _candidate_key_columns_spark(df, sample_size: int = 5000) -> List[str]:
+    usable = [col for col in df.columns if _spark_type_family(df, col) not in {"datetime", "other"}]
+    if not usable:
+        return []
+
+    id_like = [col for col in usable if _is_id_like_name(col)]
+    sample_cols = usable[: min(40, len(usable))]
+    sample_pdf = df.select(*sample_cols).limit(sample_size).toPandas()
+    for col in sample_cols:
+        if col in id_like:
+            continue
+        if _series_unique_ratio(sample_pdf[col]) >= 0.4:
+            id_like.append(col)
+    if not id_like:
+        id_like = sample_cols
+    return id_like[:40]
+
+
+def _infer_join_mapping_spark(
+    left_df,
+    right_df,
+    left_table: str,
+    right_table: str,
+    sample_size: int = 5000,
+    min_confidence: float = 0.6,
+) -> Optional[Dict[str, Any]]:
+    left_candidates = _candidate_key_columns_spark(left_df, sample_size=sample_size)
+    right_candidates = _candidate_key_columns_spark(right_df, sample_size=sample_size)
+    if not left_candidates or not right_candidates:
+        return None
+
+    left_pdf = left_df.select(*left_candidates).limit(sample_size).toPandas()
+    right_pdf = right_df.select(*right_candidates).limit(sample_size).toPandas()
+    if left_pdf.empty or right_pdf.empty:
+        return None
+
+    scored: List[Tuple[float, str, str, Dict[str, float]]] = []
+    for left_col in left_candidates:
+        left_series = left_pdf[left_col]
+        left_type = _spark_type_family(left_df, left_col)
+        left_unique = _series_unique_ratio(left_series)
+        left_id_like = 1.0 if _is_id_like_name(left_col) else 0.0
+        for right_col in right_candidates:
+            right_series = right_pdf[right_col]
+            right_type = _spark_type_family(right_df, right_col)
+            type_score = _type_compatibility(left_type, right_type)
+            if type_score <= 0.0:
+                continue
+            right_unique = _series_unique_ratio(right_series)
+            name_score = _name_similarity(left_col, right_col)
+            overlap_score = _value_overlap_score(left_series, right_series)
+            if overlap_score <= 0.0:
+                continue
+            right_id_like = 1.0 if _is_id_like_name(right_col) else 0.0
+            uniqueness_score = min(left_unique, right_unique)
+            id_hint_score = 0.5 * (left_id_like + right_id_like)
+            score = (
+                0.30 * name_score
+                + 0.20 * type_score
+                + 0.25 * overlap_score
+                + 0.15 * uniqueness_score
+                + 0.10 * id_hint_score
+            )
+            details = {
+                "name_similarity": round(float(name_score), 6),
+                "type_score": round(float(type_score), 6),
+                "overlap_score": round(float(overlap_score), 6),
+                "uniqueness_score": round(float(uniqueness_score), 6),
+                "id_hint_score": round(float(id_hint_score), 6),
+            }
+            scored.append((score, left_col, right_col, details))
+
+    if not scored:
+        return None
+    scored.sort(key=lambda item: item[0], reverse=True)
+    best_score, best_left, best_right, best_details = scored[0]
+    if best_score < min_confidence:
+        return None
+    return {
+        "right": right_table,
+        "left_on": [best_left],
+        "right_on": [best_right],
+        "how": "left",
+        "inference": {
+            "left_table": left_table,
+            "right_table": right_table,
+            "confidence": round(float(best_score), 6),
+            "details": best_details,
+        },
+    }
 
 
 def _infer_base_table(tables: Dict[str, Any]) -> str:
@@ -279,15 +494,19 @@ def _compose_tables_spark(
 
     raw_joins = spec.get("joins")
     if raw_joins is None:
-        base_cols = list(tables[base].columns)
         for table_name in tables.keys():
             if table_name == base:
                 continue
-            keys = _infer_join_keys(base_cols, list(tables[table_name].columns), table_name)
-            if not keys:
+            inferred = _infer_join_mapping_spark(
+                left_df=tables[base],
+                right_df=tables[table_name],
+                left_table=base,
+                right_table=table_name,
+            )
+            if not inferred:
                 unjoinable.append(table_name)
                 continue
-            joins.append({"right": table_name, "left_on": keys, "right_on": keys, "how": "left"})
+            joins.append(inferred)
     else:
         if not isinstance(raw_joins, list) or not raw_joins:
             raise ValueError("compose_spec.joins must be a non-empty list.")
@@ -393,6 +612,7 @@ def _compose_tables_spark(
                 "right_on": right_on,
                 "rows_after_join": rows_after_join,
                 "unmatched_left_rows": unmatched_rows,
+                "inference": join.get("inference"),
             }
         )
 
@@ -541,6 +761,29 @@ def _concat_frames(frames: List):
     return df
 
 
+def _merge_table_frame(tables: Dict[str, Any], table_name: str, frame) -> None:
+    if table_name in tables:
+        tables[table_name] = _concat_frames([tables[table_name], frame])
+    else:
+        tables[table_name] = frame
+
+
+def _merge_loaded_object_into_tables(
+    obj: Any,
+    spark,
+    tables: Dict[str, Any],
+    source_name: str,
+    default_table_name: str,
+) -> None:
+    if isinstance(obj, Mapping):
+        table_dict = _ensure_table_dict(obj, spark, source_name)
+        for table_name, frame in table_dict.items():
+            _merge_table_frame(tables, _normalize_table_name(table_name), frame)
+        return
+    frame = _ensure_spark_df(obj, spark)
+    _merge_table_frame(tables, _normalize_table_name(default_table_name), frame)
+
+
 def _load_python_file_object(path: str) -> Any:
     file_path = Path(path)
     if not file_path.exists():
@@ -659,6 +902,40 @@ def _pick_sql_table(objects: List[Tuple[str, str]]) -> Optional[str]:
     return None
 
 
+def _resolve_file_inputs(
+    value: Optional[str],
+    allowed_exts: Sequence[str],
+    recursive: bool = False,
+) -> List[Path]:
+    if not value:
+        return []
+    raw = str(value).strip()
+    if not raw:
+        return []
+    tokens = [tok.strip() for tok in raw.split(",") if tok.strip()]
+    if not tokens:
+        return []
+    matches: List[Path] = []
+    for token in tokens:
+        token_matches: List[Path] = []
+        if _is_glob(token):
+            token_matches.extend(Path(p) for p in glob.glob(token, recursive=recursive))
+        else:
+            p = Path(token)
+            if p.is_dir():
+                for ext in allowed_exts:
+                    pattern = f"**/*{ext}" if recursive else f"*{ext}"
+                    token_matches.extend(p.glob(pattern))
+            elif p.exists():
+                token_matches.append(p)
+        if not token_matches:
+            return []
+        matches.extend(token_matches)
+    allow_set = {ext.lower() for ext in allowed_exts}
+    filtered = [p for p in matches if p.exists() and p.suffix.lower() in allow_set]
+    return sorted(filtered, key=lambda p: p.stat().st_mtime, reverse=True)
+
+
 def _load_sql_with_db(spark, sql: str, db: str):
     if db.startswith("jdbc:"):
         return (
@@ -695,22 +972,25 @@ def _load_sql_with_db(spark, sql: str, db: str):
     return spark.createDataFrame(pdf)
 
 
-def _load_sql_auto(spark, sql_files: List[Path], db_files: List[Path]) -> List:
+def _load_sql_auto(spark, sql_files: List[Path], db_files: List[Path]) -> List[Tuple[str, Any]]:
     if not sql_files:
         return []
-    texts = [p.read_text(encoding="utf-8") for p in sql_files]
-    if db_files and all(_is_select_only(t) for t in texts):
+    texts = [(p, p.read_text(encoding="utf-8")) for p in sql_files]
+    if db_files and all(_is_select_only(text) for _, text in texts):
         db_path = str(db_files[0])
         conn = sqlite3.connect(db_path)
         try:
-            frames = [spark.createDataFrame(pd.read_sql_query(t, conn)) for t in texts]
+            frames = [
+                (_table_name_from_path(path), spark.createDataFrame(pd.read_sql_query(text, conn)))
+                for path, text in texts
+            ]
         finally:
             conn.close()
         return frames
 
     conn = sqlite3.connect(":memory:")
     try:
-        for text in texts:
+        for _, text in texts:
             conn.executescript(text)
         objects = _sqlite_objects(conn)
         table = _pick_sql_table(objects)
@@ -721,7 +1001,7 @@ def _load_sql_auto(spark, sql_files: List[Path], db_files: List[Path]) -> List:
                 f"{', '.join(PREFERRED_SQL_TABLES)}."
             )
         pdf = pd.read_sql_query(f"SELECT * FROM {table}", conn)
-        return [spark.createDataFrame(pdf)]
+        return [(_normalize_table_name(table), spark.createDataFrame(pdf))]
     finally:
         conn.close()
 
@@ -742,7 +1022,7 @@ class DataLoader:
         recursive: bool = False,
         auto_exec: bool = False,
         compose_spec: Optional[Any] = None,
-        no_key_policy: str = "aggregate_only",
+        no_key_policy: str = "error",
     ) -> None:
         self.spark = spark
         self.data = _as_list(data)
@@ -777,10 +1057,62 @@ class DataLoader:
                 )
                 self.last_compose_meta = meta
                 return df, "sql_map:" + ",".join(named_sql.keys())
+            sql_files = _resolve_file_inputs(self.sql, [".sql"], recursive=self.recursive)
+            if len(sql_files) > 1:
+                tables: Dict[str, Any] = {}
+                sources: List[str] = []
+                for path in sql_files:
+                    query = path.read_text(encoding="utf-8")
+                    frame = _load_sql_with_db(self.spark, query, self.db)
+                    _merge_table_frame(tables, _table_name_from_path(path), frame)
+                    sources.append(str(path))
+                df, meta = _compose_tables_spark(
+                    self.spark,
+                    tables,
+                    compose_spec=compose_spec,
+                    no_key_policy=self.no_key_policy,
+                )
+                self.last_compose_meta = meta
+                return df, "sql_files:" + ",".join(sources)
+
+            if (
+                len(sql_files) == 1
+                and self.sql
+                and Path(str(self.sql).strip()).exists()
+                and Path(str(self.sql).strip()).is_file()
+            ):
+                sql_path = sql_files[0]
+                query = sql_path.read_text(encoding="utf-8")
+                df = _load_sql_with_db(self.spark, query, self.db)
+                return df, f"sql_file:{sql_path}"
+
             df = _load_sql_with_db(self.spark, self.sql or "", self.db)
             return df, f"sql:{self.sql}"
 
         if mode == "py":
+            py_files = _resolve_file_inputs(self.py, [".py"], recursive=self.recursive)
+            if len(py_files) > 1:
+                tables: Dict[str, Any] = {}
+                sources: List[str] = []
+                for path in py_files:
+                    obj = _load_python_file_object(str(path))
+                    _merge_loaded_object_into_tables(
+                        obj=obj,
+                        spark=self.spark,
+                        tables=tables,
+                        source_name=f"Python loader file '{path}'",
+                        default_table_name=_table_name_from_path(path),
+                    )
+                    sources.append(str(path))
+                df, meta = _compose_tables_spark(
+                    self.spark,
+                    tables,
+                    compose_spec=compose_spec,
+                    no_key_policy=self.no_key_policy,
+                )
+                self.last_compose_meta = meta
+                return df, "py_files:" + ",".join(sources)
+
             obj = _load_python_file_object(self.py or "")
             if isinstance(obj, Mapping):
                 tables = _ensure_table_dict(obj, self.spark, "Python loader")
@@ -809,6 +1141,29 @@ class DataLoader:
             return _ensure_spark_df(obj, self.spark), "py_code"
 
         if mode == "nb":
+            nb_files = _resolve_file_inputs(self.nb, [".ipynb"], recursive=self.recursive)
+            if len(nb_files) > 1:
+                tables: Dict[str, Any] = {}
+                sources: List[str] = []
+                for path in nb_files:
+                    obj = _load_notebook_object(str(path))
+                    _merge_loaded_object_into_tables(
+                        obj=obj,
+                        spark=self.spark,
+                        tables=tables,
+                        source_name=f"Notebook loader file '{path}'",
+                        default_table_name=_table_name_from_path(path),
+                    )
+                    sources.append(str(path))
+                df, meta = _compose_tables_spark(
+                    self.spark,
+                    tables,
+                    compose_spec=compose_spec,
+                    no_key_policy=self.no_key_policy,
+                )
+                self.last_compose_meta = meta
+                return df, "nb_files:" + ",".join(sources)
+
             obj = _load_notebook_object(self.nb or "")
             if isinstance(obj, Mapping):
                 tables = _ensure_table_dict(obj, self.spark, "Notebook loader")
@@ -832,25 +1187,15 @@ class DataLoader:
             if named_data and unnamed_data:
                 raise ValueError("Do not mix named and unnamed --data inputs when composing tables.")
 
-            should_compose = bool(compose_spec) or bool(named_data)
-            if should_compose:
-                tables, sources = self._load_tables_for_data_mode(named_data, unnamed_data)
-                df, meta = _compose_tables_spark(
-                    self.spark,
-                    tables,
-                    compose_spec=compose_spec,
-                    no_key_policy=self.no_key_policy,
-                )
-                self.last_compose_meta = meta
-                return df, ";".join(sources)
-
-            paths = _expand_paths(self.data, recursive=self.recursive)
-            if not paths:
-                raise FileNotFoundError("No matching data files found.")
-            frames = [_read_single_spark(self.spark, p) for p in paths]
-            df = _concat_frames(frames)
-            data_source = ";".join(str(p) for p in paths)
-            return df, data_source
+            tables, sources = self._load_tables_for_data_mode(named_data, unnamed_data)
+            df, meta = _compose_tables_spark(
+                self.spark,
+                tables,
+                compose_spec=compose_spec,
+                no_key_policy=self.no_key_policy,
+            )
+            self.last_compose_meta = meta
+            return df, ";".join(sources)
 
         if mode == "auto":
             data_paths = _scan_dir_for_exts(self.data_dir, list(SUPPORTED_EXTS), self.recursive)
@@ -859,28 +1204,54 @@ class DataLoader:
             nb_files = _scan_dir_for_exts(self.data_dir, [".ipynb"], self.recursive)
             db_files = _scan_dir_for_exts(self.data_dir, list(AUTO_DB_EXTS), self.recursive)
 
-            frames: List[Any] = []
+            tables: Dict[str, Any] = {}
             sources: List[str] = []
             if data_paths:
-                frames.extend([_read_single_spark(self.spark, p) for p in data_paths])
+                grouped_frames: Dict[str, List[Any]] = {}
+                for p in data_paths:
+                    table_name = _table_name_from_path(p)
+                    grouped_frames.setdefault(table_name, []).append(_read_single_spark(self.spark, p))
+                for table_name, frames in grouped_frames.items():
+                    _merge_table_frame(tables, table_name, _concat_frames(frames))
                 sources.extend(str(p) for p in data_paths)
             if sql_files:
-                sql_frames = _load_sql_auto(self.spark, sql_files, db_files)
-                frames.extend(sql_frames)
+                sql_tables = _load_sql_auto(self.spark, sql_files, db_files)
+                for table_name, frame in sql_tables:
+                    _merge_table_frame(tables, table_name, frame)
                 sources.extend(str(p) for p in sql_files)
             if py_files:
                 for p in py_files:
-                    frames.append(_load_python_file(str(p), self.spark))
+                    obj = _load_python_file_object(str(p))
+                    _merge_loaded_object_into_tables(
+                        obj=obj,
+                        spark=self.spark,
+                        tables=tables,
+                        source_name=f"Python loader file '{p}'",
+                        default_table_name=_table_name_from_path(p),
+                    )
                     sources.append(str(p))
             if nb_files:
                 for p in nb_files:
-                    frames.append(_load_notebook(str(p), self.spark))
+                    obj = _load_notebook_object(str(p))
+                    _merge_loaded_object_into_tables(
+                        obj=obj,
+                        spark=self.spark,
+                        tables=tables,
+                        source_name=f"Notebook loader file '{p}'",
+                        default_table_name=_table_name_from_path(p),
+                    )
                     sources.append(str(p))
 
-            if not frames:
+            if not tables:
                 raise FileNotFoundError("No supported data/auto-exec files found in ./data.")
 
-            df = _concat_frames(frames)
+            df, meta = _compose_tables_spark(
+                self.spark,
+                tables,
+                compose_spec=compose_spec,
+                no_key_policy=self.no_key_policy,
+            )
+            self.last_compose_meta = meta
             return df, ";".join(sources)
 
         raise ValueError("No valid data input provided.")
@@ -899,8 +1270,9 @@ class DataLoader:
                 if not paths:
                     raise FileNotFoundError(f"No matching files found for table '{table_name}'.")
                 frames = [_read_single_spark(self.spark, p) for p in paths]
-                tables[table_name] = _concat_frames(frames)
-                sources.append(f"{table_name}=" + ",".join(str(p) for p in paths))
+                normalized = _normalize_table_name(table_name)
+                _merge_table_frame(tables, normalized, _concat_frames(frames))
+                sources.append(f"{normalized}=" + ",".join(str(p) for p in paths))
             return tables, sources
 
         paths = _expand_paths(unnamed_data, recursive=self.recursive)
@@ -910,7 +1282,7 @@ class DataLoader:
         grouped_frames: Dict[str, List[Any]] = {}
         grouped_sources: Dict[str, List[str]] = {}
         for path in paths:
-            table_name = path.stem
+            table_name = _table_name_from_path(path)
             grouped_frames.setdefault(table_name, []).append(_read_single_spark(self.spark, path))
             grouped_sources.setdefault(table_name, []).append(str(path))
 

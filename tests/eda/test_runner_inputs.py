@@ -3,6 +3,7 @@ import sqlite3
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from eda.runner import EDA
 
@@ -182,7 +183,7 @@ def test_eda_run_auto_exec(local_tmp_path: Path):
     _write_nb_loader(local_tmp_path)
 
     payload = _run_eda(local_tmp_path / "out_auto", data_dir=str(local_tmp_path), auto_exec=True)
-    assert payload["config"]["rows_used"] == 10
+    assert payload["config"]["rows_used"] == 5
     data_path = payload["config"]["data_path"]
     assert "data.csv" in data_path
     assert "query.sql" in data_path
@@ -224,6 +225,20 @@ def test_eda_run_no_key_aggregate_only(local_tmp_path: Path):
     payload = _run_eda(
         local_tmp_path / "out_no_key",
         data=[f"transaction={tx_path}", f"customer={cust_path}"],
+        no_key_policy="aggregate_only",
     )
     assert payload["config"]["composition"]["mode"] == "aggregate_only"
     assert payload["config"]["rows_used"] == 2
+
+
+def test_eda_run_no_key_error_default(local_tmp_path: Path):
+    tx_path = local_tmp_path / "transaction.csv"
+    cust_path = local_tmp_path / "customer.csv"
+    pd.DataFrame({"transaction_id": [1, 2], "amount": [5.0, 8.0]}).to_csv(tx_path, index=False)
+    pd.DataFrame({"cust_ref": ["x", "y"], "segment": ["a", "b"]}).to_csv(cust_path, index=False)
+
+    with pytest.raises(ValueError, match="missing join keys"):
+        _run_eda(
+            local_tmp_path / "out_no_key_error",
+            data=[f"transaction={tx_path}", f"customer={cust_path}"],
+        )

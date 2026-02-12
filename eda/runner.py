@@ -119,7 +119,7 @@ class EDA:
         report_name: str = "EDA_Report.pdf",
         data_dir: str = "./data",
         compose_spec: Optional[Any] = None,
-        no_key_policy: str = "aggregate_only",
+        no_key_policy: str = "error",
         return_payload: bool = False,
     ) -> Dict[str, Any]:
         """Run EDA on a dataset and optionally generate a report."""
@@ -250,7 +250,7 @@ class EDA:
         report_name: str = "EDA_Report.pdf",
         data_dir: str = "./data",
         compose_spec: Optional[Any] = None,
-        no_key_policy: str = "aggregate_only",
+        no_key_policy: str = "error",
         return_payload: bool = False,
     ) -> Dict[str, Any]:
         """Interactive selection of sections and columns."""

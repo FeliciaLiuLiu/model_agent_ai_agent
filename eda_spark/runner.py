@@ -150,7 +150,7 @@ class EDASpark:
         report_name: str = "EDA_Report.pdf",
         data_dir: str = "./data",
         compose_spec: Optional[Any] = None,
-        no_key_policy: str = "aggregate_only",
+        no_key_policy: str = "error",
         return_payload: bool = False,
     ) -> Dict[str, Any]:
         from pyspark.sql import functions as F
@@ -288,7 +288,7 @@ class EDASpark:
         report_name: str = "EDA_Report.pdf",
         data_dir: str = "./data",
         compose_spec: Optional[Any] = None,
-        no_key_policy: str = "aggregate_only",
+        no_key_policy: str = "error",
         return_payload: bool = False,
     ) -> Dict[str, Any]:
         """Interactive selection of sections and columns (Spark)."""

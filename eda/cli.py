@@ -44,7 +44,7 @@ def main():
     )
     parser.add_argument(
         "--no-key-policy",
-        default="aggregate_only",
+        default="error",
         choices=["aggregate_only", "error"],
         help="Behavior when tables cannot be joined by keys: aggregate_only or error.",
     )
@@ -120,8 +120,6 @@ def main():
             raise RuntimeError("--auto-exec is only supported in pandas mode (no --spark).")
         if args.compose_spec:
             raise RuntimeError("--compose-spec is only supported in pandas mode (no --spark).")
-        if args.no_key_policy != "aggregate_only":
-            raise RuntimeError("--no-key-policy is only supported in pandas mode (no --spark).")
         if args.sql or args.py or args.py_code or args.nb or args.db or args.data_recursive:
             raise RuntimeError("SQL/Python/Notebook inputs are only supported in pandas mode (no --spark).")
         if data_inputs and len(data_inputs) > 1:

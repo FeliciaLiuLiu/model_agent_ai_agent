@@ -64,7 +64,7 @@ def main():
     )
     parser.add_argument(
         "--no-key-policy",
-        default="aggregate_only",
+        default="error",
         choices=["aggregate_only", "error"],
         help="Behavior when tables cannot be joined by keys: aggregate_only or error.",
     )

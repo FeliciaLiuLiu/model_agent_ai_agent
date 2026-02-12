@@ -3,6 +3,7 @@ import sqlite3
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from eda.dataloader import DataLoader
 
@@ -167,7 +168,7 @@ def test_dataloader_data_dir_and_glob(local_tmp_path: Path):
 
     loader_recursive = DataLoader(data=[str(local_tmp_path)], recursive=True)
     df_recursive, source_recursive = loader_recursive.load()
-    assert df_recursive.shape[0] == 6
+    assert df_recursive.shape[0] == 5
     assert "nested.csv" in source_recursive
 
 
@@ -180,7 +181,7 @@ def test_dataloader_auto_exec(local_tmp_path: Path):
 
     loader = DataLoader(data_dir=str(local_tmp_path), auto_exec=True)
     df, source = loader.load()
-    assert df.shape[0] == 10
+    assert df.shape[0] == 5
     assert "data.csv" in source
     assert "query.sql" in source
     assert "loader.py" in source
@@ -206,13 +207,26 @@ def test_dataloader_compose_named_tables(local_tmp_path: Path):
     assert any(c.get("name") == "customer_consistency_account" and c.get("mismatch_rows") == 1 for c in checks)
 
 
-def test_dataloader_compose_no_key_fallback(local_tmp_path: Path):
+def test_dataloader_compose_no_key_error(local_tmp_path: Path):
     left, right = _write_no_key_csvs(local_tmp_path)
     loader = DataLoader(
         data=[
             f"transaction={left}",
             f"customer={right}",
         ]
+    )
+    with pytest.raises(ValueError, match="missing join keys"):
+        loader.load()
+
+
+def test_dataloader_compose_no_key_aggregate_only(local_tmp_path: Path):
+    left, right = _write_no_key_csvs(local_tmp_path)
+    loader = DataLoader(
+        data=[
+            f"transaction={left}",
+            f"customer={right}",
+        ],
+        no_key_policy="aggregate_only",
     )
     df, _ = loader.load()
     assert loader.last_compose_meta["mode"] == "aggregate_only"
