@@ -164,6 +164,13 @@ EDA accepts exactly one input mode and loads everything into a pandas DataFrame:
 4) Inline Python: `py_code` that defines `load()` or `df`.
 5) Notebook: `nb` (`.ipynb`) with `load()` or `df` in code cells.
 
+Multi-table composition (join modeling):
+- Bind table names in `--data` using `table=path`, for example:
+  `--data transaction=./data/transaction.csv --data customer=./data/customer.csv --data account=./data/account.csv`
+- Provide `--compose-spec` as JSON string or JSON file to define `base` and `joins`.
+- Without `--compose-spec`, the loader infers joins from shared id-like keys.
+- If no reliable join keys exist, default `--no-key-policy aggregate_only` avoids row-level fusion and falls back to table-level aggregate dataset.
+
 Note: Python/Notebook modes execute code. Use trusted inputs only.
 
 ### Auto-Exec (no input flags)
@@ -245,6 +252,14 @@ python -m eda.cli --output ./output_eda
 ```bash
 python -m eda.cli --data ./path/to/your_dataset.csv --output ./output_eda --target-col your_target
 python -m eda.cli --data ./data/part1.csv --data ./data/part2.csv --output ./output_eda
+
+# Multi-table join modeling
+python -m eda.cli \
+  --data transaction=./data/transaction.csv \
+  --data customer=./data/customer.csv \
+  --data account=./data/account.csv \
+  --compose-spec ./data/compose_spec.json \
+  --output ./output_eda
 ```
 
 Directory or glob:

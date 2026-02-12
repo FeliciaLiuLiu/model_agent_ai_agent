@@ -7,7 +7,7 @@ import json
 import os
 import sqlite3
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 import pandas as pd
 
@@ -37,6 +37,427 @@ def _as_list(value) -> List[str]:
     if isinstance(value, (list, tuple, set)):
         return [str(v) for v in value]
     return [str(value)]
+
+
+def _looks_like_alias_binding(token: str) -> bool:
+    if "=" not in token:
+        return False
+    left, _ = token.split("=", 1)
+    left = left.strip()
+    if not left:
+        return False
+    if "/" in left or "\\" in left or left.startswith("."):
+        return False
+    return all(ch.isalnum() or ch in {"_", "-"} for ch in left)
+
+
+def _parse_data_bindings(data: Sequence[str]) -> Tuple[Dict[str, List[str]], List[str]]:
+    named: Dict[str, List[str]] = {}
+    unnamed: List[str] = []
+    for raw in data:
+        token = str(raw).strip()
+        if not token:
+            continue
+        if _looks_like_alias_binding(token):
+            alias, path_expr = token.split("=", 1)
+            alias = alias.strip()
+            path_expr = path_expr.strip()
+            if not path_expr:
+                continue
+            named.setdefault(alias, []).append(path_expr)
+        else:
+            unnamed.append(token)
+    return named, unnamed
+
+
+def _load_compose_spec(spec: Optional[Any]) -> Optional[Dict[str, Any]]:
+    if spec is None:
+        return None
+    if isinstance(spec, Mapping):
+        return dict(spec)
+
+    raw = str(spec).strip()
+    if not raw:
+        return None
+
+    payload = raw
+    path = Path(raw)
+    if path.exists() and path.is_file():
+        payload = path.read_text(encoding="utf-8")
+
+    try:
+        parsed = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise ValueError("compose_spec must be a JSON object string or a JSON file path.") from exc
+    if not isinstance(parsed, dict):
+        raise ValueError("compose_spec must be a JSON object.")
+    return parsed
+
+
+def _parse_named_sql(sql: Optional[str]) -> Optional[Dict[str, str]]:
+    if not sql:
+        return None
+    raw = sql.strip()
+    if not raw:
+        return None
+
+    payload = raw
+    path = Path(raw)
+    if path.exists() and path.is_file() and path.suffix.lower() == ".json":
+        payload = path.read_text(encoding="utf-8")
+
+    if not payload.lstrip().startswith("{"):
+        return None
+
+    try:
+        parsed = json.loads(payload)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(parsed, dict):
+        raise ValueError("Named SQL payload must be a JSON object: {table_name: sql_query}.")
+
+    out: Dict[str, str] = {}
+    for key, value in parsed.items():
+        table_name = str(key).strip()
+        query = str(value).strip()
+        if not table_name or not query:
+            raise ValueError("Named SQL payload contains empty table name or query.")
+        out[table_name] = query
+    return out or None
+
+
+def _normalize_keys(value: Any, field_name: str) -> List[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        keys = [value]
+    elif isinstance(value, (list, tuple)):
+        keys = [str(v) for v in value]
+    else:
+        raise ValueError(f"{field_name} must be a string or list of strings.")
+    keys = [k.strip() for k in keys if str(k).strip()]
+    return keys
+
+
+def _normalize_no_key_policy(policy: Optional[str]) -> str:
+    value = (policy or "aggregate_only").strip().lower()
+    if value not in {"aggregate_only", "error"}:
+        raise ValueError("no_key_policy must be one of: aggregate_only, error")
+    return value
+
+
+def _infer_base_table(tables: Dict[str, pd.DataFrame]) -> str:
+    preferred = ("transaction", "transactions", "txn", "fact_transaction", "fact")
+    for name in preferred:
+        if name in tables:
+            return name
+    return max(tables.items(), key=lambda x: int(x[1].shape[0]))[0]
+
+
+def _infer_join_keys(base_cols: Sequence[str], right_cols: Sequence[str], right_name: str) -> List[str]:
+    shared = [c for c in base_cols if c in set(right_cols)]
+    if not shared:
+        return []
+
+    right_lower = right_name.lower()
+    if "customer" in right_lower and "customer_id" in shared:
+        return ["customer_id"]
+    if "account" in right_lower and "account_id" in shared:
+        return ["account_id"]
+
+    id_like = [c for c in shared if c.lower() == "id" or c.lower().endswith("_id") or "id" in c.lower()]
+    if id_like:
+        return [id_like[0]]
+    return []
+
+
+def _prepare_right_for_merge(
+    right_df: pd.DataFrame,
+    right_on: Sequence[str],
+    table_name: str,
+) -> Tuple[pd.DataFrame, List[str]]:
+    rename_map: Dict[str, str] = {}
+    renamed_keys: List[str] = []
+    for col in right_df.columns:
+        if col in right_on:
+            new_name = f"__rk__{table_name}__{col}"
+            renamed_keys.append(new_name)
+            rename_map[col] = new_name
+        else:
+            rename_map[col] = f"{table_name}__{col}"
+    prepared = right_df.rename(columns=rename_map)
+    return prepared, renamed_keys
+
+
+def _aggregate_tables_pandas(tables: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+    rows: List[Dict[str, Any]] = []
+    for name, df in tables.items():
+        numeric_cols = int(df.select_dtypes(include=["number", "bool"]).shape[1])
+        rows.append(
+            {
+                "table_name": name,
+                "row_count": int(df.shape[0]),
+                "column_count": int(df.shape[1]),
+                "numeric_column_count": numeric_cols,
+                "non_numeric_column_count": int(df.shape[1] - numeric_cols),
+                "missing_cell_count": int(df.isna().sum().sum()),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _evaluate_consistency_checks(
+    df: pd.DataFrame,
+    checks: Sequence[Dict[str, str]],
+) -> List[Dict[str, Any]]:
+    reports: List[Dict[str, Any]] = []
+    for check in checks:
+        left_col = check.get("left", "")
+        right_col = check.get("right", "")
+        name = check.get("name", f"{left_col}_vs_{right_col}")
+        if left_col not in df.columns or right_col not in df.columns:
+            reports.append(
+                {
+                    "name": name,
+                    "left": left_col,
+                    "right": right_col,
+                    "status": "skipped_missing_column",
+                }
+            )
+            continue
+        both = df[left_col].notna() & df[right_col].notna()
+        comparable = int(both.sum())
+        if comparable == 0:
+            reports.append(
+                {
+                    "name": name,
+                    "left": left_col,
+                    "right": right_col,
+                    "status": "skipped_no_overlap",
+                    "comparable_rows": 0,
+                }
+            )
+            continue
+        mismatch = int(((df[left_col] != df[right_col]) & both).sum())
+        reports.append(
+            {
+                "name": name,
+                "left": left_col,
+                "right": right_col,
+                "status": "ok",
+                "comparable_rows": comparable,
+                "mismatch_rows": mismatch,
+                "mismatch_rate": round(float(mismatch / comparable), 6),
+            }
+        )
+    return reports
+
+
+def _compose_tables_pandas(
+    tables: Dict[str, pd.DataFrame],
+    compose_spec: Optional[Dict[str, Any]],
+    no_key_policy: str,
+) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    if not tables:
+        raise ValueError("No tables available for composition.")
+
+    if len(tables) == 1:
+        only_name = next(iter(tables.keys()))
+        return tables[only_name], {"mode": "single_table", "base_table": only_name, "tables": list(tables.keys())}
+
+    policy = _normalize_no_key_policy(no_key_policy)
+    spec = compose_spec or {}
+    base = str(spec.get("base", "")).strip() or _infer_base_table(tables)
+    if base not in tables:
+        raise ValueError(f"compose_spec base table '{base}' not found in inputs.")
+
+    joins: List[Dict[str, Any]] = []
+    unjoinable: List[str] = []
+
+    raw_joins = spec.get("joins")
+    if raw_joins is None:
+        base_cols = list(tables[base].columns)
+        for table_name in tables.keys():
+            if table_name == base:
+                continue
+            keys = _infer_join_keys(base_cols, list(tables[table_name].columns), table_name)
+            if not keys:
+                unjoinable.append(table_name)
+                continue
+            joins.append(
+                {
+                    "right": table_name,
+                    "left_on": keys,
+                    "right_on": keys,
+                    "how": "left",
+                    "validate": None,
+                }
+            )
+    else:
+        if not isinstance(raw_joins, list) or not raw_joins:
+            raise ValueError("compose_spec.joins must be a non-empty list.")
+        seen: set = set()
+        for raw in raw_joins:
+            if not isinstance(raw, Mapping):
+                raise ValueError("Each compose_spec.joins entry must be an object.")
+            right = str(raw.get("right", "")).strip()
+            if not right:
+                raise ValueError("Each compose_spec.joins entry requires 'right'.")
+            if right == base:
+                continue
+            if right not in tables:
+                raise ValueError(f"compose_spec references unknown table '{right}'.")
+            left_on = _normalize_keys(raw.get("left_on"), "left_on")
+            right_on = _normalize_keys(raw.get("right_on", left_on), "right_on")
+            if not left_on:
+                raise ValueError(f"Join to '{right}' requires left_on.")
+            if len(left_on) != len(right_on):
+                raise ValueError(f"Join to '{right}' has different left_on/right_on lengths.")
+            joins.append(
+                {
+                    "right": right,
+                    "left_on": left_on,
+                    "right_on": right_on,
+                    "how": str(raw.get("how", "left")).strip() or "left",
+                    "validate": raw.get("validate"),
+                }
+            )
+            seen.add(right)
+        unjoinable = [name for name in tables.keys() if name != base and name not in seen]
+
+    if not joins or unjoinable:
+        if policy == "aggregate_only":
+            return _aggregate_tables_pandas(tables), {
+                "mode": "aggregate_only",
+                "reason": "missing_join_keys",
+                "base_table": base,
+                "tables_without_join_keys": unjoinable or [t for t in tables if t != base],
+                "tables": list(tables.keys()),
+            }
+        raise ValueError(
+            "Unable to compose all tables at row level due to missing join keys: "
+            + ", ".join(unjoinable or [t for t in tables if t != base])
+        )
+
+    composed = tables[base].copy()
+    join_reports: List[Dict[str, Any]] = []
+    for join in joins:
+        right_name = join["right"]
+        left_on = list(join["left_on"])
+        right_on = list(join["right_on"])
+        right_df = tables[right_name]
+
+        missing_left = [c for c in left_on if c not in composed.columns]
+        missing_right = [c for c in right_on if c not in right_df.columns]
+        if missing_left or missing_right:
+            if policy == "aggregate_only":
+                return _aggregate_tables_pandas(tables), {
+                    "mode": "aggregate_only",
+                    "reason": "join_key_not_found",
+                    "base_table": base,
+                    "join_table": right_name,
+                    "missing_left_keys": missing_left,
+                    "missing_right_keys": missing_right,
+                    "tables": list(tables.keys()),
+                }
+            raise ValueError(
+                f"Join keys missing for table '{right_name}'. "
+                f"left missing={missing_left}, right missing={missing_right}"
+            )
+
+        prepared_right, renamed_keys = _prepare_right_for_merge(right_df, right_on, right_name)
+        marker = f"__joined__{right_name}"
+        prepared_right[marker] = 1
+        merge_kwargs: Dict[str, Any] = {
+            "how": join["how"],
+            "left_on": left_on,
+            "right_on": renamed_keys,
+            "sort": False,
+        }
+        validate = join.get("validate")
+        if validate:
+            merge_kwargs["validate"] = validate
+
+        try:
+            merged = composed.merge(prepared_right, **merge_kwargs)
+        except Exception as exc:
+            if policy == "aggregate_only":
+                return _aggregate_tables_pandas(tables), {
+                    "mode": "aggregate_only",
+                    "reason": "join_failed",
+                    "base_table": base,
+                    "join_table": right_name,
+                    "error": str(exc),
+                    "tables": list(tables.keys()),
+                }
+            raise
+
+        unmatched_rows = int(merged[marker].isna().sum())
+        composed = merged.drop(columns=[marker] + renamed_keys, errors="ignore")
+        join_reports.append(
+            {
+                "right_table": right_name,
+                "how": join["how"],
+                "left_on": left_on,
+                "right_on": right_on,
+                "rows_after_join": int(composed.shape[0]),
+                "unmatched_left_rows": unmatched_rows,
+            }
+        )
+
+    explicit_checks = spec.get("checks", [])
+    if explicit_checks and not isinstance(explicit_checks, list):
+        raise ValueError("compose_spec.checks must be a list of objects.")
+
+    checks: List[Dict[str, str]] = []
+    if isinstance(explicit_checks, list):
+        for raw in explicit_checks:
+            if not isinstance(raw, Mapping):
+                raise ValueError("Each compose_spec.checks entry must be an object.")
+            left_col = str(raw.get("left", "")).strip()
+            right_col = str(raw.get("right", "")).strip()
+            name = str(raw.get("name", f"{left_col}_vs_{right_col}")).strip()
+            if not left_col or not right_col:
+                continue
+            checks.append({"name": name, "left": left_col, "right": right_col})
+
+    if "customer_id" in composed.columns:
+        for join in joins:
+            candidate = f"{join['right']}__customer_id"
+            if candidate in composed.columns:
+                checks.append(
+                    {
+                        "name": f"customer_consistency_{join['right']}",
+                        "left": "customer_id",
+                        "right": candidate,
+                    }
+                )
+
+    consistency = _evaluate_consistency_checks(composed, checks) if checks else []
+    meta = {
+        "mode": "row_level",
+        "base_table": base,
+        "tables": list(tables.keys()),
+        "join_reports": join_reports,
+        "consistency_checks": consistency,
+    }
+    return composed, meta
+
+
+def _ensure_table_dict(obj: Any, source_name: str) -> Dict[str, pd.DataFrame]:
+    if not isinstance(obj, Mapping):
+        raise ValueError(f"{source_name} must return a dict[str, DataFrame] for multi-table composition.")
+    tables: Dict[str, pd.DataFrame] = {}
+    for key, value in obj.items():
+        name = str(key).strip()
+        if not name:
+            continue
+        if not isinstance(value, pd.DataFrame):
+            raise ValueError(f"{source_name} table '{name}' is not a pandas DataFrame.")
+        tables[name] = value
+    if not tables:
+        raise ValueError(f"{source_name} returned an empty table dictionary.")
+    return tables
 
 
 def _expand_paths(data: Sequence[str], recursive: bool = False) -> List[Path]:
@@ -111,7 +532,7 @@ def _concat_frames(frames: List[pd.DataFrame]) -> pd.DataFrame:
     return pd.concat(frames, axis=0, ignore_index=True, sort=False)
 
 
-def _load_python_file(path: str) -> pd.DataFrame:
+def _load_python_file_object(path: str) -> Any:
     file_path = Path(path)
     if not file_path.exists():
         raise FileNotFoundError(f"Python file not found: {path}")
@@ -126,12 +547,17 @@ def _load_python_file(path: str) -> pd.DataFrame:
         df = getattr(module, "df")
     else:
         raise ValueError("Python file must define `load()` or `df`.")
+    return df
+
+
+def _load_python_file(path: str) -> pd.DataFrame:
+    df = _load_python_file_object(path)
     if not isinstance(df, pd.DataFrame):
         raise ValueError("Python loader did not return a pandas DataFrame.")
     return df
 
 
-def _load_python_code(code: str) -> pd.DataFrame:
+def _load_python_code_object(code: str) -> Any:
     local_ns: dict = {}
     exec(code, local_ns, local_ns)
     if "load" in local_ns and callable(local_ns["load"]):
@@ -140,12 +566,17 @@ def _load_python_code(code: str) -> pd.DataFrame:
         df = local_ns["df"]
     else:
         raise ValueError("Python code must define `load()` or `df`.")
+    return df
+
+
+def _load_python_code(code: str) -> pd.DataFrame:
+    df = _load_python_code_object(code)
     if not isinstance(df, pd.DataFrame):
         raise ValueError("Python code did not return a pandas DataFrame.")
     return df
 
 
-def _load_notebook(path: str) -> pd.DataFrame:
+def _load_notebook_object(path: str) -> Any:
     nb_path = Path(path)
     if not nb_path.exists():
         raise FileNotFoundError(f"Notebook not found: {path}")
@@ -164,6 +595,11 @@ def _load_notebook(path: str) -> pd.DataFrame:
         df = local_ns["df"]
     else:
         raise ValueError("Notebook must define `load()` or `df` in code cells.")
+    return df
+
+
+def _load_notebook(path: str) -> pd.DataFrame:
+    df = _load_notebook_object(path)
     if not isinstance(df, pd.DataFrame):
         raise ValueError("Notebook execution did not return a pandas DataFrame.")
     return df
@@ -276,6 +712,8 @@ class DataLoader:
         data_dir: str = "./data",
         recursive: bool = False,
         auto_exec: bool = False,
+        compose_spec: Optional[Any] = None,
+        no_key_policy: str = "aggregate_only",
     ) -> None:
         self.data = _as_list(data)
         self.sql = sql
@@ -286,33 +724,76 @@ class DataLoader:
         self.data_dir = data_dir
         self.recursive = recursive
         self.auto_exec = auto_exec
+        self.compose_spec = compose_spec
+        self.no_key_policy = _normalize_no_key_policy(no_key_policy)
+        self.last_compose_meta: Dict[str, Any] = {}
 
     def load(self) -> Tuple[pd.DataFrame, str]:
+        self.last_compose_meta = {}
         mode = self._detect_mode()
+        compose_spec = _load_compose_spec(self.compose_spec)
 
         if mode == "sql":
             if not self.db:
                 raise ValueError("SQL mode requires --db.")
+            named_sql = _parse_named_sql(self.sql)
+            if named_sql:
+                tables = {name: _load_sql(query, self.db) for name, query in named_sql.items()}
+                df, meta = _compose_tables_pandas(tables, compose_spec=compose_spec, no_key_policy=self.no_key_policy)
+                self.last_compose_meta = meta
+                return df, "sql_map:" + ",".join(named_sql.keys())
             df = _load_sql(self.sql or "", self.db)
             return df, f"sql:{self.sql}"
 
         if mode == "py":
-            df = _load_python_file(self.py or "")
-            return df, f"py:{self.py}"
+            obj = _load_python_file_object(self.py or "")
+            if isinstance(obj, Mapping):
+                tables = _ensure_table_dict(obj, "Python loader")
+                df, meta = _compose_tables_pandas(tables, compose_spec=compose_spec, no_key_policy=self.no_key_policy)
+                self.last_compose_meta = meta
+                return df, f"py:{self.py}"
+            if not isinstance(obj, pd.DataFrame):
+                raise ValueError("Python loader did not return a pandas DataFrame.")
+            return obj, f"py:{self.py}"
 
         if mode == "py_code":
-            df = _load_python_code(self.py_code or "")
-            return df, "py_code"
+            obj = _load_python_code_object(self.py_code or "")
+            if isinstance(obj, Mapping):
+                tables = _ensure_table_dict(obj, "Python code")
+                df, meta = _compose_tables_pandas(tables, compose_spec=compose_spec, no_key_policy=self.no_key_policy)
+                self.last_compose_meta = meta
+                return df, "py_code"
+            if not isinstance(obj, pd.DataFrame):
+                raise ValueError("Python code did not return a pandas DataFrame.")
+            return obj, "py_code"
 
         if mode == "nb":
-            df = _load_notebook(self.nb or "")
-            return df, f"nb:{self.nb}"
+            obj = _load_notebook_object(self.nb or "")
+            if isinstance(obj, Mapping):
+                tables = _ensure_table_dict(obj, "Notebook loader")
+                df, meta = _compose_tables_pandas(tables, compose_spec=compose_spec, no_key_policy=self.no_key_policy)
+                self.last_compose_meta = meta
+                return df, f"nb:{self.nb}"
+            if not isinstance(obj, pd.DataFrame):
+                raise ValueError("Notebook execution did not return a pandas DataFrame.")
+            return obj, f"nb:{self.nb}"
 
         if mode == "data":
             if not self.data:
                 path = detect_latest_dataset(data_dir=self.data_dir)
                 df = _read_single(Path(path))
                 return df, path
+
+            named_data, unnamed_data = _parse_data_bindings(self.data)
+            if named_data and unnamed_data:
+                raise ValueError("Do not mix named and unnamed --data inputs when composing tables.")
+
+            should_compose = bool(compose_spec) or bool(named_data)
+            if should_compose:
+                tables, sources = self._load_tables_for_data_mode(named_data, unnamed_data)
+                df, meta = _compose_tables_pandas(tables, compose_spec=compose_spec, no_key_policy=self.no_key_policy)
+                self.last_compose_meta = meta
+                return df, ";".join(sources)
 
             paths = _expand_paths(self.data, recursive=self.recursive)
             if not paths:
@@ -355,6 +836,40 @@ class DataLoader:
             return df, ";".join(sources)
 
         raise ValueError("No valid data input provided.")
+
+    def _load_tables_for_data_mode(
+        self,
+        named_data: Dict[str, List[str]],
+        unnamed_data: List[str],
+    ) -> Tuple[Dict[str, pd.DataFrame], List[str]]:
+        tables: Dict[str, pd.DataFrame] = {}
+        sources: List[str] = []
+
+        if named_data:
+            for table_name, inputs in named_data.items():
+                paths = _expand_paths(inputs, recursive=self.recursive)
+                if not paths:
+                    raise FileNotFoundError(f"No matching files found for table '{table_name}'.")
+                frames = [_read_single(p) for p in paths]
+                tables[table_name] = _concat_frames(frames)
+                sources.append(f"{table_name}=" + ",".join(str(p) for p in paths))
+            return tables, sources
+
+        paths = _expand_paths(unnamed_data, recursive=self.recursive)
+        if not paths:
+            raise FileNotFoundError("No matching data files found.")
+
+        grouped_frames: Dict[str, List[pd.DataFrame]] = {}
+        grouped_sources: Dict[str, List[str]] = {}
+        for path in paths:
+            table_name = path.stem
+            grouped_frames.setdefault(table_name, []).append(_read_single(path))
+            grouped_sources.setdefault(table_name, []).append(str(path))
+
+        for table_name, frames in grouped_frames.items():
+            tables[table_name] = _concat_frames(frames)
+            sources.append(f"{table_name}=" + ",".join(grouped_sources.get(table_name, [])))
+        return tables, sources
 
     def _detect_mode(self) -> str:
         provided = {

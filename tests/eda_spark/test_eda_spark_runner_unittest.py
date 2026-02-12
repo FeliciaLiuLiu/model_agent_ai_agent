@@ -184,6 +184,66 @@ class TestEDASparkRunner(SparkTestCase):
         self.assertIn("results", payload)
         self.assertGreaterEqual(payload["config"]["rows_used"], 1)
 
+    def test_run_named_table_composition(self):
+        txn_path = self.tmp_path / "transaction.csv"
+        cust_path = self.tmp_path / "customer.csv"
+        acct_path = self.tmp_path / "account.csv"
+        pd.DataFrame(
+            {
+                "transaction_id": [1, 2],
+                "customer_id": ["C1", "C1"],
+                "account_id": ["A1", "A2"],
+                "amount": [100.0, 55.0],
+                "sar_actual": [0, 1],
+                "txn_datetime": ["2024-01-01", "2024-01-02"],
+            }
+        ).to_csv(txn_path, index=False)
+        pd.DataFrame({"customer_id": ["C1", "C2"], "segment": ["gold", "silver"]}).to_csv(cust_path, index=False)
+        pd.DataFrame({"account_id": ["A1", "A2"], "customer_id": ["C1", "C2"], "balance": [1000.0, 2000.0]}).to_csv(
+            acct_path, index=False
+        )
+
+        eda = EDASpark(
+            output_dir=str(self.tmp_path / "out_compose"),
+            spark=self.spark,
+            max_plots=1,
+            sample_size=200,
+        )
+        payload = eda.run(
+            data=[
+                f"transaction={txn_path}",
+                f"customer={cust_path}",
+                f"account={acct_path}",
+            ],
+            sections=["data_quality"],
+            save_json=False,
+            generate_report=False,
+            return_payload=True,
+        )
+        self.assertEqual(payload["config"]["composition"]["mode"], "row_level")
+
+    def test_run_no_key_aggregate_only(self):
+        tx_path = self.tmp_path / "transaction.csv"
+        cust_path = self.tmp_path / "customer.csv"
+        pd.DataFrame({"transaction_id": [1, 2], "amount": [5.0, 8.0]}).to_csv(tx_path, index=False)
+        pd.DataFrame({"cust_ref": ["x", "y"], "segment": ["a", "b"]}).to_csv(cust_path, index=False)
+
+        eda = EDASpark(
+            output_dir=str(self.tmp_path / "out_no_key"),
+            spark=self.spark,
+            max_plots=1,
+            sample_size=200,
+        )
+        payload = eda.run(
+            data=[f"transaction={tx_path}", f"customer={cust_path}"],
+            sections=["data_quality"],
+            save_json=False,
+            generate_report=False,
+            return_payload=True,
+        )
+        self.assertEqual(payload["config"]["composition"]["mode"], "aggregate_only")
+        self.assertEqual(payload["config"]["rows_used"], 2)
+
     def test_run_interactive(self):
         eda = self._make_eda()
         df = self.spark.createDataFrame(make_runner_dataframe(rows=120))

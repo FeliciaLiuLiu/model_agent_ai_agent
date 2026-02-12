@@ -98,6 +98,13 @@ EDA Spark accepts exactly one input mode and loads everything into a Spark DataF
 4) Inline Python: `py_code` that defines `load()` or `df`.
 5) Notebook: `nb` (`.ipynb`) with `load()` or `df` in code cells.
 
+Multi-table composition (join modeling):
+- Bind table names in `--data` using `table=path`, for example:
+  `--data transaction=./data/transaction.csv --data customer=./data/customer.csv --data account=./data/account.csv`
+- Provide `--compose-spec` as JSON string or JSON file to define `base` and `joins`.
+- Without `--compose-spec`, the loader infers joins from shared id-like keys.
+- If no reliable join keys exist, default `--no-key-policy aggregate_only` avoids row-level fusion and falls back to table-level aggregate dataset.
+
 Supported file types: `.csv`, `.tsv`, `.parquet`, `.json`, `.xlsx`, `.xls`, `.feather`.
 Excel uses `spark-excel` if available, otherwise falls back to pandas (`openpyxl` required).
 
@@ -166,6 +173,14 @@ python -m eda_spark.cli --output ./output_eda_spark
 ```bash
 python -m eda_spark.cli --data ./data/your_dataset.csv --output ./output_eda_spark
 python -m eda_spark.cli --data ./data/part1.csv --data ./data/part2.parquet --output ./output_eda_spark
+
+# Multi-table join modeling
+python -m eda_spark.cli \
+  --data transaction=./data/transaction.csv \
+  --data customer=./data/customer.csv \
+  --data account=./data/account.csv \
+  --compose-spec ./data/compose_spec.json \
+  --output ./output_eda_spark
 ```
 
 ### SQL Input

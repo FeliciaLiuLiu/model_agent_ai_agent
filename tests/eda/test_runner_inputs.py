@@ -72,6 +72,40 @@ def _write_nb_loader(tmp_path: Path) -> Path:
     return path
 
 
+def _write_relational_sqlite_db(tmp_path: Path) -> Path:
+    db_path = tmp_path / "relational.db"
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute("CREATE TABLE transaction_tbl (transaction_id INTEGER, customer_id TEXT, account_id TEXT, amount REAL)")
+        conn.execute("CREATE TABLE customer_tbl (customer_id TEXT, segment TEXT)")
+        conn.execute("CREATE TABLE account_tbl (account_id TEXT, customer_id TEXT, balance REAL)")
+        conn.executemany(
+            "INSERT INTO transaction_tbl VALUES (?, ?, ?, ?)",
+            [(1, "C1", "A1", 100.0), (2, "C1", "A2", 55.0)],
+        )
+        conn.executemany("INSERT INTO customer_tbl VALUES (?, ?)", [("C1", "gold"), ("C2", "silver")])
+        conn.executemany("INSERT INTO account_tbl VALUES (?, ?, ?)", [("A1", "C1", 1000.0), ("A2", "C2", 2000.0)])
+        conn.commit()
+    finally:
+        conn.close()
+    return db_path
+
+
+def _write_py_multi_loader(tmp_path: Path) -> Path:
+    path = tmp_path / "loader_multi.py"
+    path.write_text(
+        "import pandas as pd\n"
+        "def load():\n"
+        "    return {\n"
+        "        'transaction': pd.DataFrame({'transaction_id':[1,2], 'customer_id':['C1','C1'], 'account_id':['A1','A2'], 'amount':[100.0,55.0]}),\n"
+        "        'customer': pd.DataFrame({'customer_id':['C1','C2'], 'segment':['gold','silver']}),\n"
+        "        'account': pd.DataFrame({'account_id':['A1','A2'], 'customer_id':['C1','C2'], 'balance':[1000.0,2000.0]}),\n"
+        "    }\n",
+        encoding="utf-8",
+    )
+    return path
+
+
 def _run_eda(output_dir: Path, **kwargs):
     eda = EDA(output_dir=str(output_dir))
     return eda.run(
@@ -154,3 +188,42 @@ def test_eda_run_auto_exec(local_tmp_path: Path):
     assert "query.sql" in data_path
     assert "loader.py" in data_path
     assert "loader.ipynb" in data_path
+
+
+def test_eda_run_named_sql_composition(local_tmp_path: Path):
+    db_path = _write_relational_sqlite_db(local_tmp_path)
+    sql_map = json.dumps(
+        {
+            "transaction": "SELECT * FROM transaction_tbl",
+            "customer": "SELECT * FROM customer_tbl",
+            "account": "SELECT * FROM account_tbl",
+        }
+    )
+    payload = _run_eda(
+        local_tmp_path / "out_sql_map",
+        sql=sql_map,
+        db=f"sqlite:///{db_path}",
+    )
+    assert payload["config"]["rows_used"] == 2
+    assert payload["config"]["composition"]["mode"] == "row_level"
+
+
+def test_eda_run_py_multi_table_composition(local_tmp_path: Path):
+    py_path = _write_py_multi_loader(local_tmp_path)
+    payload = _run_eda(local_tmp_path / "out_py_multi", py=str(py_path))
+    assert payload["config"]["rows_used"] == 2
+    assert payload["config"]["composition"]["mode"] == "row_level"
+
+
+def test_eda_run_no_key_aggregate_only(local_tmp_path: Path):
+    tx_path = local_tmp_path / "transaction.csv"
+    cust_path = local_tmp_path / "customer.csv"
+    pd.DataFrame({"transaction_id": [1, 2], "amount": [5.0, 8.0]}).to_csv(tx_path, index=False)
+    pd.DataFrame({"cust_ref": ["x", "y"], "segment": ["a", "b"]}).to_csv(cust_path, index=False)
+
+    payload = _run_eda(
+        local_tmp_path / "out_no_key",
+        data=[f"transaction={tx_path}", f"customer={cust_path}"],
+    )
+    assert payload["config"]["composition"]["mode"] == "aggregate_only"
+    assert payload["config"]["rows_used"] == 2

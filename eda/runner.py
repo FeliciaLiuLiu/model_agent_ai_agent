@@ -118,9 +118,12 @@ class EDA:
         generate_report: bool = True,
         report_name: str = "EDA_Report.pdf",
         data_dir: str = "./data",
+        compose_spec: Optional[Any] = None,
+        no_key_policy: str = "aggregate_only",
         return_payload: bool = False,
     ) -> Dict[str, Any]:
         """Run EDA on a dataset and optionally generate a report."""
+        compose_meta: Dict[str, Any] = {}
         if df is None:
             if auto_exec is None:
                 has_explicit = any([file_path, data, sql, py, py_code, nb])
@@ -135,8 +138,11 @@ class EDA:
                 data_dir=data_dir,
                 recursive=recursive,
                 auto_exec=bool(auto_exec),
+                compose_spec=compose_spec,
+                no_key_policy=no_key_policy,
             )
             df, path = loader.load()
+            compose_meta = dict(loader.last_compose_meta)
         else:
             path = file_path
 
@@ -206,6 +212,8 @@ class EDA:
                 "time_parse_ratio": round(float(time_ratio), 4),
             },
         }
+        if compose_meta:
+            payload["config"]["composition"] = compose_meta
 
         if save_json:
             json_path = os.path.join(self.output_dir, "eda_results.json")
@@ -241,6 +249,8 @@ class EDA:
         generate_report: bool = True,
         report_name: str = "EDA_Report.pdf",
         data_dir: str = "./data",
+        compose_spec: Optional[Any] = None,
+        no_key_policy: str = "aggregate_only",
         return_payload: bool = False,
     ) -> Dict[str, Any]:
         """Interactive selection of sections and columns."""
@@ -258,6 +268,8 @@ class EDA:
                 data_dir=data_dir,
                 recursive=recursive,
                 auto_exec=bool(auto_exec),
+                compose_spec=compose_spec,
+                no_key_policy=no_key_policy,
             )
             df, path = loader.load()
         else:
@@ -323,6 +335,8 @@ class EDA:
             generate_report=generate_report,
             report_name=report_name,
             data_dir=data_dir,
+            compose_spec=compose_spec,
+            no_key_policy=no_key_policy,
             return_payload=return_payload,
         )
 

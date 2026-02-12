@@ -72,6 +72,33 @@ def _write_nb_loader(tmp_path: Path) -> Path:
     return path
 
 
+def _write_relational_csvs(tmp_path: Path):
+    txn = tmp_path / "transaction.csv"
+    cust = tmp_path / "customer.csv"
+    acct = tmp_path / "account.csv"
+    pd.DataFrame(
+        {
+            "transaction_id": [1, 2],
+            "customer_id": ["C1", "C1"],
+            "account_id": ["A1", "A2"],
+            "amount": [100.0, 55.0],
+        }
+    ).to_csv(txn, index=False)
+    pd.DataFrame({"customer_id": ["C1", "C2"], "segment": ["gold", "silver"]}).to_csv(cust, index=False)
+    pd.DataFrame({"account_id": ["A1", "A2"], "customer_id": ["C1", "C2"], "balance": [1000.0, 2000.0]}).to_csv(
+        acct, index=False
+    )
+    return txn, cust, acct
+
+
+def _write_no_key_csvs(tmp_path: Path):
+    left = tmp_path / "transaction.csv"
+    right = tmp_path / "customer.csv"
+    pd.DataFrame({"transaction_id": [1, 2], "amount": [10.0, 20.0]}).to_csv(left, index=False)
+    pd.DataFrame({"cust_ref": ["x", "y"], "segment": ["a", "b"]}).to_csv(right, index=False)
+    return left, right
+
+
 def test_dataloader_csv(local_tmp_path: Path):
     csv_path = _write_csv(local_tmp_path)
     loader = DataLoader(data=[str(csv_path)])
@@ -158,3 +185,35 @@ def test_dataloader_auto_exec(local_tmp_path: Path):
     assert "query.sql" in source
     assert "loader.py" in source
     assert "loader.ipynb" in source
+
+
+def test_dataloader_compose_named_tables(local_tmp_path: Path):
+    txn, cust, acct = _write_relational_csvs(local_tmp_path)
+    loader = DataLoader(
+        data=[
+            f"transaction={txn}",
+            f"customer={cust}",
+            f"account={acct}",
+        ]
+    )
+    df, source = loader.load()
+    assert df.shape[0] == 2
+    assert "customer__segment" in df.columns
+    assert "account__balance" in df.columns
+    assert "transaction=" in source
+    assert loader.last_compose_meta["mode"] == "row_level"
+    checks = loader.last_compose_meta.get("consistency_checks", [])
+    assert any(c.get("name") == "customer_consistency_account" and c.get("mismatch_rows") == 1 for c in checks)
+
+
+def test_dataloader_compose_no_key_fallback(local_tmp_path: Path):
+    left, right = _write_no_key_csvs(local_tmp_path)
+    loader = DataLoader(
+        data=[
+            f"transaction={left}",
+            f"customer={right}",
+        ]
+    )
+    df, _ = loader.load()
+    assert loader.last_compose_meta["mode"] == "aggregate_only"
+    assert set(df["table_name"]) == {"transaction", "customer"}

@@ -223,6 +223,52 @@ class TestSparkDataLoaderClass(SparkTestCase):
         recursive_df, _ = DataLoader(self.spark, data=[str(self.tmp_path)], recursive=True).load()
         self.assertEqual(recursive_df.count(), 5)
 
+    def test_load_data_mode_named_table_composition(self):
+        txn_path = self.tmp_path / "transaction.csv"
+        cust_path = self.tmp_path / "customer.csv"
+        acct_path = self.tmp_path / "account.csv"
+        pd.DataFrame(
+            {
+                "transaction_id": [1, 2],
+                "customer_id": ["C1", "C1"],
+                "account_id": ["A1", "A2"],
+                "amount": [100.0, 55.0],
+            }
+        ).to_csv(txn_path, index=False)
+        pd.DataFrame({"customer_id": ["C1", "C2"], "segment": ["gold", "silver"]}).to_csv(cust_path, index=False)
+        pd.DataFrame({"account_id": ["A1", "A2"], "customer_id": ["C1", "C2"], "balance": [1000.0, 2000.0]}).to_csv(
+            acct_path, index=False
+        )
+
+        loader = DataLoader(
+            self.spark,
+            data=[
+                f"transaction={txn_path}",
+                f"customer={cust_path}",
+                f"account={acct_path}",
+            ],
+        )
+        df, _ = loader.load()
+        self.assertEqual(df.count(), 2)
+        self.assertIn("customer__segment", df.columns)
+        self.assertIn("account__balance", df.columns)
+        self.assertEqual(loader.last_compose_meta.get("mode"), "row_level")
+
+    def test_load_data_mode_no_key_fallback_aggregate(self):
+        left = self.tmp_path / "transaction.csv"
+        right = self.tmp_path / "customer.csv"
+        pd.DataFrame({"transaction_id": [1, 2], "amount": [10.0, 20.0]}).to_csv(left, index=False)
+        pd.DataFrame({"cust_ref": ["x", "y"], "segment": ["a", "b"]}).to_csv(right, index=False)
+
+        loader = DataLoader(
+            self.spark,
+            data=[f"transaction={left}", f"customer={right}"],
+            no_key_policy="aggregate_only",
+        )
+        df, _ = loader.load()
+        self.assertEqual(loader.last_compose_meta.get("mode"), "aggregate_only")
+        self.assertEqual(set(df.select("table_name").toPandas()["table_name"]), {"transaction", "customer"})
+
     def test_load_data_mode_auto_latest(self):
         write_csv(self.tmp_path, name="auto.csv", rows=4)
         df, src = DataLoader(self.spark, data=None, data_dir=str(self.tmp_path)).load()
@@ -239,11 +285,56 @@ class TestSparkDataLoaderClass(SparkTestCase):
         self.assertEqual(df.count(), 2)
         self.assertTrue(src.startswith("sql:"))
 
+    def test_load_sql_mode_named_sql_map(self):
+        db_path = self.tmp_path / "relational.db"
+        conn = sqlite3.connect(db_path)
+        try:
+            conn.execute("CREATE TABLE transaction_tbl (transaction_id INTEGER, customer_id TEXT, account_id TEXT, amount REAL)")
+            conn.execute("CREATE TABLE customer_tbl (customer_id TEXT, segment TEXT)")
+            conn.execute("CREATE TABLE account_tbl (account_id TEXT, customer_id TEXT, balance REAL)")
+            conn.executemany(
+                "INSERT INTO transaction_tbl VALUES (?, ?, ?, ?)",
+                [(1, "C1", "A1", 100.0), (2, "C1", "A2", 55.0)],
+            )
+            conn.executemany("INSERT INTO customer_tbl VALUES (?, ?)", [("C1", "gold"), ("C2", "silver")])
+            conn.executemany("INSERT INTO account_tbl VALUES (?, ?, ?)", [("A1", "C1", 1000.0), ("A2", "C2", 2000.0)])
+            conn.commit()
+        finally:
+            conn.close()
+
+        sql_map = (
+            '{"transaction":"SELECT * FROM transaction_tbl",'
+            '"customer":"SELECT * FROM customer_tbl",'
+            '"account":"SELECT * FROM account_tbl"}'
+        )
+        loader = DataLoader(self.spark, sql=sql_map, db=f"sqlite:///{db_path}")
+        df, src = loader.load()
+        self.assertEqual(df.count(), 2)
+        self.assertTrue(src.startswith("sql_map:"))
+        self.assertEqual(loader.last_compose_meta.get("mode"), "row_level")
+
     def test_load_py_mode(self):
         py_path = write_py_loader(self.tmp_path)
         df, src = DataLoader(self.spark, py=str(py_path)).load()
         self.assertEqual(df.count(), 2)
         self.assertTrue(src.startswith("py:"))
+
+    def test_load_py_mode_multi_table_dict(self):
+        py_path = self.tmp_path / "multi_loader.py"
+        py_path.write_text(
+            "import pandas as pd\n"
+            "def load():\n"
+            "    return {\n"
+            "        'transaction': pd.DataFrame({'transaction_id':[1,2], 'customer_id':['C1','C1'], 'account_id':['A1','A2'], 'amount':[100.0,55.0]}),\n"
+            "        'customer': pd.DataFrame({'customer_id':['C1','C2'], 'segment':['gold','silver']}),\n"
+            "        'account': pd.DataFrame({'account_id':['A1','A2'], 'customer_id':['C1','C2'], 'balance':[1000.0,2000.0]}),\n"
+            "    }\n",
+            encoding="utf-8",
+        )
+        loader = DataLoader(self.spark, py=str(py_path))
+        df, _ = loader.load()
+        self.assertEqual(df.count(), 2)
+        self.assertEqual(loader.last_compose_meta.get("mode"), "row_level")
 
     def test_load_py_code_mode(self):
         code = "import pandas as pd\ndef load():\n    return pd.DataFrame({'a':[1,2,3]})\n"

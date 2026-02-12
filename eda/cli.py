@@ -38,6 +38,17 @@ def main():
     parser.add_argument("--nb", default=None, help="Notebook (.ipynb) file with load() or df")
     parser.add_argument("--data-recursive", action="store_true", help="Recursively search directories/globs for data files")
     parser.add_argument(
+        "--compose-spec",
+        default=None,
+        help="JSON string or JSON file path describing multi-table join composition.",
+    )
+    parser.add_argument(
+        "--no-key-policy",
+        default="aggregate_only",
+        choices=["aggregate_only", "error"],
+        help="Behavior when tables cannot be joined by keys: aggregate_only or error.",
+    )
+    parser.add_argument(
         "--auto-exec",
         action="store_true",
         help="Auto-execute .sql/.py/.ipynb in ./data when no input is provided",
@@ -107,6 +118,10 @@ def main():
     if spark_mode:
         if args.auto_exec:
             raise RuntimeError("--auto-exec is only supported in pandas mode (no --spark).")
+        if args.compose_spec:
+            raise RuntimeError("--compose-spec is only supported in pandas mode (no --spark).")
+        if args.no_key_policy != "aggregate_only":
+            raise RuntimeError("--no-key-policy is only supported in pandas mode (no --spark).")
         if args.sql or args.py or args.py_code or args.nb or args.db or args.data_recursive:
             raise RuntimeError("SQL/Python/Notebook inputs are only supported in pandas mode (no --spark).")
         if data_inputs and len(data_inputs) > 1:
@@ -150,6 +165,8 @@ def main():
                 nb=args.nb,
                 recursive=args.data_recursive,
                 auto_exec=auto_exec,
+                compose_spec=args.compose_spec,
+                no_key_policy=args.no_key_policy,
                 target_col=args.target_col,
                 time_col=args.time_col,
                 max_rows=args.max_rows,
@@ -169,6 +186,8 @@ def main():
                 nb=args.nb,
                 recursive=args.data_recursive,
                 auto_exec=auto_exec,
+                compose_spec=args.compose_spec,
+                no_key_policy=args.no_key_policy,
                 sections=sections,
                 columns=columns,
                 section_columns=section_columns,
