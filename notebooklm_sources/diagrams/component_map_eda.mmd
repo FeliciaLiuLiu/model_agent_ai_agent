@@ -1,7 +1,0 @@
-flowchart LR
-  CLI[eda/cli.py::main] --> RUN[eda/runner.py::EDA.run]
-  CLI --> IRUN[eda/runner.py::EDA.run_interactive]
-  RUN --> DL[eda/dataloader.py::DataLoader.load]
-  RUN --> U[eda/utils.py\ninfer/pick/detect]
-  RUN --> SEC[EDA._section_*]
-  RUN --> REP[eda/report.py::EDAReportBuilder.build]

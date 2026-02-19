@@ -1,26 +1,47 @@
-# 00 Overview (Model Developer Deck)
+# 00 Overview (NotebookLM PPT Source Pack)
 
-- This deck targets **model developers** who need fast, repeatable dataset understanding before modeling.
-- The repository provides two EDA engines with the same analysis intent:
-- **EDA (Pandas)** for local/smaller workflows (`eda/runner.py::EDA`).
-- **EDA Spark (PySpark)** for larger/distributed workflows (`eda_spark/runner.py::EDASpark`).
-- Both engines expose **CLI** and **API** usage, support multi-source input, and produce standardized artifacts:
-- `eda_results.json` for machine-readable output.
-- `EDA_Report.pdf` for human-readable report.
-- Core developer value:
-- One command/API call can replace repetitive manual profiling and charting.
-- Teams get consistent section outputs across projects.
-- Input flexibility reduces pre-processing overhead (files/folders/globs, SQL, `.py`, `.ipynb`).
-- Current multi-table behavior (both engines):
-- Compose by join keys (including inferred keys).
-- Default `no_key_policy=error` (fail fast if tables cannot be joined).
-- `aggregate_only` is opt-in fallback.
+## Purpose
+- This source pack is designed for NotebookLM to generate an **all-English PPT** for model developers.
+- Deck topic: how to use `eda` and `eda_spark` in `model_agent_ai_agent` for fast, repeatable pre-modeling dataset analysis.
+
+## Code-Verified Facts
+- Two EDA engines:
+- `EDA (Pandas)`: `eda/runner.py::EDA`
+- `EDA Spark (PySpark)`: `eda_spark/runner.py::EDASpark`
+- Both engines support CLI/API and the same input modes:
+- `--data --sql --db --py --py-code --nb --data-recursive --compose-spec --no-key-policy --auto-exec`
+- Both engines produce standardized artifacts:
+- `<output_dir>/eda_results.json`
+- `<output_dir>/EDA_Report.pdf`
+- Shared analysis sections:
+- `data_quality`
+- `target`
+- `univariate`
+- `bivariate_target`
+- `feature_vs_feature`
+- `time_drift`
+
+## Recommended NotebookLM Sources (English-First)
+- `08_notebooklm_deck_story_en.md`: audience framing and deck narrative.
+- `09_notebooklm_slide_content_en.md`: slide-by-slide content draft (12-14 slides).
+- `10_notebooklm_demo_and_troubleshooting_en.md`: demo commands and troubleshooting checklist.
+- `01_inputs_catalog.md`: input resolution and composition behavior.
+- `02_eda_pipeline.md` and `03_eda_spark_pipeline.md`: pipeline flow references.
+- `05_usage_modes.md` and `06_demo_paths_in_data_folder.md`: runnable commands and sample paths.
+
+## Output Target
+- A 15-20 minute English technical deck with 12-14 slides.
+- Each slide should answer one practical model developer question:
+- when to use it,
+- how to run it,
+- how to read outputs,
+- what action to take next.
 
 ```mermaid
 flowchart LR
-  U[Model Developer] --> C[Same EDA Semantics]
-  C --> P[EDA Pandas\neda/runner.py::EDA]
-  C --> S[EDA Spark\neda_spark/runner.py::EDASpark]
-  P --> O[JSON + PDF + PNG]
+  U[Model Developer] --> C[Unified EDA Semantics]
+  C --> P[EDA Pandas]
+  C --> S[EDA Spark]
+  P --> O[EDA_Report.pdf + eda_results.json]
   S --> O
 ```
