@@ -1,85 +1,102 @@
-# 03 EDA Spark Pipeline (PySpark)
+# 03 EDA Spark System Design (PySpark)
 
-## Driver vs Executor Pipeline
+## System Design Objective
+Explain how `EDASpark` turns model-developer inputs into distributed computation results and standardized outputs.
+
+## Component Design
+
+| Layer | File | Responsibility | Key functions |
+|---|---|---|---|
+| CLI | `eda_spark/cli.py` | Parse Spark + EDA args and dispatch run mode | `main()` |
+| Runner | `eda_spark/runner.py` | Driver-side orchestration over Spark execution | `run()`, `run_interactive()` |
+| Function catalog | `eda_spark/runner.py` | Expose selectable analysis functions | `list_functions()`, `print_functions()`, `parse_function_selection()`, `parse_column_selection()` |
+| Data loader | `eda_spark/dataloader.py` | Load/compose Spark DataFrames from multiple modes | `DataLoader.load()` |
+| Spark utilities | `eda_spark/utils.py` | Infer types/target/time and path helpers | `infer_column_types()`, `pick_target_column()`, `pick_time_column()`, `time_parse_ratio()` |
+| Report builder | `eda_spark/report.py` | Build PDF from aggregated results | `EDAReportBuilder.build()` |
+
+## Analysis Function Keys (same semantics as Pandas)
+- `data_quality`
+- `target`
+- `univariate`
+- `bivariate_target`
+- `feature_vs_feature`
+- `time_drift`
+
+## Driver-Executor Runtime Pipeline
 
 ```mermaid
 flowchart LR
-  subgraph D[Driver]
-    A[CLI/API\neda_spark/cli.py::main\nEDASpark.run()] --> B[Create SparkSession\nEDASpark.__init__]
-    B --> C[DataLoader.load\nmode + input resolution]
-    C --> D1[Logical table map\n+ key-based composition]
-    D1 --> E[Infer column types\neda_spark/utils.py::infer_column_types]
-    E --> F[Auto target/time detection\npick_target_column + pick_time_column]
-    F --> G[Run selected sections\n_check_prerequisites + _section_*]
-    G --> H[Assemble payload]
-    H --> I[Write JSON\noutput/eda_results.json]
-    H --> J[Build PDF\noutput/EDA_Report.pdf]
+  subgraph Driver
+    A[CLI or API input] --> B[EDASpark.run]
+    B --> C[DataLoader.load]
+    C --> D[Infer types + target + time]
+    D --> E[Execute selected section functions]
+    E --> F[Assemble results payload]
+    F --> G[Write eda_results.json]
+    F --> H[Build EDA_Report.pdf]
   end
 
-  subgraph X[Executors]
-    K[Distributed computations\ncount/groupBy/approxQuantile\ncorrelation/drift prep]
+  subgraph Executors
+    X[Distributed scans/joins/aggregations/correlation]
   end
 
-  G --> K
-  K --> G
-  G --> L[Small result collection\ntoPandas for plotting]
+  E --> X
+  X --> E
 ```
 
-## Distributed vs Driver Responsibilities
+## API Return and Output Results
+- Default API call:
+- `results = EDASpark(...).run(...)`
+- Return value: section-keyed `results` dict.
+- Full payload option:
+- `payload = EDASpark(...).run(..., return_payload=True)`
+- Includes `results`, `skipped_sections`, and `config`.
 
-| Stage | Main execution location | Notes |
-|---|---|---|
-| Source reading into Spark DataFrame | Driver orchestrates, IO/scan distributed | Spark-native reads for csv/parquet/json; Excel may use plugin or pandas fallback |
-| Multi-table composition | Spark joins on driver-planned join graph, execution distributed | Join mapping inferred or from `compose_spec` |
-| Section aggregations | Mostly distributed | `count`, `groupBy`, quantiles, correlations |
-| Plot generation | Driver | Plot functions consume small local/pandas results |
-| PDF generation | Driver | `eda_spark/report.py::EDAReportBuilder` |
+## Result Payload Shape (with `return_payload=True`)
 
-## Section Profiling Map
-
-```mermaid
-flowchart TD
-  S[EDASpark.SECTION_INFO] --> Q[Data Quality]
-  S --> T[Target]
-  S --> U[Univariate]
-  S --> V[Bivariate with Target]
-  S --> W[Feature vs Feature]
-  S --> X[Time Series and Drift]
-
-  Q --> Q1[Rows/columns/duplicate ratio]
-  Q --> Q2[Missingness + null-like values]
-  Q --> Q3[Type classification + outlier ratio]
-
-  T --> T1[Target distribution/stats]
-  T --> T2[Rate-over-time]
-  T --> T3[Target by category]
-
-  U --> U1[Describe + histograms]
-  U --> U2[Categorical top-k]
-
-  V --> V1[Quantile bins vs target]
-  V --> V2[Categorical rates vs target]
-
-  W --> W1[Spark ML correlation]
-  W --> W2[High-correlation pairs]
-
-  X --> X1[Time volume]
-  X --> X2[Amount trend]
-  X --> X3[PSI + categorical drift]
+```json
+{
+  "results": {
+    "data_quality": {},
+    "target": {},
+    "univariate": {},
+    "bivariate_target": {},
+    "feature_vs_feature": {},
+    "time_drift": {}
+  },
+  "skipped_sections": [],
+  "config": {
+    "data_path": "...",
+    "rows_used": 500000,
+    "target_col": "sar_actual",
+    "time_col": "txn_ts",
+    "time_parse_ratio": 0.97
+  }
+}
 ```
 
-## What PDF Contains (High-Level)
-- Cover / Dataset overview.
-- Data Quality section.
-- Selected analysis section pages (Target, Univariate, Bivariate Target, Feature vs Feature, Time Drift).
-- Skipped sections page.
-- Run configuration page.
+## Minimal Usage Examples (Spark)
 
-## Output Artifacts
-- JSON: `<output_dir>/eda_results.json`
-- PDF: `<output_dir>/<report_name>` default `EDA_Report.pdf`
-- Plot files: same naming scheme as Pandas runner (`missingness.png`, `hist_*.png`, `correlation_heatmap.png`, etc.).
+### CLI
+```bash
+python -m eda_spark.cli \
+  --data ./data/transactions.parquet \
+  --target-col sar_actual \
+  --spark-master "local[*]" \
+  --output ./output_eda_spark
+```
 
-## Why This Helps Model Developers
-- Keeps heavy computation in Spark while preserving report semantics similar to Pandas EDA.
-- Enables fast model-readiness checks on larger datasets with standardized outputs.
+### API
+```python
+from eda_spark.runner import EDASpark
+
+eda = EDASpark(output_dir="./output_eda_spark", spark_master="local[*]", target_col="sar_actual")
+results = eda.run(
+    data=["./data/transactions.parquet"],
+    sections=["data_quality", "target", "univariate"],
+)
+```
+
+## What Model Developers Should Read First
+- `eda_results.json` for programmatic result consumption.
+- `EDA_Report.pdf` for human review and communication.

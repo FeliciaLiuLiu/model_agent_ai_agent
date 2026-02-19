@@ -1,146 +1,72 @@
-# 10 NotebookLM Demo and Troubleshooting (EN)
+# 10 NotebookLM Generation Prompt + Validation Checklist
 
-## A. Copy/Paste Command Sheet
-
-### 1) Generate demo datasets
-```bash
-python scripts/05_generate_synthetic_aml_200k_timeseries.py --out-dir ./data
-python scripts/07_generate_synthetic_aml_mixed_bank_fintech.py --out-dir ./data
-```
-
-### 2) EDA (Pandas) one-shot
-```bash
-python -m eda.cli --output ./output_eda
-```
-
-### 3) EDA Spark (PySpark) one-shot
-```bash
-python -m eda_spark.cli --spark-master "local[*]" --output ./output_eda_spark
-```
-
-### 4) EDA (Pandas) explicit dataset
-```bash
-python -m eda.cli \
-  --data ./data/synthetic_aml_200k_20260130_135951.csv \
-  --target-col is_suspicious \
-  --output ./output_eda
-```
-
-### 5) EDA Spark explicit dataset
-```bash
-python -m eda_spark.cli \
-  --data ./data/synthetic_aml_mixed_50k_20260205_094055.csv \
-  --target-col sar_actual \
-  --spark-master "local[*]" \
-  --output ./output_eda_spark
-```
-
-### 6) Section-scoped runs
-```bash
-python -m eda.cli \
-  --data ./data/synthetic_aml_200k_20260130_135951.csv \
-  --sections data_quality,univariate,time_drift \
-  --columns-univariate txn_amount,velocity_score,origin_country \
-  --target-col is_suspicious \
-  --output ./output_eda
-
-python -m eda_spark.cli \
-  --data ./data/synthetic_aml_mixed_50k_20260205_094055.csv \
-  --sections data_quality,target,univariate \
-  --columns-univariate txn_amount,velocity_score,merchant_category \
-  --columns-target sar_actual \
-  --target-col sar_actual \
-  --spark-master "local[*]" \
-  --output ./output_eda_spark
-```
-
-### 7) Interactive runs
-```bash
-python -m eda.cli --list-functions
-python -m eda_spark.cli --list-functions
-
-python -m eda.cli \
-  --interactive \
-  --data ./data/synthetic_aml_200k_20260130_135951.csv \
-  --target-col is_suspicious \
-  --output ./output_eda
-
-python -m eda_spark.cli \
-  --interactive \
-  --data ./data/synthetic_aml_mixed_50k_20260205_094055.csv \
-  --target-col sar_actual \
-  --spark-master "local[*]" \
-  --output ./output_eda_spark
-```
-
-### 8) Output files to showcase in deck
-- `./output_eda/EDA_Report.pdf`
-- `./output_eda/eda_results.json`
-- `./output_eda_spark/EDA_Report.pdf`
-- `./output_eda_spark/eda_results.json`
-
-## B. Parameters and Section Names (Do Not Rename)
-- Input modes:
-- `--data --sql --db --py --py-code --nb --data-recursive --compose-spec --no-key-policy --auto-exec`
-- Selection controls:
-- `--sections --columns --columns-data-quality --columns-target --columns-univariate --columns-bivariate-target --columns-feature-vs-feature --columns-time-drift`
-- Run modes:
-- `--interactive --list-functions --max-rows --no-report --no-json`
-- Spark options:
-- `--spark-master --spark-app-name --spark-conf`
-- Section keys:
-- `data_quality,target,univariate,bivariate_target,feature_vs_feature,time_drift`
-
-## C. Frequent Errors and Fast Fixes
-
-### 1) Error: "Only one input mode is allowed"
-- Cause: more than one of `--data/--sql/--py/--py-code/--nb` is set.
-- Fix: keep exactly one mode per command.
-
-### 2) Error: SQL mode requires DB
-- Cause: using `--sql` without `--db`.
-- Fix: pass `--db`, for example `sqlite:///./data/aml.db`.
-
-### 3) Error: mixed named and unnamed `--data`
-- Cause: command mixes `--data a.csv` and `--data table=b.csv`.
-- Fix: use either all unnamed or all named bindings.
-
-### 4) Multi-table join composition failure
-- Cause: no reliable join keys inferred.
-- Fix:
-- pass `--compose-spec` with explicit joins, or
-- set `--no-key-policy aggregate_only` if table-level fallback is acceptable.
-
-### 5) Spark runtime/config issues
-- Cause: local Spark environment not initialized correctly.
-- Fix:
-- pass `--spark-master "local[*]"`,
-- verify PySpark installation,
-- in CML/headless contexts set `MPLBACKEND=Agg` and `MPLCONFIGDIR`.
-
-## D. NotebookLM Upload Order (Recommended)
-- `00_overview.md`
-- `08_notebooklm_deck_story_en.md`
-- `09_notebooklm_slide_content_en.md`
-- `10_notebooklm_demo_and_troubleshooting_en.md`
-- `01_inputs_catalog.md`
-- `02_eda_pipeline.md`
-- `03_eda_spark_pipeline.md`
-- `05_usage_modes.md`
-- `06_demo_paths_in_data_folder.md`
-
-## E. NotebookLM Deck Generation Prompt (English)
-Use this text as your Slide Deck prompt inside NotebookLM:
+## A. Prompt for NotebookLM Slide Deck (Use As-Is)
 
 ```text
-Create a 12-14 slide English technical deck for model developers on how to use EDA (Pandas) and EDA Spark (PySpark) in this repository.
+Create a 12-14 slide English technical deck for model developers about the EDA (Pandas) and EDA Spark (PySpark) projects in this repository.
 
-Requirements:
-- Focus on practical usage and decisions, not generic EDA theory.
-- Include exact runnable commands from the sources.
-- Include one comparison slide: when to choose EDA vs EDA Spark.
-- Include one slide mapping each section (data_quality, target, univariate, bivariate_target, feature_vs_feature, time_drift) to modeling decisions.
-- Include one troubleshooting slide with common errors and fixes.
-- Keep all parameter names and file paths exactly as in the sources.
-- End with a rollout checklist and next steps for model developers.
+Hard requirements:
+1) Focus only on three themes:
+   - input data types and input modes,
+   - system design of EDA and EDA Spark,
+   - concrete CLI/API usage and output results interpretation.
+2) Do not include legacy workflow history.
+3) Show exact function keys used by both designs:
+   data_quality, target, univariate, bivariate_target, feature_vs_feature, time_drift.
+4) Show runner-level functions:
+   run(), run_interactive(), list_functions(), parse_function_selection(), parse_column_selection(), print_functions().
+5) Include exact runnable command examples for both EDA and EDA Spark.
+6) Include API examples for both EDA and EDA Spark.
+7) Emphasize outputs and results:
+   - <output_dir>/eda_results.json
+   - <output_dir>/EDA_Report.pdf
+   - API default return (results) and return_payload=True payload structure.
+8) Include one slide mapping section results to model-development decisions.
+9) Keep all parameter names and paths exactly as in sources.
+10) End with an immediate action checklist for model developers.
 ```
+
+## B. Command Snippets NotebookLM Should Prefer
+
+### EDA CLI
+```bash
+python -m eda.cli \
+  --data ./data/synthetic_aml_200k_20260130_135951.csv \
+  --target-col is_suspicious \
+  --sections data_quality,target,univariate,time_drift \
+  --output ./output_eda
+```
+
+### EDA Spark CLI
+```bash
+python -m eda_spark.cli \
+  --data ./data/synthetic_aml_mixed_50k_20260205_094055.csv \
+  --target-col sar_actual \
+  --sections data_quality,target,univariate,time_drift \
+  --spark-master "local[*]" \
+  --output ./output_eda_spark
+```
+
+### EDA API
+```python
+from adm_central_utility import EDA
+
+eda = EDA(output_dir="./output_eda", target_col="is_suspicious")
+results = eda.run(data=["./data/synthetic_aml_200k_20260130_135951.csv"])
+```
+
+### EDA Spark API
+```python
+from eda_spark.runner import EDASpark
+
+eda = EDASpark(output_dir="./output_eda_spark", spark_master="local[*]", target_col="sar_actual")
+results = eda.run(data=["./data/synthetic_aml_mixed_50k_20260205_094055.csv"])
+```
+
+## C. Validation Checklist for Generated Slides
+- Input types are explicitly listed.
+- Both system designs are shown as architecture/data-flow.
+- CLI and API usage are both covered for each engine.
+- Function keys and runner functions are present and spelled correctly.
+- Output artifacts (`eda_results.json`, `EDA_Report.pdf`) are emphasized.
+- Results interpretation for model-development actions is explicit.

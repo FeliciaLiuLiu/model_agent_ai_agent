@@ -1,94 +1,97 @@
-# 02 EDA Pipeline (Pandas)
+# 02 EDA System Design (Pandas)
 
-## System Pipeline (Model Developer View)
+## System Design Objective
+Explain how `EDA` (Pandas) turns model-developer inputs into standardized result outputs.
+
+## Component Design
+
+| Layer | File | Responsibility | Key functions |
+|---|---|---|---|
+| CLI | `eda/cli.py` | Parse arguments and dispatch run mode | `main()` |
+| Runner | `eda/runner.py` | End-to-end orchestration | `run()`, `run_interactive()` |
+| Function catalog | `eda/runner.py` | Expose selectable analysis functions | `list_functions()`, `print_functions()`, `parse_function_selection()`, `parse_column_selection()` |
+| Data loader | `eda/dataloader.py` | Resolve input mode and load/compose data | `DataLoader.load()` |
+| Utilities | `eda/utils.py` | Infer types/target/time and data profiling helpers | `infer_column_types()`, `pick_target_column()`, `pick_time_column()` |
+| Report builder | `eda/report.py` | Build PDF report | `EDAReportBuilder.build()` |
+
+## Analysis Function Keys (for model developers)
+- `data_quality`
+- `target`
+- `univariate`
+- `bivariate_target`
+- `feature_vs_feature`
+- `time_drift`
+
+## Runtime Pipeline
 
 ```mermaid
 flowchart LR
-  A[CLI/API\neda/cli.py::main\nEDA.run()] --> B[DataLoader\neda/dataloader.py::DataLoader.load]
-  B --> C[Input resolution\nmode + source expansion]
-  C --> D[Logical table map\n+ key-based composition]
-  D --> E[Type inference\neda/utils.py::infer_column_types]
-  E --> F[Auto target/time detection\npick_target_column + pick_time_column]
-  F --> G[Section orchestration\nEDA._check_prerequisites]
-  G --> H1[data_quality]
-  G --> H2[target]
-  G --> H3[univariate]
-  G --> H4[bivariate_target]
-  G --> H5[feature_vs_feature]
-  G --> H6[time_drift]
-  H1 --> I[Assemble payload]
-  H2 --> I
-  H3 --> I
-  H4 --> I
-  H5 --> I
-  H6 --> I
-  I --> J[Write JSON\noutput/eda_results.json]
-  I --> K[Build PDF\noutput/EDA_Report.pdf]
+  A[Model Developer Input
+CLI or API] --> B[DataLoader.load]
+  B --> C[Resolve mode + load/compose DataFrame]
+  C --> D[Infer types + target + time]
+  D --> E[Select sections + columns]
+  E --> F[Execute section functions]
+  F --> G[Assemble results payload]
+  G --> H[Write eda_results.json]
+  G --> I[Build EDA_Report.pdf]
 ```
 
-## Section Profiling Map
+## API Return and Output Results
+- Default API call:
+- `results = EDA(...).run(...)`
+- Return value: section-keyed `results` dict.
+- Full payload option:
+- `payload = EDA(...).run(..., return_payload=True)`
+- Includes:
+- `results`
+- `skipped_sections`
+- `config` (data path, rows used, target/time columns, parse ratio, composition metadata)
 
-```mermaid
-flowchart TD
-  S[EDA.SECTION_INFO\neda/runner.py] --> Q[Data Quality]
-  S --> T[Target]
-  S --> U[Univariate]
-  S --> V[Bivariate with Target]
-  S --> W[Feature vs Feature]
-  S --> X[Time Series and Drift]
+## Result Payload Shape (with `return_payload=True`)
 
-  Q --> Q1[Rows/columns/duplicates]
-  Q --> Q2[Missingness + null-like values]
-  Q --> Q3[Type classification + outlier ratio]
-
-  T --> T1[Target distribution/statistics]
-  T --> T2[Target trend over time]
-  T --> T3[Target rate by categorical columns]
-
-  U --> U1[Numeric summary statistics]
-  U --> U2[Histograms]
-  U --> U3[Categorical top-k tables/charts]
-
-  V --> V1[Numeric bins vs target]
-  V --> V2[Categorical rates vs target]
-
-  W --> W1[Correlation matrix + heatmap]
-  W --> W2[Highly correlated pairs]
-
-  X --> X1[Time volume trend]
-  X --> X2[Amount trend if amount-like column exists]
-  X --> X3[Numeric PSI + categorical drift]
+```json
+{
+  "results": {
+    "data_quality": {},
+    "target": {},
+    "univariate": {},
+    "bivariate_target": {},
+    "feature_vs_feature": {},
+    "time_drift": {}
+  },
+  "skipped_sections": [
+    {"section": "time_drift", "reason": "No valid time column"}
+  ],
+  "config": {
+    "data_path": "...",
+    "rows_original": 100000,
+    "rows_used": 100000,
+    "target_col": "is_suspicious",
+    "time_col": "txn_ts",
+    "time_parse_ratio": 0.98
+  }
+}
 ```
 
-## What PDF Contains (High-Level Slide Structure)
-- Cover / Dataset Overview:
-- Data path, rows used, target column, time column.
-- Part 1: Data Quality:
-- Summary bullets, missingness table, null-like values table, type classification, outlier ratio, charts.
-- Part 2+: Section pages for selected analyses:
-- Target, Univariate, Bivariate Target, Feature vs Feature, Time Drift.
-- Each section can include summary bullets, tables, charts.
-- Final pages:
-- Skipped sections table (with reasons).
-- Run configuration table.
+## Minimal Usage Examples (Pandas)
 
-## Output Artifacts (Exact Filenames)
-- JSON: `<output_dir>/eda_results.json`
-- PDF: `<output_dir>/<report_name>` default `EDA_Report.pdf`
-- Typical plots written to `<output_dir>/`:
-- `missingness.png`
-- `outlier_iqr.png`
-- `target_rate_over_time.png` or `target_mean_over_time.png`
-- `target_rate_by_<col>.png`
-- `hist_<col>.png`
-- `cat_<col>.png`
-- `target_rate_bins_<col>.png`
-- `target_rate_cat_<col>.png`
-- `correlation_heatmap.png`
-- `time_volume.png`
-- `time_amount_mean.png`
+### CLI
+```bash
+python -m eda.cli --data ./data/transactions.csv --target-col is_suspicious --output ./output_eda
+```
 
-## Why This Helps Model Developers
-- Fast baseline understanding of new datasets before feature engineering.
-- Consistent, reusable analysis sections across projects.
-- Reduces ad-hoc notebook profiling and manual chart building.
+### API
+```python
+from adm_central_utility import EDA
+
+eda = EDA(output_dir="./output_eda", target_col="is_suspicious")
+results = eda.run(
+    data=["./data/transactions.csv"],
+    sections=["data_quality", "target", "univariate"],
+)
+```
+
+## What Model Developers Should Read First
+- `eda_results.json` for machine-consumable checks and downstream automation.
+- `EDA_Report.pdf` for presentation and review.
