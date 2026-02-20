@@ -3,9 +3,7 @@
 ## Demo Inputs to Reference in Slides
 
 ### EDA demo input
-- Source script: `./data/aml_synthetic_20k.sql`
-- Materialized DB: `./data/aml_synthetic_20k.db`
-- Query target table: `aml_synthetic`
+- Data file: `./data/synthetic_bank_aml_200k.csv`
 
 ### EDA Spark demo input
 - Python loader: `./data/Paypal_data.py`
@@ -13,10 +11,10 @@
 
 ## Quick Validation Commands
 
-### Validate EDA SQL demo files
+### Validate EDA data file
 ```bash
-ls -l ./data/aml_synthetic_20k.sql
-head -n 20 ./data/aml_synthetic_20k.sql
+ls -l ./data/synthetic_bank_aml_200k.csv
+head -n 5 ./data/synthetic_bank_aml_200k.csv
 ```
 
 ### Validate EDA Spark Python loader
@@ -25,42 +23,22 @@ ls -l ./data/Paypal_data.py
 head -n 40 ./data/Paypal_data.py
 ```
 
-## Build DB from SQL Script (for EDA demo)
-
-```bash
-python - <<'PY'
-import sqlite3
-from pathlib import Path
-
-sql_text = Path('./data/aml_synthetic_20k.sql').read_text(encoding='utf-8')
-conn = sqlite3.connect('./data/aml_synthetic_20k.db')
-conn.executescript(sql_text)
-conn.commit()
-conn.close()
-print('ready: ./data/aml_synthetic_20k.db')
-PY
-```
-
 ## Canonical Commands to Put into Slides
 
 ### EDA CLI non-interactive
 ```bash
 python -m eda.cli \
-  --sql "SELECT * FROM aml_synthetic" \
-  --db "sqlite:///./data/aml_synthetic_20k.db" \
+  --data ./data/synthetic_bank_aml_200k.csv \
   --sections data_quality,target,univariate,bivariate_target,feature_vs_feature,time_drift \
   --target-col is_suspicious \
-  --time-col txn_datetime \
   --output ./output_eda
 ```
 
 ### EDA CLI interactive
 ```bash
 python -m eda.cli \
-  --sql "SELECT * FROM aml_synthetic" \
-  --db "sqlite:///./data/aml_synthetic_20k.db" \
+  --data ./data/synthetic_bank_aml_200k.csv \
   --target-col is_suspicious \
-  --time-col txn_datetime \
   --interactive \
   --output ./output_eda
 ```
@@ -91,8 +69,8 @@ python -m eda_spark.cli \
 2. Loader contract mismatch:
 - If `load()` or `df` is missing, run fails.
 
-3. SQL table not found:
-- Validate schema/table in SQL text and DB before running `--sql`.
+3. Wrong data path:
+- Validate the file path before running CLI/API.
 
 ## Output Paths to Show
 - EDA: `./output_eda/EDA_Report.pdf`, `./output_eda/eda_results.json`

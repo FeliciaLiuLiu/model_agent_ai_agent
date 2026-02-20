@@ -45,43 +45,23 @@ Spark adaptation (same mode logic):
 - CLI: replace `eda.cli` with `eda_spark.cli`.
 - API: replace `EDA` with `EDASpark` and import from `eda_spark.runner`.
 
-## 2) Case Slides (Concrete Examples)
+## 2) Case Slides (Concrete Execution Examples)
 
-### Case A - EDA SQL demo with `aml_synthetic_20k.sql`
-First materialize SQL script to SQLite:
-
-```bash
-python - <<'PY'
-import sqlite3
-from pathlib import Path
-
-sql_text = Path('./data/aml_synthetic_20k.sql').read_text(encoding='utf-8')
-conn = sqlite3.connect('./data/aml_synthetic_20k.db')
-conn.executescript(sql_text)
-conn.commit()
-conn.close()
-print('created ./data/aml_synthetic_20k.db')
-PY
-```
-
+### Case A - EDA file-input execution example
 CLI non-interactive:
 ```bash
 python -m eda.cli \
-  --sql "SELECT * FROM aml_synthetic" \
-  --db "sqlite:///./data/aml_synthetic_20k.db" \
+  --data ./data/synthetic_bank_aml_200k.csv \
   --sections data_quality,target,univariate,bivariate_target,feature_vs_feature,time_drift \
   --target-col is_suspicious \
-  --time-col txn_datetime \
   --output ./output_eda
 ```
 
 CLI interactive:
 ```bash
 python -m eda.cli \
-  --sql "SELECT * FROM aml_synthetic" \
-  --db "sqlite:///./data/aml_synthetic_20k.db" \
+  --data ./data/synthetic_bank_aml_200k.csv \
   --target-col is_suspicious \
-  --time-col txn_datetime \
   --interactive \
   --output ./output_eda
 ```
@@ -90,19 +70,17 @@ API non-interactive:
 ```python
 from adm_central_utility import EDA
 
-eda = EDA(output_dir='./output_eda', target_col='is_suspicious', time_col='txn_datetime')
+eda = EDA(output_dir='./output_eda', target_col='is_suspicious')
 results = eda.run(
-    sql='SELECT * FROM aml_synthetic',
-    db='sqlite:///./data/aml_synthetic_20k.db',
-    sections=['data_quality','target','univariate','bivariate_target','feature_vs_feature','time_drift'],
+    data=['./data/synthetic_bank_aml_200k.csv'],
+    sections=['data_quality', 'target', 'univariate', 'bivariate_target', 'feature_vs_feature', 'time_drift'],
 )
 ```
 
 API interactive:
 ```python
 payload = eda.run_interactive(
-    sql='SELECT * FROM aml_synthetic',
-    db='sqlite:///./data/aml_synthetic_20k.db',
+    data=['./data/synthetic_bank_aml_200k.csv'],
     return_payload=True,
 )
 ```

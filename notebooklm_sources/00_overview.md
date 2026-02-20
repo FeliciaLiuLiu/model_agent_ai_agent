@@ -18,7 +18,7 @@ Create a fully English slide deck for model developers that focuses on:
 ## Required Example Anchors
 - EDA Spark must include this command pattern with row cap:
 - `python -m eda_spark.cli --py ./data/Paypal_data.py --sections data_quality,univariate,feature_vs_feature,time_drift --max-rows 5000 --output ./output_eda_spark`
-- EDA must use `./data/aml_synthetic_20k.sql` as the demo source (materialize SQL script -> query DB).
+- EDA case should focus on direct execution with file input (no DB conversion step).
 
 ## Required Weakness Statements
 - Exactly one input mode is allowed per run (`data` or `sql` or `py` or `py_code` or `nb`).

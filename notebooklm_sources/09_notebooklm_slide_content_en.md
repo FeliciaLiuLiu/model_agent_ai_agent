@@ -76,16 +76,13 @@ Note on this slide:
 - `python -m eda_spark.cli ...`
 - `from eda_spark.runner import EDASpark`
 
-## Slide 9 - EDA Case Slide (SQL Script Example)
-- Demo source: `./data/aml_synthetic_20k.sql` (materialize to SQLite first).
+## Slide 9 - EDA Case Slide (File Execution Example)
 
 ```bash
 python -m eda.cli \
-  --sql "SELECT * FROM aml_synthetic" \
-  --db "sqlite:///./data/aml_synthetic_20k.db" \
+  --data ./data/synthetic_bank_aml_200k.csv \
   --sections data_quality,target,univariate,bivariate_target,feature_vs_feature,time_drift \
   --target-col is_suspicious \
-  --time-col txn_datetime \
   --output ./output_eda
 ```
 
@@ -93,16 +90,14 @@ python -m eda.cli \
 ```python
 from adm_central_utility import EDA
 
-eda = EDA(output_dir='./output_eda', target_col='is_suspicious', time_col='txn_datetime')
+eda = EDA(output_dir='./output_eda', target_col='is_suspicious')
 results = eda.run(
-    sql='SELECT * FROM aml_synthetic',
-    db='sqlite:///./data/aml_synthetic_20k.db',
+    data=['./data/synthetic_bank_aml_200k.csv'],
     sections=['data_quality','target','univariate','bivariate_target','feature_vs_feature','time_drift'],
 )
 
 payload = eda.run_interactive(
-    sql='SELECT * FROM aml_synthetic',
-    db='sqlite:///./data/aml_synthetic_20k.db',
+    data=['./data/synthetic_bank_aml_200k.csv'],
     return_payload=True,
 )
 ```

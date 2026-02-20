@@ -30,7 +30,7 @@ Content requirements:
    - API interactive.
 6) In that usage slide, use generic placeholders only (no dataset-specific paths).
 7) Put dataset-specific commands in later case slides.
-8) Include EDA case using ./data/aml_synthetic_20k.sql (materialize to SQLite then query aml_synthetic).
+8) For EDA case slides, use direct file-input execution (no DB conversion workflow).
 9) Include EDA Spark required CLI case:
    python -m eda_spark.cli --py ./data/Paypal_data.py --sections data_quality,univariate,feature_vs_feature,time_drift --max-rows 5000 --output ./output_eda_spark
 10) Emphasize outputs:
@@ -71,11 +71,9 @@ Spark adaptation note:
 ### EDA case (CLI)
 ```bash
 python -m eda.cli \
-  --sql "SELECT * FROM aml_synthetic" \
-  --db "sqlite:///./data/aml_synthetic_20k.db" \
+  --data ./data/synthetic_bank_aml_200k.csv \
   --sections data_quality,target,univariate,bivariate_target,feature_vs_feature,time_drift \
   --target-col is_suspicious \
-  --time-col txn_datetime \
   --output ./output_eda
 ```
 
@@ -97,9 +95,9 @@ python -m eda_spark.cli \
 - Cause: loader contract not satisfied.
 - Fix: add `load()` or `df`.
 
-3. `TABLE OR VIEW NOT FOUND`
-- Cause: SQL references missing schema/table.
-- Fix: materialize correct table into SQLite or fix schema/table names.
+3. `FileNotFoundError`
+- Cause: wrong `--data` or `--py` path.
+- Fix: validate absolute/relative path in your runtime.
 
 4. `Only one input mode is allowed`
 - Cause: mixed modes in one run.
