@@ -1,16 +1,54 @@
-# 05 How Model Developers Run EDA and EDA Spark
+# 05 Usage Modes (Method First, Cases Later)
 
-## Output Guarantee
-Unless `--no-report` is used, CLI runs generate:
-- `EDA_Report.pdf`
-- `eda_results.json`
+## 1) Method Slide Content (No Dataset-Specific Paths)
+Use this as the consolidated usage slide content.
 
-API runs also generate PDF/JSON when `generate_report=True` and `save_json=True` (both default to True in runner methods).
+### CLI Non-Interactive (Template)
+```bash
+python -m eda.cli \
+  --data ./path/to/input.csv \
+  --sections data_quality,target,univariate,feature_vs_feature,time_drift \
+  --output ./output_eda
+```
 
-## A) EDA (Pandas) Demo Using `./data/aml_synthetic_20k.sql`
+### CLI Interactive (Template)
+```bash
+python -m eda.cli \
+  --data ./path/to/input.csv \
+  --interactive \
+  --output ./output_eda
+```
 
-### Step A1: Materialize SQL script into SQLite DB
-`aml_synthetic_20k.sql` is a SQL script (DDL + data). Create a DB first:
+### API Non-Interactive (Template)
+```python
+from adm_central_utility import EDA
+
+eda = EDA(output_dir='./output_eda')
+results = eda.run(
+    data=['./path/to/input.csv'],
+    sections=['data_quality', 'univariate', 'feature_vs_feature'],
+)
+```
+
+### API Interactive (Template)
+```python
+from adm_central_utility import EDA
+
+eda = EDA(output_dir='./output_eda')
+payload = eda.run_interactive(
+    data=['./path/to/input.csv'],
+    return_payload=True,
+)
+```
+
+Spark adaptation (same mode logic):
+- CLI: replace `eda.cli` with `eda_spark.cli`.
+- API: replace `EDA` with `EDASpark` and import from `eda_spark.runner`.
+
+## 2) Case Slides (Concrete Examples)
+
+### Case A - EDA SQL demo with `aml_synthetic_20k.sql`
+First materialize SQL script to SQLite:
 
 ```bash
 python - <<'PY'
@@ -26,8 +64,7 @@ print('created ./data/aml_synthetic_20k.db')
 PY
 ```
 
-### Step A2: CLI Non-Interactive (EDA)
-
+CLI non-interactive:
 ```bash
 python -m eda.cli \
   --sql "SELECT * FROM aml_synthetic" \
@@ -38,8 +75,7 @@ python -m eda.cli \
   --output ./output_eda
 ```
 
-### Step A3: CLI Interactive (EDA)
-
+CLI interactive:
 ```bash
 python -m eda.cli \
   --sql "SELECT * FROM aml_synthetic" \
@@ -50,8 +86,7 @@ python -m eda.cli \
   --output ./output_eda
 ```
 
-### Step A4: API Non-Interactive (EDA)
-
+API non-interactive:
 ```python
 from adm_central_utility import EDA
 
@@ -59,30 +94,21 @@ eda = EDA(output_dir='./output_eda', target_col='is_suspicious', time_col='txn_d
 results = eda.run(
     sql='SELECT * FROM aml_synthetic',
     db='sqlite:///./data/aml_synthetic_20k.db',
-    sections=['data_quality', 'target', 'univariate', 'bivariate_target', 'feature_vs_feature', 'time_drift'],
-    generate_report=True,
-    save_json=True,
+    sections=['data_quality','target','univariate','bivariate_target','feature_vs_feature','time_drift'],
 )
 ```
 
-### Step A5: API Interactive (EDA)
-
+API interactive:
 ```python
-from adm_central_utility import EDA
-
-eda = EDA(output_dir='./output_eda', target_col='is_suspicious', time_col='txn_datetime')
 payload = eda.run_interactive(
     sql='SELECT * FROM aml_synthetic',
     db='sqlite:///./data/aml_synthetic_20k.db',
-    generate_report=True,
-    save_json=True,
     return_payload=True,
 )
 ```
 
-## B) EDA Spark Demo Using `--py ./data/Paypal_data.py`
-
-### Required Non-Interactive Example (Top 5000 rows)
+### Case B - EDA Spark demo with `Paypal_data.py`
+Required CLI non-interactive example (top 5000 rows):
 
 ```bash
 python -m eda_spark.cli \
@@ -92,8 +118,7 @@ python -m eda_spark.cli \
   --output ./output_eda_spark
 ```
 
-### CLI Interactive (EDA Spark, Top 5000 rows)
-
+CLI interactive:
 ```bash
 python -m eda_spark.cli \
   --py ./data/Paypal_data.py \
@@ -102,8 +127,7 @@ python -m eda_spark.cli \
   --output ./output_eda_spark
 ```
 
-### API Non-Interactive (EDA Spark, Top 5000 rows)
-
+API non-interactive:
 ```python
 from eda_spark.runner import EDASpark
 
@@ -112,41 +136,20 @@ results = eda.run(
     py='./data/Paypal_data.py',
     sections=['data_quality', 'univariate', 'feature_vs_feature', 'time_drift'],
     max_rows=5000,
-    generate_report=True,
-    save_json=True,
 )
 ```
 
-### API Interactive (EDA Spark, Top 5000 rows)
-
+API interactive:
 ```python
-from eda_spark.runner import EDASpark
-
-eda = EDASpark(output_dir='./output_eda_spark', spark_master='local[*]')
 payload = eda.run_interactive(
     py='./data/Paypal_data.py',
     max_rows=5000,
-    generate_report=True,
-    save_json=True,
     return_payload=True,
 )
 ```
 
-## C) Non-Interactive vs Interactive Summary
-
-| Mode | How it works | Best for |
-|---|---|---|
-| Non-interactive | User pre-defines sections/columns via args or code | CI jobs, reproducible pipelines |
-| Interactive | Runner prompts section/column choices at runtime | Exploration, ad-hoc analyst flow |
-
-## D) Verify PDF + JSON Were Generated
-
-```bash
-ls -lh ./output_eda
-ls -lh ./output_eda_spark
-```
-
-Expected:
+## 3) Output Verification
+Expected output files:
 - `./output_eda/EDA_Report.pdf`
 - `./output_eda/eda_results.json`
 - `./output_eda_spark/EDA_Report.pdf`

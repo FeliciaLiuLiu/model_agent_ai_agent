@@ -9,17 +9,22 @@
 1. Start from the problem: model training quality depends on input data quality and data understanding.
 2. Show input flexibility: files, SQL, Python loader, notebook.
 3. Immediately show constraints: one input mode per run, key dependency for multi-table merge.
-4. Present EDA (Pandas) full system design: Input -> DataLoader -> Runner -> Sections -> Output.
-5. Present EDA Spark full system design with distributed execution perspective.
-6. Show sections and functions under each section block.
-7. Show exact usage patterns: CLI + API, each in non-interactive and interactive modes.
+4. Present EDA (Pandas) and EDA Spark (PySpark) system designs.
+5. Show section blocks and functions.
+6. Put **all usage patterns on one single slide** first:
+- CLI non-interactive,
+- CLI interactive,
+- API non-interactive,
+- API interactive.
+- This slide must use generic placeholders (no specific dataset path).
+7. Then present dataset-specific case slides (EDA SQL case and EDA Spark `Paypal_data.py` case).
 8. Emphasize outputs (`eda_results.json`, `EDA_Report.pdf`) as the core artifacts.
-9. Close with action plan: how report findings become Data Cleaning and Feature Engineering tasks.
+9. Close with action plan: turn EDA findings into Data Cleaning and Feature Engineering tasks.
 
 ## Message Priority (Top to Bottom)
 1. Input flexibility with explicit boundaries.
 2. System design clarity.
-3. Usage clarity (CLI/API + interactive/non-interactive).
+3. Usage clarity (one consolidated usage slide + separate case slides).
 4. Output interpretation for next modeling decisions.
 
 ## What Not to Include
