@@ -655,7 +655,15 @@ class EDASpark:
                 F.min(target_col).alias("min"),
                 F.max(target_col).alias("max"),
             ).collect()[0]
-            rows = [[k, round(float(v), 6)] for k, v in stats.asDict().items()]
+            rows = []
+            for k, v in stats.asDict().items():
+                if v is None:
+                    rows.append([k, None])
+                    continue
+                try:
+                    rows.append([k, round(float(v), 6)])
+                except Exception:
+                    rows.append([k, None])
             tables.append({
                 "title": "Target Summary Statistics",
                 "headers": ["Metric", "Value"],
@@ -672,6 +680,9 @@ class EDASpark:
                 pdf = rate.toPandas()
                 if "time_bucket" in pdf.columns:
                     pdf["time_bucket"] = pd.to_datetime(pdf["time_bucket"], errors="coerce")
+                if "rate" in pdf.columns:
+                    pdf["rate"] = pd.to_numeric(pdf["rate"], errors="coerce")
+                pdf = pdf.dropna(subset=["time_bucket", "rate"])
                 if not pdf.empty:
                     path = os.path.join(self.output_dir, "target_rate_over_time.png")
                     self._plot_line(pdf.set_index("time_bucket")["rate"], path, "Target Rate Over Time", "Rate")
@@ -687,15 +698,26 @@ class EDASpark:
                     .limit(self.top_k_categories)
                     .collect()
                 )
-                rows = [[str(r[col]), round(float(r["rate"]), 6)] for r in rates]
+                clean_rates = []
+                for r in rates:
+                    rv = r["rate"]
+                    if rv is None:
+                        continue
+                    try:
+                        clean_rates.append((str(r[col]), round(float(rv), 6)))
+                    except Exception:
+                        continue
+                if not clean_rates:
+                    continue
+                rows = [[name, rate_val] for name, rate_val in clean_rates]
                 tables.append({
                     "title": f"Target Rate by {col}",
                     "headers": [col, "Target Rate" if is_classification else "Target Mean"],
                     "rows": rows,
                 })
                 series = pd.Series(
-                    [float(r["rate"]) for r in rates],
-                    index=[str(r[col]) for r in rates],
+                    [rate_val for _, rate_val in clean_rates],
+                    index=[name for name, _ in clean_rates],
                 )
                 path = os.path.join(self.output_dir, f"target_rate_by_{col}.png")
                 self._plot_bar(series, path, title=f"Target Rate by {col}", ylabel="Rate")
@@ -879,6 +901,9 @@ class EDASpark:
             if col == numeric_cols[0]:
                 pdf = grouped.toPandas()
                 if not pdf.empty:
+                    pdf["rate"] = pd.to_numeric(pdf["rate"], errors="coerce")
+                    pdf = pdf.dropna(subset=["bucket", "rate"])
+                if not pdf.empty:
                     pdf["bucket"] = pdf["bucket"].astype(int)
                     series = pd.Series(
                         pdf["rate"].values,
@@ -889,9 +914,12 @@ class EDASpark:
                     plots[f"target_rate_bins_{col}"] = path
 
             for g in grouped.collect():
-                if g["bucket"] is None:
+                if g["bucket"] is None or g["rate"] is None:
                     continue
-                rows.append([col, f"bin_{int(g['bucket'])}", round(float(g["rate"]), 6)])
+                try:
+                    rows.append([col, f"bin_{int(g['bucket'])}", round(float(g["rate"]), 6)])
+                except Exception:
+                    continue
 
         if rows:
             tables.append({
@@ -910,7 +938,12 @@ class EDASpark:
                 .collect()
             )
             for r in rates:
-                rows.append([col, str(r[col]), round(float(r["rate"]), 6)])
+                if r["rate"] is None:
+                    continue
+                try:
+                    rows.append([col, str(r[col]), round(float(r["rate"]), 6)])
+                except Exception:
+                    continue
         if rows:
             tables.append({
                 "title": "Categorical vs Target",
