@@ -1,138 +1,99 @@
-# 06 Input-to-Result Recipes (Model Developer Playbook)
+# 06 Demo Paths and Runbook for This Deck
 
-## Recipe 1: Single File Input
+## Demo Inputs to Reference in Slides
 
-### EDA
+### EDA demo input
+- Source script: `./data/aml_synthetic_20k.sql`
+- Materialized DB: `./data/aml_synthetic_20k.db`
+- Query target table: `aml_synthetic`
+
+### EDA Spark demo input
+- Python loader: `./data/Paypal_data.py`
+- Contract: file must define `load()` or `df`.
+
+## Quick Validation Commands
+
+### Validate EDA SQL demo files
 ```bash
-python -m eda.cli --data ./data/transactions.csv --output ./output_eda
+ls -l ./data/aml_synthetic_20k.sql
+head -n 20 ./data/aml_synthetic_20k.sql
 ```
 
-### EDA Spark
+### Validate EDA Spark Python loader
 ```bash
-python -m eda_spark.cli --data ./data/transactions.csv --spark-master "local[*]" --output ./output_eda_spark
+ls -l ./data/Paypal_data.py
+head -n 40 ./data/Paypal_data.py
 ```
 
-Expected result files:
-- `eda_results.json`
-- `EDA_Report.pdf`
+## Build DB from SQL Script (for EDA demo)
 
-## Recipe 2: Multiple Files as Input
-
-### EDA
 ```bash
-python -m eda.cli --data ./data/part1.csv --data ./data/part2.csv --output ./output_eda
+python - <<'PY'
+import sqlite3
+from pathlib import Path
+
+sql_text = Path('./data/aml_synthetic_20k.sql').read_text(encoding='utf-8')
+conn = sqlite3.connect('./data/aml_synthetic_20k.db')
+conn.executescript(sql_text)
+conn.commit()
+conn.close()
+print('ready: ./data/aml_synthetic_20k.db')
+PY
 ```
 
-### EDA Spark
-```bash
-python -m eda_spark.cli --data ./data/part1.csv --data ./data/part2.csv --spark-master "local[*]" --output ./output_eda_spark
-```
+## Canonical Commands to Put into Slides
 
-## Recipe 3: Directory and Glob Input
-
-### EDA
-```bash
-python -m eda.cli --data ./data/shards --output ./output_eda
-python -m eda.cli --data './data/shards/**/*.csv' --data-recursive --output ./output_eda
-```
-
-### EDA Spark
-```bash
-python -m eda_spark.cli --data ./data/shards --spark-master "local[*]" --output ./output_eda_spark
-python -m eda_spark.cli --data './data/shards/**/*.csv' --data-recursive --spark-master "local[*]" --output ./output_eda_spark
-```
-
-## Recipe 4: Named Multi-Table Input
-
-### EDA
+### EDA CLI non-interactive
 ```bash
 python -m eda.cli \
-  --data transaction=./data/transaction.csv \
-  --data customer=./data/customer.csv \
-  --data account=./data/account.csv \
+  --sql "SELECT * FROM aml_synthetic" \
+  --db "sqlite:///./data/aml_synthetic_20k.db" \
+  --sections data_quality,target,univariate,bivariate_target,feature_vs_feature,time_drift \
+  --target-col is_suspicious \
+  --time-col txn_datetime \
   --output ./output_eda
 ```
 
-### EDA Spark
-```bash
-python -m eda_spark.cli \
-  --data transaction=./data/transaction.csv \
-  --data customer=./data/customer.csv \
-  --data account=./data/account.csv \
-  --spark-master "local[*]" \
-  --output ./output_eda_spark
-```
-
-## Recipe 5: Multi-Table with Explicit Join Spec
-
-### EDA
+### EDA CLI interactive
 ```bash
 python -m eda.cli \
-  --data transaction=./data/transaction.csv \
-  --data customer=./data/customer.csv \
-  --compose-spec ./data/compose_spec.json \
-  --no-key-policy error \
+  --sql "SELECT * FROM aml_synthetic" \
+  --db "sqlite:///./data/aml_synthetic_20k.db" \
+  --target-col is_suspicious \
+  --time-col txn_datetime \
+  --interactive \
   --output ./output_eda
 ```
 
-### EDA Spark
+### EDA Spark CLI non-interactive (required)
 ```bash
 python -m eda_spark.cli \
-  --data transaction=./data/transaction.csv \
-  --data customer=./data/customer.csv \
-  --compose-spec ./data/compose_spec.json \
-  --no-key-policy error \
-  --spark-master "local[*]" \
+  --py ./data/Paypal_data.py \
+  --sections data_quality,univariate,feature_vs_feature,time_drift \
+  --max-rows 5000 \
   --output ./output_eda_spark
 ```
 
-## Recipe 6: SQL Input
-
-### EDA
-```bash
-python -m eda.cli --sql "SELECT * FROM aml_dataset" --db "sqlite:///./data/aml.db" --output ./output_eda
-```
-
-### EDA Spark
-```bash
-python -m eda_spark.cli --sql "SELECT * FROM aml_dataset" --db "sqlite:///./data/aml.db" --spark-master "local[*]" --output ./output_eda_spark
-```
-
-## Recipe 7: Python and Notebook Loader Inputs
-
-### EDA
-```bash
-python -m eda.cli --py ./data/eda_input_loader.py --output ./output_eda
-python -m eda.cli --nb ./data/eda_input_loader.ipynb --output ./output_eda
-```
-
-### EDA Spark
-```bash
-python -m eda_spark.cli --py ./data/eda_spark_input_loader.py --spark-master "local[*]" --output ./output_eda_spark
-python -m eda_spark.cli --nb ./data/eda_spark_input_loader.ipynb --spark-master "local[*]" --output ./output_eda_spark
-```
-
-## Recipe 8: Function-Scoped Runs (Result-Focused)
-
-### EDA
-```bash
-python -m eda.cli \
-  --data ./data/transactions.csv \
-  --sections data_quality,target,time_drift \
-  --output ./output_eda
-```
-
-### EDA Spark
+### EDA Spark CLI interactive
 ```bash
 python -m eda_spark.cli \
-  --data ./data/transactions.parquet \
-  --sections data_quality,target,time_drift \
-  --spark-master "local[*]" \
+  --py ./data/Paypal_data.py \
+  --interactive \
+  --max-rows 5000 \
   --output ./output_eda_spark
 ```
 
-## Result-Reading Checklist
-- Confirm files exist in output directory.
-- Open `eda_results.json` first for section-level machine-readable results.
-- Open `EDA_Report.pdf` second for review and communication.
-- Translate section findings into modeling tasks.
+## Common CML Path Pitfalls to Mention
+1. Missing `.py` extension:
+- `--py ./data/Paypal_data` fails.
+- Use `--py ./data/Paypal_data.py`.
+
+2. Loader contract mismatch:
+- If `load()` or `df` is missing, run fails.
+
+3. SQL table not found:
+- Validate schema/table in SQL text and DB before running `--sql`.
+
+## Output Paths to Show
+- EDA: `./output_eda/EDA_Report.pdf`, `./output_eda/eda_results.json`
+- EDA Spark: `./output_eda_spark/EDA_Report.pdf`, `./output_eda_spark/eda_results.json`

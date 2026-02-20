@@ -1,97 +1,74 @@
-# 02 EDA System Design (Pandas)
+# 02 EDA (Pandas) System Design for Model Developers
 
-## System Design Objective
-Explain how `EDA` (Pandas) turns model-developer inputs into standardized result outputs.
-
-## Component Design
-
-| Layer | File | Responsibility | Key functions |
-|---|---|---|---|
-| CLI | `eda/cli.py` | Parse arguments and dispatch run mode | `main()` |
-| Runner | `eda/runner.py` | End-to-end orchestration | `run()`, `run_interactive()` |
-| Function catalog | `eda/runner.py` | Expose selectable analysis functions | `list_functions()`, `print_functions()`, `parse_function_selection()`, `parse_column_selection()` |
-| Data loader | `eda/dataloader.py` | Resolve input mode and load/compose data | `DataLoader.load()` |
-| Utilities | `eda/utils.py` | Infer types/target/time and data profiling helpers | `infer_column_types()`, `pick_target_column()`, `pick_time_column()` |
-| Report builder | `eda/report.py` | Build PDF report | `EDAReportBuilder.build()` |
-
-## Analysis Function Keys (for model developers)
-- `data_quality`
-- `target`
-- `univariate`
-- `bivariate_target`
-- `feature_vs_feature`
-- `time_drift`
-
-## Runtime Pipeline
+## End-to-End Architecture (Input -> Engine -> Output)
 
 ```mermaid
 flowchart LR
-  A[Model Developer Input
-CLI or API] --> B[DataLoader.load]
-  B --> C[Resolve mode + load/compose DataFrame]
-  C --> D[Infer types + target + time]
-  D --> E[Select sections + columns]
-  E --> F[Execute section functions]
-  F --> G[Assemble results payload]
-  G --> H[Write eda_results.json]
-  G --> I[Build EDA_Report.pdf]
+  A[Input Mode\n--data/--sql/--py/--py-code/--nb] --> B[CLI\neda/cli.py]
+  B --> C[Runner\neda/runner.py::EDA.run]
+  C --> D[DataLoader\neda/dataloader.py::load]
+  D --> E[Type & Role Inference\ninfer_column_types/pick_target/pick_time]
+  E --> F[Section Execution\ndata_quality,target,univariate,bivariate_target,feature_vs_feature,time_drift]
+  F --> G[Payload Assembly]
+  G --> H[eda_results.json]
+  G --> I[EDA_Report.pdf]
 ```
 
-## API Return and Output Results
-- Default API call:
-- `results = EDA(...).run(...)`
-- Return value: section-keyed `results` dict.
-- Full payload option:
-- `payload = EDA(...).run(..., return_payload=True)`
-- Includes:
-- `results`
-- `skipped_sections`
-- `config` (data path, rows used, target/time columns, parse ratio, composition metadata)
+## Engine Responsibilities
+- Parse user intent from CLI/API.
+- Resolve one input mode and load a pandas DataFrame.
+- Infer column families, target column, and time column.
+- Execute section blocks with prerequisite checks.
+- Persist structured JSON and PDF report.
 
-## Result Payload Shape (with `return_payload=True`)
+## Section Blocks and What They Run
 
-```json
-{
-  "results": {
-    "data_quality": {},
-    "target": {},
-    "univariate": {},
-    "bivariate_target": {},
-    "feature_vs_feature": {},
-    "time_drift": {}
-  },
-  "skipped_sections": [
-    {"section": "time_drift", "reason": "No valid time column"}
-  ],
-  "config": {
-    "data_path": "...",
-    "rows_original": 100000,
-    "rows_used": 100000,
-    "target_col": "is_suspicious",
-    "time_col": "txn_ts",
-    "time_parse_ratio": 0.98
-  }
-}
-```
+### `data_quality`
+- Row/column counts and duplicate ratio.
+- Missingness counts/rates and missingness plot.
+- Null-like value detection.
+- Column type summary.
+- Outlier-ratio style validity checks.
 
-## Minimal Usage Examples (Pandas)
+### `target`
+- Target distribution (classification-like) or stats (continuous-like).
+- Target trend over time (if time column is valid).
+- Target rate by key categorical dimensions.
 
-### CLI
-```bash
-python -m eda.cli --data ./data/transactions.csv --target-col is_suspicious --output ./output_eda
-```
+### `univariate`
+- Numeric descriptive stats and histograms.
+- Categorical top-k frequency tables/charts.
 
-### API
-```python
-from adm_central_utility import EDA
+### `bivariate_target`
+- Numeric bins vs target rate/mean.
+- Categorical groups vs target rate/mean.
 
-eda = EDA(output_dir="./output_eda", target_col="is_suspicious")
-results = eda.run(
-    data=["./data/transactions.csv"],
-    sections=["data_quality", "target", "univariate"],
-)
-```
+### `feature_vs_feature`
+- Numeric correlation matrix and heatmap.
+- Highly correlated pair detection.
 
-## What Model Developers Should Read First
-- `eda_results.json` for machine-consumable checks and downstream automation.
-- `EDA_Report.pdf` for presentation and review.
+### `time_drift`
+- Time-bucket volume trend.
+- Amount trend where applicable.
+- Numeric PSI drift and categorical drift signals.
+
+## Public Runner Functions to Show in Deck
+- `run()`
+- `run_interactive()`
+- `list_functions()`
+- `parse_function_selection()`
+- `parse_column_selection()`
+- `print_functions()`
+
+## Output Objects Model Developers Use
+- Files:
+- `./output_eda/eda_results.json`
+- `./output_eda/EDA_Report.pdf`
+- API return:
+- default: `results`
+- optional full payload: `return_payload=True` -> `results`, `skipped_sections`, `config`.
+
+## Section Skip Logic (Important for Interpretation)
+- `target` / `bivariate_target` skip when no valid target column is available.
+- `time_drift` skips when no parseable time column is available.
+- `feature_vs_feature` needs at least two numeric columns.

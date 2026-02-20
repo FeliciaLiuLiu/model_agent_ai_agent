@@ -1,46 +1,40 @@
-# 00 Overview (Model Developer-Focused NotebookLM Source Pack)
+# 00 Overview for NotebookLM Deck (EDA + EDA Spark)
 
-## Objective
-This source pack is built for an English PPT that explains only three things for model developers:
-- what input data types `eda` and `eda_spark` accept,
-- how each system is designed,
-- how to run CLI/API and interpret output **results**.
+## Deck Objective
+Create a fully English slide deck for model developers that focuses on:
+1. Full system design for `eda` and `eda_spark` from **Input -> Engine -> Output**.
+2. Input data flexibility based on real dataloader behavior.
+3. Input weaknesses and failure conditions.
+4. Section blocks and what functions/analyses each block executes.
+5. How users run both projects via **CLI** and **API**, in **interactive** and **non-interactive** modes.
+6. How to use the EDA results to drive **Data Cleaning** and **Feature Engineering**.
 
-## Scope (No Legacy Narrative)
-- Project: `model_agent_ai_agent`
-- Engines:
-- `EDA (Pandas)`: `eda/runner.py::EDA`
-- `EDA Spark (PySpark)`: `eda_spark/runner.py::EDASpark`
+## Hard Focus Areas (Must Be Visible in Slides)
+- Input flexibility and real constraints.
+- End-to-end design visibility for both engines.
+- Usage mode clarity (CLI/API + interactive/non-interactive).
+- Output-first mindset: `eda_results.json` and `EDA_Report.pdf`.
 
-## What the Deck Must Emphasize
-- Inputs:
-- `--data --sql --db --py --py-code --nb --data-recursive --compose-spec --no-key-policy --auto-exec`
-- System design:
-- CLI -> Runner -> DataLoader -> Section Functions -> JSON/PDF output
-- Usage:
-- CLI batch, CLI interactive, API batch, API interactive
-- Output results:
+## Required Example Anchors
+- EDA Spark must include this command pattern with row cap:
+- `python -m eda_spark.cli --py ./data/Paypal_data.py --sections data_quality,univariate,feature_vs_feature,time_drift --max-rows 5000 --output ./output_eda_spark`
+- EDA must use `./data/aml_synthetic_20k.sql` as the demo source (materialize SQL script -> query DB).
+
+## Required Weakness Statements
+- Exactly one input mode is allowed per run (`data` or `sql` or `py` or `py_code` or `nb`).
+- Multi-table row-level composition requires joinable key columns; otherwise default behavior is fail-fast error.
+- Fallback mode `no_key_policy=aggregate_only` exists, but it loses row-level linkage.
+
+## Output Contract (Both Engines)
 - `<output_dir>/eda_results.json`
 - `<output_dir>/EDA_Report.pdf`
-- API return object (`results` by default; full payload with `return_payload=True`)
 
-## Function Surfaces to Cover
-- Public orchestration functions (both runners):
-- `run()`
-- `run_interactive()`
-- `list_functions()`
-- `parse_function_selection()`
-- `parse_column_selection()`
-- `print_functions()`
-- Analysis function keys (both engines):
-- `data_quality`
-- `target`
-- `univariate`
-- `bivariate_target`
-- `feature_vs_feature`
-- `time_drift`
+## Slide Style Constraint
+- White background.
+- Clean, simple style.
+- Minimal decorative elements.
 
-## Recommended NotebookLM Upload Order
+## Suggested NotebookLM Upload Order
 1. `00_overview.md`
 2. `01_inputs_catalog.md`
 3. `02_eda_pipeline.md`
@@ -50,11 +44,3 @@ This source pack is built for an English PPT that explains only three things for
 7. `08_notebooklm_deck_story_en.md`
 8. `09_notebooklm_slide_content_en.md`
 9. `10_notebooklm_demo_and_troubleshooting_en.md`
-
-```mermaid
-flowchart LR
-  U[Model Developer] --> I[Input Types]
-  U --> D[System Design]
-  U --> R[Run CLI/API]
-  R --> O[Output Results: JSON + PDF]
-```

@@ -1,38 +1,34 @@
-# 08 Deck Story (Input + Design + Usage + Results)
+# 08 Deck Storyline (White, Simple, Model-Developer First)
 
-## Audience
-- Model developers who need a practical way to understand data before training.
+## Design Intent
+- Audience: model developers.
+- Tone: technical and practical.
+- Style: white background, simple layout, low decoration, high readability.
 
-## Single Narrative
-- Start with **input flexibility**,
-- explain **system design** for EDA and EDA Spark,
-- show **exact CLI/API usage**,
-- end with **how to read results and act**.
+## Story Arc
+1. Start from the problem: model training quality depends on input data quality and data understanding.
+2. Show input flexibility: files, SQL, Python loader, notebook.
+3. Immediately show constraints: one input mode per run, key dependency for multi-table merge.
+4. Present EDA (Pandas) full system design: Input -> DataLoader -> Runner -> Sections -> Output.
+5. Present EDA Spark full system design with distributed execution perspective.
+6. Show sections and functions under each section block.
+7. Show exact usage patterns: CLI + API, each in non-interactive and interactive modes.
+8. Emphasize outputs (`eda_results.json`, `EDA_Report.pdf`) as the core artifacts.
+9. Close with action plan: how report findings become Data Cleaning and Feature Engineering tasks.
 
-## What to Avoid
-- Do not spend time on historical process or legacy workflows.
-- Do not present generic EDA theory without usage context.
+## Message Priority (Top to Bottom)
+1. Input flexibility with explicit boundaries.
+2. System design clarity.
+3. Usage clarity (CLI/API + interactive/non-interactive).
+4. Output interpretation for next modeling decisions.
 
-## Core Messages
-- Message 1: Input is not a blocker.
-- You can start from files, SQL, Python loaders, or notebooks.
-- Message 2: Design is predictable.
-- CLI/API always goes through runner + dataloader + section functions.
-- Message 3: Usage is operational.
-- Use CLI for fast runs and API for pipeline integration.
-- Message 4: Results are the product.
-- `eda_results.json` is the machine-readable source of truth.
-- `EDA_Report.pdf` is the review and communication artifact.
+## What Not to Include
+- Legacy process history.
+- Unrelated platform comparisons.
+- Long conceptual EDA theory without runnable commands.
 
-## Function Coverage Requirement
-The deck must explicitly show the function keys:
-- `data_quality`
-- `target`
-- `univariate`
-- `bivariate_target`
-- `feature_vs_feature`
-- `time_drift`
-
-## Desired Closing
-- The audience should leave with one immediate action:
-- run one command on their own dataset and review `eda_results.json` first.
+## Visual Rules for NotebookLM Prompt
+- White canvas.
+- Black/gray text with one accent color (blue or green).
+- Architecture and comparison tables over decorative graphics.
+- Command blocks in monospaced style.

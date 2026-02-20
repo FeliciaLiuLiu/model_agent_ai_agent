@@ -1,76 +1,142 @@
-# 09 Slide-by-Slide Content (Model Developer Focus)
+# 09 Slide-by-Slide Content (Detailed)
 
 ## Slide 1 - Title
-**How Model Developers Use EDA and EDA Spark**
-- Scope: input types, system design, CLI/API usage, and output results.
+**EDA and EDA Spark for Model Developers**
+- Focus: Input flexibility, system design, and practical usage.
 
-## Slide 2 - Why This Matters for Model Development
-- Standardized pre-modeling analysis reduces rework and hidden data risks.
-- Output artifacts make results reproducible and reviewable.
+## Slide 2 - Agenda
+- Input modes and constraints.
+- EDA system design.
+- EDA Spark system design.
+- CLI/API usage in interactive and non-interactive modes.
+- How to convert report outputs into next modeling actions.
 
-## Slide 3 - Input Data Types You Can Use
-- `--data` (single file, multiple files, directory, glob, named tables)
-- `--sql` + `--db`
-- `--py`
-- `--py-code`
-- `--nb`
-- `--auto-exec` and `--compose-spec` / `--no-key-policy`
+## Slide 3 - Input Flexibility Overview
+- Supported modes: `data`, `sql+db`, `py`, `py_code`, `nb`.
+- Supported file types: csv/tsv/parquet/json/xlsx/xls/feather.
+- Single mode per run rule.
 
-## Slide 4 - Input Mode Rule
-- Exactly one input mode per run.
-- If no explicit mode is given, loader resolves default/auto behavior.
-- Multi-table inputs are composed by key rules.
+## Slide 4 - Input Weaknesses and Failure Conditions
+- Constraint 1: only one input mode allowed.
+- Constraint 2: row-level multi-table merge requires joinable keys.
+- Constraint 3: SQL mode requires `--db`.
+- Constraint 4: `--py`/`--nb` must expose `load()` or `df`.
 
-## Slide 5 - EDA (Pandas) System Design
-- CLI -> `EDA.run()` -> `DataLoader.load()` -> section functions -> output.
-- Show component responsibilities and data flow.
+## Slide 5 - EDA (Pandas) Architecture
+- Show flow diagram: Input -> `eda/dataloader.py` -> `eda/runner.py` -> outputs.
+- Explain runner responsibilities and skip logic.
 
-## Slide 6 - EDA Spark (PySpark) System Design
-- Driver orchestration + executor-side distributed computation.
-- Same section semantics and output contract as Pandas.
+## Slide 6 - EDA Section Blocks and Functions
+- `data_quality`: duplicates, missingness, null-like checks, type summary.
+- `target`: target distribution/stats, target trend, target-by-category rates.
+- `univariate`: numeric stats/histograms, categorical top-k.
+- `bivariate_target`: bins/groups vs target.
+- `feature_vs_feature`: correlation matrix + high-correlation pairs.
+- `time_drift`: trend and drift signals.
 
-## Slide 7 - Function Catalog in Both Designs
-- Runner orchestration functions:
-- `run()`, `run_interactive()`, `list_functions()`, `parse_function_selection()`, `parse_column_selection()`, `print_functions()`
-- Section function keys:
-- `data_quality`, `target`, `univariate`, `bivariate_target`, `feature_vs_feature`, `time_drift`
+## Slide 7 - EDA CLI Non-Interactive Example (SQL Demo)
+- Use `aml_synthetic_20k.sql` materialized into SQLite.
 
-## Slide 8 - CLI Usage (EDA)
-- Show an exact runnable command.
-- Emphasize `--sections`, `--columns-*`, and output path.
+```bash
+python -m eda.cli \
+  --sql "SELECT * FROM aml_synthetic" \
+  --db "sqlite:///./data/aml_synthetic_20k.db" \
+  --sections data_quality,target,univariate,bivariate_target,feature_vs_feature,time_drift \
+  --target-col is_suspicious \
+  --time-col txn_datetime \
+  --output ./output_eda
+```
 
-## Slide 9 - CLI Usage (EDA Spark)
-- Show an exact runnable command with `--spark-master`.
-- Emphasize same function keys, different compute backend.
+## Slide 8 - EDA CLI Interactive Example
 
-## Slide 10 - API Usage (EDA + EDA Spark)
-- Show minimal API examples.
-- Explain default return (`results`) and `return_payload=True`.
+```bash
+python -m eda.cli \
+  --sql "SELECT * FROM aml_synthetic" \
+  --db "sqlite:///./data/aml_synthetic_20k.db" \
+  --target-col is_suspicious \
+  --time-col txn_datetime \
+  --interactive \
+  --output ./output_eda
+```
 
-## Slide 11 - Output Results Contract
+## Slide 9 - EDA API (Non-Interactive + Interactive)
+Non-interactive:
+```python
+from adm_central_utility import EDA
+eda = EDA(output_dir='./output_eda', target_col='is_suspicious', time_col='txn_datetime')
+results = eda.run(sql='SELECT * FROM aml_synthetic', db='sqlite:///./data/aml_synthetic_20k.db', sections=['data_quality','target','univariate','bivariate_target','feature_vs_feature','time_drift'])
+```
+
+Interactive:
+```python
+payload = eda.run_interactive(sql='SELECT * FROM aml_synthetic', db='sqlite:///./data/aml_synthetic_20k.db', return_payload=True)
+```
+
+## Slide 10 - EDA Spark Architecture
+- Show flow diagram: Input -> `eda_spark/dataloader.py` -> `eda_spark/runner.py` -> distributed compute -> outputs.
+- Clarify driver/executor responsibilities.
+
+## Slide 11 - EDA Spark Section Blocks and Functions
+- Same section keys as EDA.
+- Explain that semantics are aligned, compute backend is different.
+
+## Slide 12 - EDA Spark CLI Non-Interactive (Required Example)
+
+```bash
+python -m eda_spark.cli \
+  --py ./data/Paypal_data.py \
+  --sections data_quality,univariate,feature_vs_feature,time_drift \
+  --max-rows 5000 \
+  --output ./output_eda_spark
+```
+
+## Slide 13 - EDA Spark CLI Interactive
+
+```bash
+python -m eda_spark.cli \
+  --py ./data/Paypal_data.py \
+  --interactive \
+  --max-rows 5000 \
+  --output ./output_eda_spark
+```
+
+## Slide 14 - EDA Spark API (Non-Interactive + Interactive)
+Non-interactive:
+```python
+from eda_spark.runner import EDASpark
+eda = EDASpark(output_dir='./output_eda_spark', spark_master='local[*]')
+results = eda.run(py='./data/Paypal_data.py', sections=['data_quality','univariate','feature_vs_feature','time_drift'], max_rows=5000)
+```
+
+Interactive:
+```python
+payload = eda.run_interactive(py='./data/Paypal_data.py', max_rows=5000, return_payload=True)
+```
+
+## Slide 15 - Output Contract and How to Read It
 - File outputs:
-- `eda_results.json`
-- `EDA_Report.pdf`
-- API payload structure:
-- `results`
-- `skipped_sections`
-- `config`
+- `output_eda/eda_results.json`
+- `output_eda/EDA_Report.pdf`
+- `output_eda_spark/eda_results.json`
+- `output_eda_spark/EDA_Report.pdf`
+- API payload keys:
+- `results`, `skipped_sections`, `config`
 
-## Slide 12 - How to Interpret Results as a Model Developer
-- `data_quality` -> cleaning priorities.
-- `target` -> imbalance/threshold strategy.
-- `feature_vs_feature` -> redundancy and feature pruning.
-- `time_drift` -> split and monitoring decisions.
+## Slide 16 - From EDA Findings to Data Cleaning Tasks
+- Missingness high -> define imputation/drop rules.
+- Duplicate ratio high -> dedup strategy and primary-key validation.
+- Null-like strings -> value normalization map.
+- Time parse issues -> datetime parsing standardization.
 
-## Slide 13 - Practical Input-to-Result Recipes
-- Single file
-- Multi-file
-- SQL
-- Python/Notebook loader
-- Multi-table with compose spec
+## Slide 17 - From EDA Findings to Feature Engineering Tasks
+- Strong feature correlations -> prune/reduce multicollinearity.
+- Drift signals -> robust temporal split and monitoring features.
+- Categorical imbalance -> encoding + frequency bucketing.
+- Target imbalance -> class weight or resampling strategy.
 
-## Slide 14 - Actionable Next Step
-- Pick one dataset.
-- Run one EDA command.
-- Read `eda_results.json` first.
-- Convert findings into a concrete modeling checklist.
+## Slide 18 - Execution Checklist for Model Developers
+1. Confirm input mode and loader contract.
+2. Run non-interactive baseline command.
+3. Review `eda_results.json` first, then PDF.
+4. Convert findings into cleaning/feature tasks.
+5. Re-run after data updates and compare outputs.

@@ -1,69 +1,52 @@
-# 01 Inputs Catalog (Model Developer View)
+# 01 Input Data Flexibility and Constraints
 
-## Goal
-This document defines exactly what input types model developers can provide to `eda` and `eda_spark`, and how inputs flow into final EDA results.
+## Input Modes Supported by Both Projects
+Both `eda` and `eda_spark` support these modes:
+- `--data`
+- `--sql` with `--db`
+- `--py`
+- `--py-code`
+- `--nb`
 
-## Engines and Loader Entry Points
-- EDA (Pandas): `eda/cli.py` -> `eda/runner.py::EDA` -> `eda/dataloader.py::DataLoader.load`
-- EDA Spark (PySpark): `eda_spark/cli.py` -> `eda_spark/runner.py::EDASpark` -> `eda_spark/dataloader.py::DataLoader.load`
+Only one mode can be active in a single run.
 
-## Input Mode Rule (Critical)
-- Exactly one input mode per run: `data`, `sql`, `py`, `py_code`, or `nb`.
-- If multiple are provided together, loader raises: `Only one input mode is allowed`.
-- If no explicit mode is provided:
-- `auto_exec=True` -> auto scan `./data`
-- otherwise -> default data mode (latest detectable dataset or provided `--data`)
-
-## Supported File Extensions (`--data` mode)
+## File Types Supported in `--data`
 - `.csv`, `.tsv`, `.parquet`, `.json`, `.xlsx`, `.xls`, `.feather`
 
-## Input Type Matrix
+## Flexibility Matrix
 
-| Input type | EDA | EDA Spark | CLI pattern | API pattern | Notes |
-|---|---|---|---|---|---|
-| Single file | Yes | Yes | `--data ./data/file.csv` | `run(data=["./data/file.csv"])` | Most common model-dev path |
-| Multiple files | Yes | Yes | repeat `--data` | `run(data=[...])` | Files grouped to logical tables then composed |
-| Directory | Yes | Yes | `--data ./data/folder` | `run(data=["./data/folder"])` | Supported extensions only |
-| Glob | Yes | Yes | `--data './data/**/*.csv' --data-recursive` | `run(data=["./data/**/*.csv"], recursive=True)` | Recursive matching supported |
-| Named table bindings | Yes | Yes | `--data transaction=... --data customer=...` | `run(data=["transaction=...","customer=..."])` | Enables explicit logical tables |
-| SQL query or SQL file | Yes | Yes | `--sql ... --db ...` | `run(sql="...", db="...")` | `--db` is required in SQL mode |
-| Python loader file | Yes | Yes | `--py ./data/loader.py` | `run(py="./data/loader.py")` | Must expose `load()` or `df` |
-| Inline Python | Yes | Yes | `--py-code '...'` | `run(py_code="...")` | Must define `load()` or `df` |
-| Notebook loader | Yes | Yes | `--nb ./data/loader.ipynb` | `run(nb="./data/loader.ipynb")` | Code cells are executed |
-| Auto scan from `./data` | Yes | Yes | no input mode + `--auto-exec` optional | `run(auto_exec=True)` | Loads data/sql/py/ipynb then composes |
+| Input pattern | EDA (Pandas) | EDA Spark (PySpark) | Typical usage |
+|---|---|---|---|
+| Single file | Yes | Yes | `--data ./data/file.csv` |
+| Multiple files | Yes | Yes | `--data ./data/a.csv --data ./data/b.csv` |
+| Directory | Yes | Yes | `--data ./data/folder` |
+| Glob + recursive | Yes | Yes | `--data './data/**/*.csv' --data-recursive` |
+| Named table bindings | Yes | Yes | `--data trans=... --data cust=...` |
+| SQL query | Yes | Yes | `--sql "SELECT ..." --db "sqlite:///..."` |
+| Python loader file | Yes | Yes | `--py ./data/loader.py` |
+| Inline Python | Yes | Yes | `--py-code "..."` |
+| Notebook loader | Yes | Yes | `--nb ./data/loader.ipynb` |
 
-## Multi-Table Composition Semantics
-- Composition engines:
-- Pandas: `_compose_tables_pandas(...)`
-- Spark: `_compose_tables_spark(...)`
-- Explicit composition:
-- `--compose-spec <json string or json file>`
-- Join failure policy:
-- default `--no-key-policy error`
-- fallback `--no-key-policy aggregate_only`
+## Weaknesses and Risks to Show Clearly
+1. Single-mode limitation:
+- If multiple modes are provided together, run fails.
+- Typical error: `Only one input mode is allowed.`
 
-## Input-to-Output Contract
-Any accepted input mode eventually produces:
-- a working DataFrame for section execution,
-- `eda_results.json` (machine-readable results),
-- `EDA_Report.pdf` (human-readable report).
+2. Multi-table composition dependency:
+- Row-level merge needs usable join keys.
+- If join inference fails and policy is `error`, run fails.
+- Typical error: missing join keys / unable to compose all tables at row level.
 
-## Input Resolution Flow
+3. SQL mode dependency:
+- `--sql` requires `--db` in direct SQL mode.
+- SQL scripts containing DDL + inserts are better materialized first into a DB, then queried.
 
-```mermaid
-flowchart TD
-  A[Start CLI or API] --> B{Input mode set?}
-  B -->|data| C[Resolve file/folder/glob/bindings]
-  B -->|sql| D[Execute SQL using DB connection]
-  B -->|py/py_code/nb| E[Execute loader code]
-  B -->|none + auto| F[Scan ./data for supported sources]
+4. Python/Notebook loader contract:
+- Loader must define `load()` or `df`.
+- Returned object must be DataFrame-compatible (pandas or Spark depending on engine conversion path).
 
-  C --> G[Build logical tables]
-  D --> G
-  E --> G
-  F --> G
-
-  G --> H[Compose tables by keys]
-  H --> I[Runner executes section functions]
-  I --> J[Output JSON + PDF]
-```
+## Mitigations
+- Keep one input mode per run.
+- Use `--compose-spec` for explicit joins when multiple tables exist.
+- Keep `no_key_policy=error` for strict quality; switch to `aggregate_only` only when row-level merge is impossible and acceptable.
+- For SQL script files, materialize to SQLite first and use `--sql "SELECT ..." --db ...`.
