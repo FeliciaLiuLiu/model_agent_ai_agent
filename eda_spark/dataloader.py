@@ -1023,7 +1023,12 @@ class DataLoader:
         auto_exec: bool = False,
         compose_spec: Optional[Any] = None,
         no_key_policy: str = "error",
+        **kwargs: Any,
     ) -> None:
+        # Backward/forward compatibility: ignore unknown kwargs passed by
+        # runners from other versions so loading does not fail at init-time.
+        # Example: future runner arguments not recognized by this DataLoader.
+        _ = kwargs
         self.spark = spark
         self.data = _as_list(data)
         self.sql = sql
