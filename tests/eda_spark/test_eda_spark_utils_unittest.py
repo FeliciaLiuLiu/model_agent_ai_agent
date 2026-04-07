@@ -112,6 +112,32 @@ class TestSparkUtils(SparkTestCase):
         picked = utils.pick_target_column(df, col_types, id_cols=["txn_id"])
         self.assertEqual(picked, "flag")
 
+    def test_coerce_target_column(self):
+        pdf = pd.DataFrame(
+            {
+                "target_bool": [True, False, True, False],
+                "target_text": ["yes", "no", "YES", "no"],
+                "target_num_text": ["1", "2", "3", "4"],
+            }
+        )
+        df = self.spark.createDataFrame(pdf)
+
+        bool_df, bool_col, bool_meta = utils.coerce_target_column(df, "target_bool", output_col="target_bool_num")
+        self.assertEqual(bool_meta["kind"], "boolean")
+        self.assertEqual(bool_col, "target_bool_num")
+        self.assertEqual(bool_df.select(bool_col).collect()[0][0], 1.0)
+
+        text_df, text_col, text_meta = utils.coerce_target_column(df, "target_text", output_col="target_text_num")
+        self.assertEqual(text_meta["kind"], "boolean_like_string")
+        self.assertEqual(text_col, "target_text_num")
+        values = [row[0] for row in text_df.select(text_col).collect()]
+        self.assertEqual(values[:2], [1.0, 0.0])
+
+        num_df, num_col, num_meta = utils.coerce_target_column(df, "target_num_text", output_col="target_num_text_num")
+        self.assertEqual(num_meta["kind"], "numeric_like_string")
+        self.assertEqual(num_col, "target_num_text_num")
+        self.assertEqual(num_df.select(num_col).collect()[2][0], 3.0)
+
     def test_time_parse_ratio_and_pick_time_column(self):
         pdf = pd.DataFrame(
             {

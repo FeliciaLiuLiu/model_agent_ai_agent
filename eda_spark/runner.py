@@ -11,6 +11,7 @@ try:
     from .report import EDAReportBuilder
     from .dataloader import DataLoader
     from .utils import (
+        coerce_target_column,
         DEFAULT_NULL_LIKE_VALUES,
         detect_null_like_values,
         infer_column_types,
@@ -25,6 +26,7 @@ except ImportError:  # allow running as a script: python eda_spark/runner.py
     from eda_spark.report import EDAReportBuilder
     from eda_spark.dataloader import DataLoader
     from eda_spark.utils import (
+        coerce_target_column,
         DEFAULT_NULL_LIKE_VALUES,
         detect_null_like_values,
         infer_column_types,
@@ -639,6 +641,9 @@ class EDASpark:
 
         distinct_count = df.select(target_col).distinct().count()
         is_classification = distinct_count <= 10
+        df_target, target_numeric_col, target_mapping = coerce_target_column(df, target_col)
+        metrics["target_column"] = target_col
+        metrics["target_mapping"] = target_mapping
         if is_classification:
             counts = df.groupBy(target_col).count().orderBy(F.desc("count"))
             total = df.count()
@@ -649,33 +654,36 @@ class EDASpark:
                 "rows": rows,
             })
         else:
-            stats = df.select(
-                F.mean(target_col).alias("mean"),
-                F.stddev(target_col).alias("std"),
-                F.min(target_col).alias("min"),
-                F.max(target_col).alias("max"),
-            ).collect()[0]
-            rows = []
-            for k, v in stats.asDict().items():
-                if v is None:
-                    rows.append([k, None])
-                    continue
-                try:
-                    rows.append([k, round(float(v), 6)])
-                except Exception:
-                    rows.append([k, None])
-            tables.append({
-                "title": "Target Summary Statistics",
-                "headers": ["Metric", "Value"],
-                "rows": rows,
-            })
+            if target_numeric_col is not None:
+                stats = df_target.select(
+                    F.mean(target_numeric_col).alias("mean"),
+                    F.stddev(target_numeric_col).alias("std"),
+                    F.min(target_numeric_col).alias("min"),
+                    F.max(target_numeric_col).alias("max"),
+                ).collect()[0]
+                rows = []
+                for k, v in stats.asDict().items():
+                    if v is None:
+                        rows.append([k, None])
+                        continue
+                    try:
+                        rows.append([k, round(float(v), 6)])
+                    except Exception:
+                        rows.append([k, None])
+                tables.append({
+                    "title": "Target Summary Statistics",
+                    "headers": ["Metric", "Value"],
+                    "rows": rows,
+                })
+            else:
+                summary.append("Skipped continuous-target statistics because target could not be coerced to numeric.")
 
-        if time_col and context.get("time_clean"):
-            df_time = df.withColumn("time_ts", F.to_timestamp(F.col(time_col)))
+        if time_col and context.get("time_clean") and target_numeric_col is not None:
+            df_time = df_target.withColumn("time_ts", F.to_timestamp(F.col(time_col)))
             df_time = df_time.dropna(subset=["time_ts"])
             df_time = df_time.withColumn("time_bucket", F.date_trunc("month", F.col("time_ts")))
             if is_classification:
-                rate = df_time.groupBy("time_bucket").agg(F.mean(target_col).alias("rate")).orderBy("time_bucket")
+                rate = df_time.groupBy("time_bucket").agg(F.mean(target_numeric_col).alias("rate")).orderBy("time_bucket")
                 rate = rate.withColumn("time_bucket", F.col("time_bucket").cast("string"))
                 pdf = rate.toPandas()
                 if "time_bucket" in pdf.columns:
@@ -687,13 +695,30 @@ class EDASpark:
                     path = os.path.join(self.output_dir, "target_rate_over_time.png")
                     self._plot_line(pdf.set_index("time_bucket")["rate"], path, "Target Rate Over Time", "Rate")
                     plots["target_rate_over_time"] = path
+            else:
+                mean_target = (
+                    df_time.groupBy("time_bucket").agg(F.mean(target_numeric_col).alias("target_mean")).orderBy("time_bucket")
+                )
+                mean_target = mean_target.withColumn("time_bucket", F.col("time_bucket").cast("string"))
+                pdf = mean_target.toPandas()
+                if "time_bucket" in pdf.columns:
+                    pdf["time_bucket"] = pd.to_datetime(pdf["time_bucket"], errors="coerce")
+                if "target_mean" in pdf.columns:
+                    pdf["target_mean"] = pd.to_numeric(pdf["target_mean"], errors="coerce")
+                pdf = pdf.dropna(subset=["time_bucket", "target_mean"])
+                if not pdf.empty:
+                    path = os.path.join(self.output_dir, "target_mean_over_time.png")
+                    self._plot_line(pdf.set_index("time_bucket")["target_mean"], path, "Target Mean Over Time", "Mean")
+                    plots["target_mean_over_time"] = path
+        elif time_col and context.get("time_clean"):
+            summary.append("Skipped target-over-time metrics because target could not be coerced to numeric.")
 
-        categorical = self._select_categorical(df, col_types, None)
-        if categorical:
+        categorical = [col for col in self._select_categorical(df, col_types, None) if col != target_col]
+        if categorical and target_numeric_col is not None:
             for col in categorical[: min(self.max_plots, len(categorical))]:
                 rates = (
-                    df.groupBy(col)
-                    .agg(F.mean(target_col).alias("rate"))
+                    df_target.groupBy(col)
+                    .agg(F.mean(target_numeric_col).alias("rate"))
                     .orderBy(F.desc("rate"))
                     .limit(self.top_k_categories)
                     .collect()
@@ -722,9 +747,10 @@ class EDASpark:
                 path = os.path.join(self.output_dir, f"target_rate_by_{col}.png")
                 self._plot_bar(series, path, title=f"Target Rate by {col}", ylabel="Rate")
                 plots[f"target_rate_by_{col}"] = path
+        elif categorical:
+            summary.append("Skipped target-by-category metrics because target could not be coerced to numeric.")
 
         summary.append("Target analysis completed.")
-        metrics["target_column"] = target_col
         return {"metrics": metrics, "tables": tables, "plots": plots, "summary": summary}
 
     def _section_univariate(self, context: Dict[str, Any], selected_cols: Optional[List[str]]) -> Dict[str, Any]:
@@ -877,6 +903,12 @@ class EDASpark:
 
         numeric_cols = self._select_numeric(df, col_types, selected_cols)
         categorical_cols = self._select_categorical(df, col_types, selected_cols)
+        df_target, target_numeric_col, target_mapping = coerce_target_column(df, target_col)
+        metrics["target_mapping"] = target_mapping
+
+        if target_numeric_col is None:
+            summary.append("Skipped feature-to-target rate analysis because target could not be coerced to numeric.")
+            return {"metrics": metrics, "tables": tables, "plots": plots, "summary": summary}
 
         rows = []
         for col in numeric_cols:
@@ -887,14 +919,14 @@ class EDASpark:
                     outputCol="bucket",
                     handleInvalid="skip",
                 )
-                model = discretizer.fit(df)
-                binned = model.transform(df)
+                model = discretizer.fit(df_target)
+                binned = model.transform(df_target)
             except Exception:
                 continue
 
             grouped = (
                 binned.groupBy("bucket")
-                .agg(F.mean(target_col).alias("rate"))
+                .agg(F.mean(target_numeric_col).alias("rate"))
                 .orderBy("bucket")
             )
 
@@ -931,8 +963,8 @@ class EDASpark:
         rows = []
         for col in categorical_cols:
             rates = (
-                df.groupBy(col)
-                .agg(F.mean(target_col).alias("rate"))
+                df_target.groupBy(col)
+                .agg(F.mean(target_numeric_col).alias("rate"))
                 .orderBy(F.desc("rate"))
                 .limit(self.top_k_categories)
                 .collect()

@@ -30,6 +30,10 @@ DEFAULT_NULL_LIKE_VALUES = [
     "UNKNOWN",
 ]
 
+BOOLEAN_TRUE_STRINGS = {"1", "true", "yes", "y", "t"}
+BOOLEAN_FALSE_STRINGS = {"0", "false", "no", "n", "f"}
+BOOLEAN_STRING_VALUES = BOOLEAN_TRUE_STRINGS | BOOLEAN_FALSE_STRINGS
+
 TARGET_NAME_HINTS = [
     "sar_actual",
     "is_suspicious",
@@ -151,8 +155,7 @@ def infer_column_types(
         ):
             normalized = s.astype(str).str.strip().str.lower()
             unique = set(normalized.unique())
-            truthy = {"true", "false", "0", "1", "yes", "no", "y", "n"}
-            return unique.issubset(truthy)
+            return unique.issubset(BOOLEAN_STRING_VALUES)
         return False
 
     id_cols = set(id_cols or [])
@@ -260,6 +263,38 @@ def pick_target_column(
             return col
 
     return None
+
+
+def coerce_target_series(series: pd.Series) -> Tuple[Optional[pd.Series], Dict[str, Any]]:
+    """Convert a target series into a numeric series for rate/mean calculations."""
+    if pd.api.types.is_bool_dtype(series):
+        return series.astype("float64"), {"kind": "boolean", "mapping": "false=0,true=1"}
+
+    if pd.api.types.is_numeric_dtype(series):
+        return pd.to_numeric(series, errors="coerce").astype("float64"), {"kind": "numeric"}
+
+    if (
+        pd.api.types.is_object_dtype(series)
+        or pd.api.types.is_string_dtype(series)
+        or pd.api.types.is_categorical_dtype(series)
+    ):
+        normalized = series.astype("string").str.strip().str.lower()
+        non_null = normalized.dropna()
+        unique = set(non_null.unique())
+        if unique and unique.issubset(BOOLEAN_STRING_VALUES):
+            mapped = normalized.map({
+                **{value: 1.0 for value in BOOLEAN_TRUE_STRINGS},
+                **{value: 0.0 for value in BOOLEAN_FALSE_STRINGS},
+            })
+            return mapped.astype("float64"), {"kind": "boolean_like_string", "mapping": "false=0,true=1"}
+
+        numeric = pd.to_numeric(series, errors="coerce")
+        non_null_count = int(series.notna().sum())
+        numeric_count = int(numeric.notna().sum())
+        if non_null_count == numeric_count:
+            return numeric.astype("float64"), {"kind": "numeric_like_string"}
+
+    return None, {"kind": "unsupported"}
 
 
 def ensure_datetime(df: pd.DataFrame, time_col: str) -> pd.Series:

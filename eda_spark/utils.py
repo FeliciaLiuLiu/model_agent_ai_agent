@@ -19,6 +19,10 @@ DEFAULT_NULL_LIKE_VALUES = [
     "UNKNOWN",
 ]
 
+BOOLEAN_TRUE_STRINGS = {"1", "true", "yes", "y", "t"}
+BOOLEAN_FALSE_STRINGS = {"0", "false", "no", "n", "f"}
+BOOLEAN_STRING_VALUES = BOOLEAN_TRUE_STRINGS | BOOLEAN_FALSE_STRINGS
+
 TARGET_NAME_HINTS = [
     "sar_actual",
     "is_suspicious",
@@ -149,6 +153,59 @@ def _score_target_name(name: str) -> int:
     if lowered.startswith("is_") or lowered.endswith("_flag"):
         score = max(score, 1)
     return score
+
+
+def coerce_target_column(df, target_col: str, output_col: str = "__target_numeric__"):
+    """Convert a target column into a numeric Spark column for rate/mean calculations."""
+    from pyspark.sql import functions as F
+    from pyspark.sql.types import BooleanType, NumericType, StringType
+
+    field_map = {field.name: field.dataType for field in df.schema.fields}
+    dtype = field_map.get(target_col)
+    if dtype is None:
+        return df, None, {"kind": "missing"}
+
+    if isinstance(dtype, BooleanType):
+        return df.withColumn(output_col, F.col(target_col).cast("double")), output_col, {
+            "kind": "boolean",
+            "mapping": "false=0,true=1",
+        }
+
+    if isinstance(dtype, NumericType):
+        return df.withColumn(output_col, F.col(target_col).cast("double")), output_col, {"kind": "numeric"}
+
+    if isinstance(dtype, StringType):
+        normalized = F.lower(F.trim(F.col(target_col)))
+        non_null_values = (
+            df.where(F.col(target_col).isNotNull())
+            .select(normalized.alias("val"))
+            .distinct()
+            .limit(len(BOOLEAN_STRING_VALUES) + 1)
+            .collect()
+        )
+        unique = {str(row["val"]) for row in non_null_values if row["val"] is not None}
+        if unique and unique.issubset(BOOLEAN_STRING_VALUES):
+            mapped = (
+                F.when(normalized.isin(list(BOOLEAN_TRUE_STRINGS)), F.lit(1.0))
+                .when(normalized.isin(list(BOOLEAN_FALSE_STRINGS)), F.lit(0.0))
+                .otherwise(F.lit(None).cast("double"))
+            )
+            return df.withColumn(output_col, mapped), output_col, {
+                "kind": "boolean_like_string",
+                "mapping": "false=0,true=1",
+            }
+
+        parsed = F.col(target_col).cast("double")
+        counts = df.select(
+            F.sum(F.when(F.col(target_col).isNotNull(), F.lit(1)).otherwise(F.lit(0))).alias("nonnull"),
+            F.sum(F.when(F.col(target_col).isNotNull() & parsed.isNotNull(), F.lit(1)).otherwise(F.lit(0))).alias("parsed"),
+        ).collect()[0]
+        nonnull = int(counts["nonnull"] or 0)
+        parsed_count = int(counts["parsed"] or 0)
+        if nonnull == parsed_count:
+            return df.withColumn(output_col, parsed), output_col, {"kind": "numeric_like_string"}
+
+    return df, None, {"kind": "unsupported"}
 
 
 def pick_target_column_from_names(names: List[str]) -> Optional[str]:

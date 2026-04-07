@@ -142,6 +142,44 @@ class TestEDASparkRunner(SparkTestCase):
         summary = eda._section_summary(context)
         self.assertIn("summary", summary)
 
+    def test_section_methods_with_boolean_like_string_target(self):
+        pdf = pd.DataFrame(
+            {
+                "txn_id": [1, 2, 3, 4, 5, 6],
+                "amount": [10.0, 15.0, 25.0, 35.0, 45.0, 55.0],
+                "segment": ["a", "a", "b", "b", "c", "c"],
+                "target": ["yes", "no", "yes", "no", "yes", "no"],
+                "txn_datetime": [
+                    "2024-01-01",
+                    "2024-01-02",
+                    "2024-02-01",
+                    "2024-02-02",
+                    "2024-03-01",
+                    "2024-03-02",
+                ],
+            }
+        )
+        df = self.spark.createDataFrame(pdf)
+        col_types = infer_column_types(df, id_cols=["txn_id"], sample_size=200)
+        time_clean, time_ratio = time_parse_ratio(df, "txn_datetime", min_valid_ratio=0.8)
+        context = {
+            "df": df,
+            "data_path": "in_memory",
+            "target_col": "target",
+            "time_col": "txn_datetime",
+            "time_clean": time_clean,
+            "time_ratio": time_ratio,
+            "col_types": col_types,
+        }
+
+        target = eda._section_target(context)
+        self.assertEqual(target["metrics"]["target_mapping"]["kind"], "boolean_like_string")
+        self.assertTrue(any(table["title"] == "Target Rate by segment" for table in target["tables"]))
+
+        bvt = eda._section_bivariate_target(context, selected_cols=None)
+        self.assertEqual(bvt["metrics"]["target_mapping"]["kind"], "boolean_like_string")
+        self.assertTrue(any(table["title"] == "Numeric vs Target (Binned)" for table in bvt["tables"]))
+
     def test_run_full_pipeline_from_dataframe(self):
         eda = self._make_eda()
         df = self.spark.createDataFrame(make_runner_dataframe(rows=220))

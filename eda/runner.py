@@ -11,6 +11,7 @@ import pandas as pd
 from .report import EDAReportBuilder
 from .dataloader import DataLoader
 from .utils import (
+    coerce_target_series,
     DEFAULT_NULL_LIKE_VALUES,
     detect_null_like_values,
     ensure_datetime,
@@ -605,6 +606,9 @@ class EDA:
 
         target = df[target_col]
         is_classification = target.nunique(dropna=True) <= 10
+        target_numeric, target_mapping = coerce_target_series(target)
+        metrics["target_column"] = target_col
+        metrics["target_mapping"] = target_mapping
         if is_classification:
             counts = target.value_counts(dropna=False)
             rows = [[str(k), int(v), round(float(v / len(target)), 6)] for k, v in counts.items()]
@@ -615,38 +619,48 @@ class EDA:
             })
             summary.append(f"Target '{target_col}' has {target.nunique()} classes.")
         else:
-            stats = target.describe(percentiles=[0.1, 0.5, 0.9]).to_dict()
-            rows = [[k, round(float(v), 6)] for k, v in stats.items()]
-            tables.append({
-                "title": "Target Summary Statistics",
-                "headers": ["Metric", "Value"],
-                "rows": rows,
-            })
-            summary.append(f"Target '{target_col}' appears continuous.")
+            if target_numeric is not None:
+                stats = target_numeric.describe(percentiles=[0.1, 0.5, 0.9]).to_dict()
+                rows = [[k, round(float(v), 6)] for k, v in stats.items()]
+                tables.append({
+                    "title": "Target Summary Statistics",
+                    "headers": ["Metric", "Value"],
+                    "rows": rows,
+                })
+                summary.append(f"Target '{target_col}' appears continuous.")
+            else:
+                summary.append("Skipped continuous-target statistics because target could not be coerced to numeric.")
 
-        if time_col and context.get("time_clean"):
+        if time_col and context.get("time_clean") and target_numeric is not None:
             ts = ensure_datetime(df, time_col)
             df_time = df.copy()
             df_time[time_col] = ts
+            df_time["__target_numeric__"] = target_numeric
             df_time = df_time.dropna(subset=[time_col])
             df_time["time_bucket"] = df_time[time_col].dt.to_period("M").dt.to_timestamp()
             if is_classification:
-                rate = df_time.groupby("time_bucket")[target_col].mean().sort_index()
+                rate = df_time.groupby("time_bucket")["__target_numeric__"].mean().sort_index()
                 path = os.path.join(self.output_dir, "target_rate_over_time.png")
                 self._plot_line(rate, path, title="Target Rate Over Time", ylabel="Rate")
                 plots["target_rate_over_time"] = path
                 summary.append("Target rate over time plotted.")
             else:
-                mean_target = df_time.groupby("time_bucket")[target_col].mean().sort_index()
+                mean_target = df_time.groupby("time_bucket")["__target_numeric__"].mean().sort_index()
                 path = os.path.join(self.output_dir, "target_mean_over_time.png")
                 self._plot_line(mean_target, path, title="Target Mean Over Time", ylabel="Mean")
                 plots["target_mean_over_time"] = path
+        elif time_col and context.get("time_clean"):
+            summary.append("Skipped target-over-time metrics because target could not be coerced to numeric.")
 
         col_types = context["col_types"]
-        categorical = self._select_categorical(df, col_types, None)
-        if categorical:
+        categorical = [col for col in self._select_categorical(df, col_types, None) if col != target_col]
+        if categorical and target_numeric is not None:
+            df_target = df.copy()
+            df_target["__target_numeric__"] = target_numeric
             for col in categorical[: min(self.max_plots, len(categorical))]:
-                rates = df.groupby(col)[target_col].mean().sort_values(ascending=False).head(self.top_k_categories)
+                rates = (
+                    df_target.groupby(col)["__target_numeric__"].mean().sort_values(ascending=False).head(self.top_k_categories)
+                )
                 rows = [[str(idx), round(float(val), 6)] for idx, val in rates.items()]
                 tables.append({
                     "title": f"Target Rate by {col}",
@@ -656,8 +670,8 @@ class EDA:
                 path = os.path.join(self.output_dir, f"target_rate_by_{col}.png")
                 self._plot_bar(rates, path, title=f"Target Rate by {col}", ylabel="Rate")
                 plots[f"target_rate_by_{col}"] = path
-
-        metrics["target_column"] = target_col
+        elif categorical:
+            summary.append("Skipped target-by-category metrics because target could not be coerced to numeric.")
         return {"metrics": metrics, "tables": tables, "plots": plots, "summary": summary}
 
     def _section_univariate(self, context: Dict[str, Any], selected_cols: Optional[List[str]]) -> Dict[str, Any]:
@@ -773,15 +787,24 @@ class EDA:
         categorical_cols = self._select_categorical(df, col_types, selected_cols)
         target = df[target_col]
         is_classification = target.nunique(dropna=True) <= 10
+        target_numeric, target_mapping = coerce_target_series(target)
+        metrics["target_mapping"] = target_mapping
+
+        if target_numeric is None:
+            summary.append("Skipped feature-to-target rate analysis because target could not be coerced to numeric.")
+            return {"metrics": metrics, "tables": tables, "plots": plots, "summary": summary}
+
+        df_target = df.copy()
+        df_target["__target_numeric__"] = target_numeric
 
         if numeric_cols:
             rows = []
             for col in numeric_cols:
                 try:
-                    bins = pd.qcut(df[col], q=5, duplicates="drop")
+                    bins = pd.qcut(df_target[col], q=5, duplicates="drop")
                 except ValueError:
                     continue
-                grouped = df.groupby(bins)[target_col].mean()
+                grouped = df_target.groupby(bins)["__target_numeric__"].mean()
                 for idx, val in grouped.items():
                     rows.append([col, str(idx), round(float(val), 6)])
                 if col == numeric_cols[0]:
@@ -799,7 +822,9 @@ class EDA:
         if categorical_cols:
             rows = []
             for col in categorical_cols:
-                rates = df.groupby(col)[target_col].mean().sort_values(ascending=False).head(self.top_k_categories)
+                rates = (
+                    df_target.groupby(col)["__target_numeric__"].mean().sort_values(ascending=False).head(self.top_k_categories)
+                )
                 for idx, val in rates.items():
                     rows.append([col, str(idx), round(float(val), 6)])
                 if col == categorical_cols[0]:

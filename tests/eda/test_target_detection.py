@@ -1,6 +1,6 @@
 import pandas as pd
 
-from adm_central_utility.eda.utils import infer_column_types, pick_target_column
+from eda.utils import coerce_target_series, infer_column_types, pick_target_column
 
 
 def test_pick_target_column_by_name():
@@ -20,3 +20,23 @@ def test_pick_target_column_binary_fallback():
     })
     col_types = infer_column_types(df)
     assert pick_target_column(df, col_types) == "outcome"
+
+
+def test_coerce_target_series_boolean_like_strings():
+    series = pd.Series(["yes", "no", "YES", None])
+    coerced, meta = coerce_target_series(series)
+    assert coerced is not None
+    assert meta["kind"] == "boolean_like_string"
+    assert coerced.iloc[0] == 1.0
+    assert coerced.iloc[1] == 0.0
+    assert coerced.iloc[2] == 1.0
+    assert pd.isna(coerced.iloc[3])
+
+
+def test_coerce_target_series_numeric_strings():
+    series = pd.Series(["1", "2", "3", None])
+    coerced, meta = coerce_target_series(series)
+    assert coerced is not None
+    assert meta["kind"] == "numeric_like_string"
+    assert coerced.iloc[0] == 1.0
+    assert coerced.iloc[2] == 3.0
