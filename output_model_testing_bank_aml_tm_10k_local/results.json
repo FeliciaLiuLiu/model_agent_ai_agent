@@ -1,0 +1,2222 @@
+{
+  "segmentation": {
+    "column": "value_date",
+    "include_overall": true,
+    "min_rows": 100,
+    "mode": "groupby",
+    "segments": [
+      {
+        "name": "value_date_quarter=2024Q1",
+        "row_count": 2122,
+        "criteria": {
+          "mode": "groupby",
+          "kind": "time",
+          "freq": "quarter",
+          "group": "2024Q1"
+        },
+        "status": "completed"
+      },
+      {
+        "name": "value_date_quarter=2024Q2",
+        "row_count": 2448,
+        "criteria": {
+          "mode": "groupby",
+          "kind": "time",
+          "freq": "quarter",
+          "group": "2024Q2"
+        },
+        "status": "completed"
+      },
+      {
+        "name": "value_date_quarter=2024Q3",
+        "row_count": 2652,
+        "criteria": {
+          "mode": "groupby",
+          "kind": "time",
+          "freq": "quarter",
+          "group": "2024Q3"
+        },
+        "status": "completed"
+      },
+      {
+        "name": "value_date_quarter=2024Q4",
+        "row_count": 2778,
+        "criteria": {
+          "mode": "groupby",
+          "kind": "time",
+          "freq": "quarter",
+          "group": "2024Q4"
+        },
+        "status": "completed"
+      }
+    ],
+    "keep_column_in_features": false
+  },
+  "segments": {
+    "value_date_quarter=2024Q1": {
+      "effectiveness": {
+        "metrics": {
+          "auc_roc": 0.8591794682220214,
+          "auc_pr": 0.5322549759417589,
+          "precision": 0.8305084745762712,
+          "recall": 0.3310810810810811,
+          "f1": 0.47342995169082125,
+          "ks_statistic": 0.5498644541197732,
+          "ks_threshold": 0.14,
+          "confusion_matrix": {
+            "TN": 1964,
+            "FP": 10,
+            "FN": 99,
+            "TP": 49
+          },
+          "precision_at_k": {
+            "10": 0.9,
+            "50": 0.82,
+            "100": 0.62,
+            "200": 0.415,
+            "500": 0.22
+          },
+          "recall_at_k": {
+            "10": 0.060810810810810814,
+            "50": 0.27702702702702703,
+            "100": 0.4189189189189189,
+            "200": 0.5608108108108109,
+            "500": 0.7432432432432432
+          }
+        },
+        "plots": {
+          "roc_curve": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/roc_curve.png",
+          "pr_curve": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/pr_curve.png",
+          "confusion_matrix": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/confusion_matrix.png",
+          "confusion_matrix_norm": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/confusion_matrix_norm.png",
+          "ks_curve": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/ks_curve.png",
+          "precision_recall_at_k": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/precision_recall_at_k.png",
+          "score_distribution": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/score_distribution.png",
+          "threshold_analysis": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/threshold_analysis.png"
+        },
+        "explanations": {
+          "summary": [
+            "Positive rate is 6.97%; AUC-ROC is 0.8592 (strong ranking).",
+            "AUC-PR is 0.5323, above the base rate 6.97%, indicating meaningful lift.",
+            "At threshold 0.50, precision=0.8305, recall=0.3311, F1=0.4734 (precision-heavy (fewer positives caught, fewer false alarms)).",
+            "Confusion matrix: TP=49, FP=10, FN=99, TN=1964 (FPR=0.51%, FNR=66.89%).",
+            "KS is 0.5499 at threshold 0.14, indicating very strong separation.",
+            "Top-10: precision=0.9000, recall=0.0608 shows the quality of the highest-risk shortlist.",
+            "Top-500: precision=0.2200, recall=0.7432 shows how much coverage you get with a larger queue."
+          ],
+          "plots": {
+            "roc_curve": "AUC-ROC=0.8592; curve above diagonal indicates strong separation.",
+            "pr_curve": "AUC-PR=0.5323 vs baseline 6.97%; higher curve implies better precision at recall.",
+            "confusion_matrix": "At threshold 0.50: TP=49, FP=10, FN=99, TN=1964.",
+            "confusion_matrix_norm": "Normalized rates: TPR=33.11%, TNR=99.49%.",
+            "ks_curve": "Maximum separation KS=0.5499 at threshold 0.14.",
+            "precision_recall_at_k": "Bars show precision/recall as you expand the review queue.",
+            "score_distribution": "Mean score: positive=0.332, negative=0.069 (larger gap is better).",
+            "threshold_analysis": "Best F1 in tested grid is 0.5240 at threshold 0.40."
+          }
+        }
+      },
+      "efficiency": {
+        "metrics": {
+          "fpr": 0.005065856129685917,
+          "tn": 1964,
+          "fp": 10,
+          "threshold": 0.5,
+          "fpr_at_thresholds": {
+            "t_0.05": 0.40425531914893614,
+            "t_0.10": 0.17375886524822695,
+            "t_0.15": 0.08814589665653495,
+            "t_0.20": 0.05268490374873354,
+            "t_0.25": 0.031408308004052685,
+            "t_0.30": 0.021783181357649443,
+            "t_0.35": 0.014184397163120567,
+            "t_0.40": 0.010638297872340425,
+            "t_0.45": 0.0070921985815602835,
+            "t_0.50": 0.005065856129685917,
+            "t_0.55": 0.004559270516717325,
+            "t_0.60": 0.002026342451874367,
+            "t_0.65": 0.001519756838905775,
+            "t_0.70": 0.0010131712259371835,
+            "t_0.75": 0.0005065856129685917,
+            "t_0.80": 0.0,
+            "t_0.85": 0.0,
+            "t_0.90": 0.0,
+            "t_0.95": 0.0
+          }
+        },
+        "plots": {
+          "fpr_vs_threshold": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/fpr_vs_threshold.png",
+          "efficiency_frontier": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/efficiency_frontier.png",
+          "fpr_tpr_tradeoff": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/fpr_tpr_tradeoff.png"
+        },
+        "explanations": {
+          "summary": [
+            "At threshold 0.50, FPR=0.0051 (low); FP=10 out of 1974 negatives.",
+            "At the same threshold, TPR=0.3311 with TP=49 and FN=99, showing the capture rate of positives.",
+            "A threshold near 0.20 yields FPR\u22480.0527 with TPR\u22480.5473 if you want to target ~5% false positives."
+          ],
+          "plots": {
+            "fpr_vs_threshold": "FPR decreases as the threshold increases; use it to pick an operating point.",
+            "efficiency_frontier": "Each point shows the FPR/TPR tradeoff; move toward the top-left for better efficiency.",
+            "fpr_tpr_tradeoff": "FPR and TPR curves highlight how recall drops as you reduce false positives."
+          }
+        }
+      },
+      "stability": {
+        "metrics": {
+          "psi": 0.01169799226362902,
+          "cv_auc_roc_mean": 0.8586850923314285,
+          "cv_auc_roc_std": 0.036924080148016396,
+          "cv_auc_pr_mean": 0.5311279116438947,
+          "cv_auc_pr_std": 0.1497140314595362,
+          "bootstrap_auc_roc_mean": 0.860456931002358,
+          "bootstrap_auc_roc_ci_lower": 0.8226398702655955,
+          "bootstrap_auc_roc_ci_upper": 0.9053526029671525,
+          "concept_drift_detected": false,
+          "concept_drift_score": 0.044067993636400474
+        },
+        "plots": {
+          "psi_distribution": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/psi_distribution.png",
+          "data_drift_heatmap": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/data_drift_heatmap.png",
+          "concept_drift": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/concept_drift.png",
+          "cv_results": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/cv_results.png",
+          "bootstrap_distribution": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/bootstrap_distribution.png",
+          "stability_summary": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/stability_summary.png"
+        },
+        "artifacts": {
+          "data_drift": {
+            "txn_amount": {
+              "ks_statistic": 0.03204524033930255,
+              "ks_pvalue": 0.6474924818913275,
+              "mean_diff": 87.75165881244118,
+              "std_ratio": 1.119338072815418,
+              "drift_detected": false
+            },
+            "account_age_days": {
+              "ks_statistic": 0.03581526861451461,
+              "ks_pvalue": 0.5043808832423312,
+              "mean_diff": 45.49670122525936,
+              "std_ratio": 1.0253223393493656,
+              "drift_detected": false
+            },
+            "kyc_risk_score": {
+              "ks_statistic": 0.04241281809613572,
+              "ks_pvalue": 0.29571795577686194,
+              "mean_diff": 1.186418473138545,
+              "std_ratio": 1.0092805790198383,
+              "drift_detected": false
+            },
+            "num_txn_24h": {
+              "ks_statistic": 0.010367577756833177,
+              "ks_pvalue": 0.9999999960846317,
+              "mean_diff": 0.3091423185673894,
+              "std_ratio": 1.151341438130211,
+              "drift_detected": false
+            },
+            "avg_amount_7d": {
+              "ks_statistic": 0.04147031102733271,
+              "ks_pvalue": 0.321296854641576,
+              "mean_diff": 103.97543826578703,
+              "std_ratio": 1.16887197373198,
+              "drift_detected": false
+            },
+            "is_pep": {
+              "ks_statistic": 0.005655042412818096,
+              "ks_pvalue": 1.0,
+              "mean_diff": 0.005655042412818095,
+              "std_ratio": 1.0953902089371406,
+              "drift_detected": false
+            },
+            "sanctions_match": {
+              "ks_statistic": 0.003770028275212064,
+              "ks_pvalue": 1.0,
+              "mean_diff": 0.003770028275212065,
+              "std_ratio": 1.18096220867226,
+              "drift_detected": false
+            },
+            "is_cross_border": {
+              "ks_statistic": 0.008482563619227144,
+              "ks_pvalue": 0.9999999999998997,
+              "mean_diff": 0.008482563619227168,
+              "std_ratio": 0.9715438735041184,
+              "drift_detected": false
+            },
+            "is_fintech_rail": {
+              "ks_statistic": 0.012252591894439209,
+              "ks_pvalue": 0.9999983980421073,
+              "mean_diff": 0.012252591894439224,
+              "std_ratio": 0.9948081562396704,
+              "drift_detected": false
+            },
+            "origin_country_code": {
+              "ks_statistic": 0.021677662582469368,
+              "ks_pvalue": 0.96452856713802,
+              "mean_diff": 0.18567389255419542,
+              "std_ratio": 0.9966961987742546,
+              "drift_detected": false
+            },
+            "destination_country_code": {
+              "ks_statistic": 0.015080113100848256,
+              "ks_pvalue": 0.9997429309247792,
+              "mean_diff": 0.0018850141376063334,
+              "std_ratio": 1.0106113159350083,
+              "drift_detected": false
+            },
+            "ip_country_code": {
+              "ks_statistic": 0.03581526861451461,
+              "ks_pvalue": 0.5043808832423312,
+              "mean_diff": 0.1262959472196048,
+              "std_ratio": 1.027383013721677,
+              "drift_detected": false
+            },
+            "currency_code": {
+              "ks_statistic": 0.0235626767200754,
+              "ks_pvalue": 0.9301343634475673,
+              "mean_diff": 0.1508011310084827,
+              "std_ratio": 0.9986195169769371,
+              "drift_detected": false
+            },
+            "txn_channel_code": {
+              "ks_statistic": 0.01885014137606032,
+              "ks_pvalue": 0.9917549302092912,
+              "mean_diff": 0.008482563619227168,
+              "std_ratio": 1.0163808993713774,
+              "drift_detected": false
+            },
+            "payment_rail_code": {
+              "ks_statistic": 0.027332704995287466,
+              "ks_pvalue": 0.8231692898148055,
+              "mean_diff": 0.13949104618284647,
+              "std_ratio": 0.9967465960903,
+              "drift_detected": false
+            },
+            "txn_type_code": {
+              "ks_statistic": 0.02639019792648445,
+              "ks_pvalue": 0.8539809481997522,
+              "mean_diff": 0.0961357210179079,
+              "std_ratio": 1.0185392398454418,
+              "drift_detected": false
+            },
+            "merchant_category_code": {
+              "ks_statistic": 0.033930254476908575,
+              "ks_pvalue": 0.5747342008432903,
+              "mean_diff": 0.09236569274269524,
+              "std_ratio": 1.0310592024355631,
+              "drift_detected": false
+            },
+            "device_type_code": {
+              "ks_statistic": 0.02827521206409048,
+              "ks_pvalue": 0.790326913547684,
+              "mean_diff": 0.0527803958529689,
+              "std_ratio": 1.0138486719709838,
+              "drift_detected": false
+            }
+          },
+          "cv_fold_scores": [
+            [
+              0.9162869198312236,
+              0.7469134305607743
+            ],
+            [
+              0.8537552742616034,
+              0.3746925368987479
+            ],
+            [
+              0.8294194674814492,
+              0.4892861267871678
+            ],
+            [
+              0.8127455259711917,
+              0.382495154015165
+            ],
+            [
+              0.8812182741116752,
+              0.6622523099576186
+            ]
+          ]
+        },
+        "explanations": {
+          "summary": [
+            "PSI is 0.0117, indicating negligible score distribution shift between reference and current data.",
+            "CV AUC-ROC is 0.8587 \u00b1 0.0369 (moderate across folds).",
+            "CV AUC-PR is 0.5311 \u00b1 0.1497 (variable across folds).",
+            "Bootstrap AUC-ROC mean is 0.8605 with 95% CI [0.8226, 0.9054] (width 0.0827).",
+            "No concept drift detected (score 0.0441), suggesting stable performance over time.",
+            "Data drift flagged 0/18 numeric features; top drift signals: ['kyc_risk_score', 'avg_amount_7d', 'account_age_days']."
+          ],
+          "plots": {
+            "psi_distribution": "Score distributions overlap consistent with PSI=0.0117.",
+            "data_drift_heatmap": "0/18 features show drift; red bars highlight flagged features.",
+            "concept_drift": "AUC across time chunks shows whether performance is stable over time.",
+            "cv_results": "Fold scores cluster around ROC 0.8587 and PR 0.5311.",
+            "bootstrap_distribution": "Bootstrap CI [0.8226, 0.9054] reflects performance stability.",
+            "stability_summary": "Dashboard summarizes PSI, CV variance, and bootstrap CI width."
+          }
+        }
+      },
+      "interpretability": {
+        "metrics": {
+          "model_type": "tree",
+          "methods_used": [
+            "permutation",
+            "pdp",
+            "ice",
+            "lime"
+          ],
+          "shap_status": "unavailable",
+          "shap_reason": "No module named 'shap'",
+          "perm_top_features": [
+            "txn_amount",
+            "num_txn_24h",
+            "txn_type_code",
+            "avg_amount_7d",
+            "account_age_days",
+            "kyc_risk_score",
+            "merchant_category_code",
+            "is_cross_border",
+            "ip_country_code",
+            "is_fintech_rail",
+            "txn_channel_code",
+            "currency_code",
+            "is_pep",
+            "origin_country_code",
+            "sanctions_match",
+            "device_type_code",
+            "destination_country_code",
+            "payment_rail_code"
+          ],
+          "lime_instances": 3,
+          "pdp_features": [
+            "avg_amount_7d",
+            "txn_amount",
+            "account_age_days",
+            "kyc_risk_score",
+            "num_txn_24h",
+            "destination_country_code"
+          ],
+          "ice_features": [
+            "avg_amount_7d",
+            "txn_amount",
+            "account_age_days",
+            "kyc_risk_score"
+          ]
+        },
+        "plots": {
+          "permutation_importance": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/permutation_importance.png",
+          "lime_explanation": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/lime_explanation.png",
+          "pdp": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/pdp.png",
+          "ice": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q1/ice.png"
+        },
+        "artifacts": {
+          "perm_importances": {
+            "txn_amount": 0.04167869167869166,
+            "account_age_days": 0.01027737694404358,
+            "kyc_risk_score": 0.008922558922558933,
+            "num_txn_24h": 0.026410934744268054,
+            "avg_amount_7d": 0.010626102292768957,
+            "is_pep": 0.0014951098284431308,
+            "sanctions_match": 0.0008337341670674681,
+            "is_cross_border": 0.004433221099887729,
+            "is_fintech_rail": 0.0022045855379188573,
+            "origin_country_code": 0.0010541927208593594,
+            "destination_country_code": -0.0015151515151515694,
+            "ip_country_code": 0.0022206188872855416,
+            "currency_code": 0.0015592432259098677,
+            "txn_channel_code": 0.001651434984768274,
+            "payment_rail_code": -0.0029260862594196134,
+            "txn_type_code": 0.019175885842552497,
+            "merchant_category_code": 0.006036556036555984,
+            "device_type_code": -2.8058361391691822e-05
+          },
+          "lime_weights": {
+            "instance_0": {
+              "txn_amount > 335.98": 0.2201550349745066,
+              "num_txn_24h > 3.00": 0.19923753561718707,
+              "sanctions_match <= 0.00": -0.0655220465872408,
+              "is_pep > 0.00": 0.055331992419173255,
+              "5.00 < txn_type_code <= 7.00": -0.028792186992410936,
+              "avg_amount_7d > 260.01": 0.02474326385828916,
+              "account_age_days <= 908.50": -0.010988524700659232,
+              "0.00 < is_fintech_rail <= 1.00": 0.00917591597040238,
+              "2.00 < payment_rail_code <= 6.00": -0.009031052797298211,
+              "9.00 < destination_country_code <= 16.00": 0.008572222510853338
+            },
+            "instance_3": {
+              "num_txn_24h > 3.00": 0.2079592994749574,
+              "sanctions_match > 0.00": 0.0915560321039118,
+              "kyc_risk_score > 48.94": 0.07750939198126942,
+              "is_pep > 0.00": 0.0680419830860546,
+              "102.38 < txn_amount <= 335.98": -0.039394685958834975,
+              "9.00 < destination_country_code <= 16.00": 0.022500534039872646,
+              "98.95 < avg_amount_7d <= 260.01": -0.020671221986056316,
+              "payment_rail_code > 10.00": 0.015183688137768268,
+              "10.00 < ip_country_code <= 17.00": -0.01423432833461406,
+              "10.00 < origin_country_code <= 17.00": 0.008378655253653746
+            },
+            "instance_5": {
+              "txn_amount > 335.98": 0.20986035396480845,
+              "num_txn_24h <= 1.00": -0.07827678864885783,
+              "sanctions_match <= 0.00": -0.07183513871968297,
+              "is_pep <= 0.00": -0.07125767110224882,
+              "1.00 < txn_type_code <= 5.00": 0.04567910144202903,
+              "avg_amount_7d > 260.01": 0.03569330960425416,
+              "destination_country_code > 16.00": -0.02437365169006734,
+              "25.57 < kyc_risk_score <= 37.08": -0.020876566941102483,
+              "4.00 < currency_code <= 5.00": 0.016652888487994042,
+              "merchant_category_code > 7.00": 0.013874595670711377
+            }
+          }
+        },
+        "explanations": {
+          "summary": [
+            "Permutation importance highlights: ['txn_amount', 'num_txn_24h', 'txn_type_code', 'avg_amount_7d', 'account_age_days'].",
+            "SHAP plots not generated because SHAP is unavailable (No module named 'shap').",
+            "LIME generated local explanations for 3 instances; top contributors for instance_0: ['txn_amount > 335.98', 'num_txn_24h > 3.00', 'sanctions_match <= 0.00', 'is_pep > 0.00', '5.00 < txn_type_code <= 7.00'].",
+            "PDP plots show average effects for: ['avg_amount_7d', 'txn_amount', 'account_age_days', 'kyc_risk_score', 'num_txn_24h', 'destination_country_code'].",
+            "ICE plots show individual-level effects for: ['avg_amount_7d', 'txn_amount', 'account_age_days', 'kyc_risk_score']."
+          ],
+          "plots": {
+            "permutation_importance": "Bars show how much AUC drops when each feature is permuted.",
+            "shap_bar": "SHAP bar plot ranks global feature impact by mean absolute SHAP values.",
+            "shap_beeswarm": "SHAP beeswarm shows both impact size and direction per feature.",
+            "lime_explanation": "LIME bars show local feature contributions for selected instances.",
+            "pdp": "PDP curves show average model response as a feature varies.",
+            "ice": "ICE curves show per-instance responses as a feature varies."
+          }
+        }
+      }
+    },
+    "value_date_quarter=2024Q2": {
+      "effectiveness": {
+        "metrics": {
+          "auc_roc": 0.8420219723927221,
+          "auc_pr": 0.47195589356925705,
+          "precision": 0.71875,
+          "recall": 0.23711340206185566,
+          "f1": 0.3565891472868217,
+          "ks_statistic": 0.5051637867159414,
+          "ks_threshold": 0.07,
+          "confusion_matrix": {
+            "TN": 2236,
+            "FP": 18,
+            "FN": 148,
+            "TP": 46
+          },
+          "precision_at_k": {
+            "10": 0.9,
+            "50": 0.76,
+            "100": 0.66,
+            "200": 0.46,
+            "500": 0.25
+          },
+          "recall_at_k": {
+            "10": 0.04639175257731959,
+            "50": 0.1958762886597938,
+            "100": 0.3402061855670103,
+            "200": 0.4742268041237113,
+            "500": 0.6443298969072165
+          }
+        },
+        "plots": {
+          "roc_curve": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/roc_curve.png",
+          "pr_curve": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/pr_curve.png",
+          "confusion_matrix": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/confusion_matrix.png",
+          "confusion_matrix_norm": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/confusion_matrix_norm.png",
+          "ks_curve": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/ks_curve.png",
+          "precision_recall_at_k": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/precision_recall_at_k.png",
+          "score_distribution": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/score_distribution.png",
+          "threshold_analysis": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/threshold_analysis.png"
+        },
+        "explanations": {
+          "summary": [
+            "Positive rate is 7.92%; AUC-ROC is 0.8420 (strong ranking).",
+            "AUC-PR is 0.4720, above the base rate 7.92%, indicating meaningful lift.",
+            "At threshold 0.50, precision=0.7188, recall=0.2371, F1=0.3566 (precision-heavy (fewer positives caught, fewer false alarms)).",
+            "Confusion matrix: TP=46, FP=18, FN=148, TN=2236 (FPR=0.80%, FNR=76.29%).",
+            "KS is 0.5052 at threshold 0.07, indicating very strong separation.",
+            "Top-10: precision=0.9000, recall=0.0464 shows the quality of the highest-risk shortlist.",
+            "Top-500: precision=0.2500, recall=0.6443 shows how much coverage you get with a larger queue."
+          ],
+          "plots": {
+            "roc_curve": "AUC-ROC=0.8420; curve above diagonal indicates strong separation.",
+            "pr_curve": "AUC-PR=0.4720 vs baseline 7.92%; higher curve implies better precision at recall.",
+            "confusion_matrix": "At threshold 0.50: TP=46, FP=18, FN=148, TN=2236.",
+            "confusion_matrix_norm": "Normalized rates: TPR=23.71%, TNR=99.20%.",
+            "ks_curve": "Maximum separation KS=0.5052 at threshold 0.07.",
+            "precision_recall_at_k": "Bars show precision/recall as you expand the review queue.",
+            "score_distribution": "Mean score: positive=0.291, negative=0.073 (larger gap is better).",
+            "threshold_analysis": "Best F1 in tested grid is 0.4770 at threshold 0.25."
+          }
+        }
+      },
+      "efficiency": {
+        "metrics": {
+          "fpr": 0.007985803016858917,
+          "tn": 2236,
+          "fp": 18,
+          "threshold": 0.5,
+          "fpr_at_thresholds": {
+            "t_0.05": 0.42324755989352264,
+            "t_0.10": 0.19520851818988466,
+            "t_0.15": 0.11002661934338953,
+            "t_0.20": 0.05989352262644188,
+            "t_0.25": 0.0385980479148181,
+            "t_0.30": 0.023513753327417924,
+            "t_0.35": 0.01730257320319432,
+            "t_0.40": 0.011091393078970719,
+            "t_0.45": 0.008873114463176575,
+            "t_0.50": 0.007985803016858917,
+            "t_0.55": 0.005323868677905945,
+            "t_0.60": 0.003992901508429458,
+            "t_0.65": 0.0026619343389529724,
+            "t_0.70": 0.00044365572315882877,
+            "t_0.75": 0.00044365572315882877,
+            "t_0.80": 0.0,
+            "t_0.85": 0.0,
+            "t_0.90": 0.0,
+            "t_0.95": 0.0
+          }
+        },
+        "plots": {
+          "fpr_vs_threshold": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/fpr_vs_threshold.png",
+          "efficiency_frontier": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/efficiency_frontier.png",
+          "fpr_tpr_tradeoff": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/fpr_tpr_tradeoff.png"
+        },
+        "explanations": {
+          "summary": [
+            "At threshold 0.50, FPR=0.0080 (low); FP=18 out of 2254 negatives.",
+            "At the same threshold, TPR=0.2371 with TP=46 and FN=148, showing the capture rate of positives.",
+            "A threshold near 0.20 yields FPR\u22480.0599 with TPR\u22480.5103 if you want to target ~5% false positives."
+          ],
+          "plots": {
+            "fpr_vs_threshold": "FPR decreases as the threshold increases; use it to pick an operating point.",
+            "efficiency_frontier": "Each point shows the FPR/TPR tradeoff; move toward the top-left for better efficiency.",
+            "fpr_tpr_tradeoff": "FPR and TPR curves highlight how recall drops as you reduce false positives."
+          }
+        }
+      },
+      "stability": {
+        "metrics": {
+          "psi": 0.02038975972717423,
+          "cv_auc_roc_mean": 0.8446066444371965,
+          "cv_auc_roc_std": 0.00616650007792317,
+          "cv_auc_pr_mean": 0.48946141130511756,
+          "cv_auc_pr_std": 0.03384306922670093,
+          "bootstrap_auc_roc_mean": 0.8540015428571579,
+          "bootstrap_auc_roc_ci_lower": 0.8241597631058468,
+          "bootstrap_auc_roc_ci_upper": 0.8913792076071985,
+          "concept_drift_detected": false,
+          "concept_drift_score": 0.020628367107586903
+        },
+        "plots": {
+          "psi_distribution": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/psi_distribution.png",
+          "data_drift_heatmap": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/data_drift_heatmap.png",
+          "concept_drift": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/concept_drift.png",
+          "cv_results": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/cv_results.png",
+          "bootstrap_distribution": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/bootstrap_distribution.png",
+          "stability_summary": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/stability_summary.png"
+        },
+        "artifacts": {
+          "data_drift": {
+            "txn_amount": {
+              "ks_statistic": 0.028594771241830064,
+              "ks_pvalue": 0.6991095555082334,
+              "mean_diff": 177.56357843137266,
+              "std_ratio": 0.27870569693164304,
+              "drift_detected": false
+            },
+            "account_age_days": {
+              "ks_statistic": 0.032679738562091505,
+              "ks_pvalue": 0.5306339821592001,
+              "mean_diff": 6.519607843137237,
+              "std_ratio": 0.9777584348910178,
+              "drift_detected": false
+            },
+            "kyc_risk_score": {
+              "ks_statistic": 0.01715686274509804,
+              "ks_pvalue": 0.9937717568652455,
+              "mean_diff": 0.08731209150327146,
+              "std_ratio": 0.9812344396293748,
+              "drift_detected": false
+            },
+            "num_txn_24h": {
+              "ks_statistic": 0.0196078431372549,
+              "ks_pvalue": 0.972798274161757,
+              "mean_diff": 0.29493464052287566,
+              "std_ratio": 1.1760291341702092,
+              "drift_detected": false
+            },
+            "avg_amount_7d": {
+              "ks_statistic": 0.04003267973856209,
+              "ks_pvalue": 0.2805659150520142,
+              "mean_diff": 135.79041666666672,
+              "std_ratio": 0.31444660397383317,
+              "drift_detected": false
+            },
+            "is_pep": {
+              "ks_statistic": 0.006535947712418301,
+              "ks_pvalue": 1.0,
+              "mean_diff": 0.006535947712418302,
+              "std_ratio": 1.1142758799771122,
+              "drift_detected": false
+            },
+            "sanctions_match": {
+              "ks_statistic": 0.0008169934640522876,
+              "ks_pvalue": 1.0,
+              "mean_diff": 0.0008169934640522881,
+              "std_ratio": 0.9611655241483018,
+              "drift_detected": false
+            },
+            "is_cross_border": {
+              "ks_statistic": 0.013071895424836602,
+              "ks_pvalue": 0.9999427621978035,
+              "mean_diff": 0.013071895424836666,
+              "std_ratio": 0.9509971373520475,
+              "drift_detected": false
+            },
+            "is_fintech_rail": {
+              "ks_statistic": 0.014705882352941176,
+              "ks_pvalue": 0.9993905574413792,
+              "mean_diff": 0.01470588235294118,
+              "std_ratio": 0.9921278517283781,
+              "drift_detected": false
+            },
+            "origin_country_code": {
+              "ks_statistic": 0.02042483660130719,
+              "ks_pvalue": 0.9605871330777771,
+              "mean_diff": 0.19689542483660105,
+              "std_ratio": 1.010403451543781,
+              "drift_detected": false
+            },
+            "destination_country_code": {
+              "ks_statistic": 0.013071895424836602,
+              "ks_pvalue": 0.9999427621978035,
+              "mean_diff": 0.07679738562091565,
+              "std_ratio": 0.9894123376764654,
+              "drift_detected": false
+            },
+            "ip_country_code": {
+              "ks_statistic": 0.05800653594771242,
+              "ks_pvalue": 0.03251840585730068,
+              "mean_diff": 0.4035947712418295,
+              "std_ratio": 1.026160569049751,
+              "drift_detected": true
+            },
+            "currency_code": {
+              "ks_statistic": 0.012254901960784314,
+              "ks_pvalue": 0.9999880498036481,
+              "mean_diff": 0.09477124183006591,
+              "std_ratio": 1.0034591859391884,
+              "drift_detected": false
+            },
+            "txn_channel_code": {
+              "ks_statistic": 0.02369281045751634,
+              "ks_pvalue": 0.8822957305075305,
+              "mean_diff": 0.0318627450980391,
+              "std_ratio": 0.9777214460001726,
+              "drift_detected": false
+            },
+            "payment_rail_code": {
+              "ks_statistic": 0.04493464052287582,
+              "ks_pvalue": 0.16886136760511045,
+              "mean_diff": 0.3259803921568629,
+              "std_ratio": 1.0029819198771879,
+              "drift_detected": false
+            },
+            "txn_type_code": {
+              "ks_statistic": 0.01715686274509804,
+              "ks_pvalue": 0.9937717568652455,
+              "mean_diff": 0.08169934640522847,
+              "std_ratio": 1.0187289712496062,
+              "drift_detected": false
+            },
+            "merchant_category_code": {
+              "ks_statistic": 0.04656862745098039,
+              "ks_pvalue": 0.14064956407458715,
+              "mean_diff": 0.1977124183006529,
+              "std_ratio": 0.9864352230957155,
+              "drift_detected": false
+            },
+            "device_type_code": {
+              "ks_statistic": 0.018790849673202614,
+              "ks_pvalue": 0.9821981983482756,
+              "mean_diff": 0.03676470588235303,
+              "std_ratio": 1.0115682496660314,
+              "drift_detected": false
+            }
+          },
+          "cv_fold_scores": [
+            [
+              0.8475183353232134,
+              0.5353170974281743
+            ],
+            [
+              0.8487122633464097,
+              0.5083019358473378
+            ],
+            [
+              0.8383648871453749,
+              0.501861620894549
+            ],
+            [
+              0.8521414400746878,
+              0.4424467038894243
+            ],
+            [
+              0.8362962962962963,
+              0.4593796984661022
+            ]
+          ]
+        },
+        "explanations": {
+          "summary": [
+            "PSI is 0.0204, indicating negligible score distribution shift between reference and current data.",
+            "CV AUC-ROC is 0.8446 \u00b1 0.0062 (stable across folds).",
+            "CV AUC-PR is 0.4895 \u00b1 0.0338 (variable across folds).",
+            "Bootstrap AUC-ROC mean is 0.8540 with 95% CI [0.8242, 0.8914] (width 0.0672).",
+            "No concept drift detected (score 0.0206), suggesting stable performance over time.",
+            "Data drift flagged 1/18 numeric features; top drift signals: ['ip_country_code', 'merchant_category_code', 'payment_rail_code']."
+          ],
+          "plots": {
+            "psi_distribution": "Score distributions overlap consistent with PSI=0.0204.",
+            "data_drift_heatmap": "1/18 features show drift; red bars highlight flagged features.",
+            "concept_drift": "AUC across time chunks shows whether performance is stable over time.",
+            "cv_results": "Fold scores cluster around ROC 0.8446 and PR 0.4895.",
+            "bootstrap_distribution": "Bootstrap CI [0.8242, 0.8914] reflects performance stability.",
+            "stability_summary": "Dashboard summarizes PSI, CV variance, and bootstrap CI width."
+          }
+        }
+      },
+      "interpretability": {
+        "metrics": {
+          "model_type": "tree",
+          "methods_used": [
+            "permutation",
+            "pdp",
+            "ice",
+            "lime"
+          ],
+          "shap_status": "unavailable",
+          "shap_reason": "No module named 'shap'",
+          "perm_top_features": [
+            "txn_amount",
+            "num_txn_24h",
+            "txn_type_code",
+            "kyc_risk_score",
+            "avg_amount_7d",
+            "is_cross_border",
+            "account_age_days",
+            "is_pep",
+            "ip_country_code",
+            "merchant_category_code",
+            "is_fintech_rail",
+            "currency_code",
+            "destination_country_code",
+            "origin_country_code",
+            "sanctions_match",
+            "txn_channel_code",
+            "device_type_code",
+            "payment_rail_code"
+          ],
+          "lime_instances": 3,
+          "pdp_features": [
+            "avg_amount_7d",
+            "txn_amount",
+            "account_age_days",
+            "kyc_risk_score",
+            "num_txn_24h",
+            "origin_country_code"
+          ],
+          "ice_features": [
+            "avg_amount_7d",
+            "txn_amount",
+            "account_age_days",
+            "kyc_risk_score"
+          ]
+        },
+        "plots": {
+          "permutation_importance": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/permutation_importance.png",
+          "lime_explanation": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/lime_explanation.png",
+          "pdp": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/pdp.png",
+          "ice": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q2/ice.png"
+        },
+        "artifacts": {
+          "perm_importances": {
+            "txn_amount": 0.07032135076252731,
+            "account_age_days": 0.008877995642701553,
+            "kyc_risk_score": 0.02682189542483664,
+            "num_txn_24h": 0.04183278867102404,
+            "avg_amount_7d": 0.015955882352941243,
+            "is_pep": 0.007933006535947784,
+            "sanctions_match": 0.0009259259259259856,
+            "is_cross_border": 0.009877450980392232,
+            "is_fintech_rail": 0.0018927015250545186,
+            "origin_country_code": 0.001162854030501137,
+            "destination_country_code": 0.001519607843137305,
+            "ip_country_code": 0.003390522875817037,
+            "currency_code": 0.0018137254901961276,
+            "txn_channel_code": 0.0008006535947712834,
+            "payment_rail_code": -0.0019471677559912525,
+            "txn_type_code": 0.03261437908496738,
+            "merchant_category_code": 0.0019335511982571218,
+            "device_type_code": 0.00015250544662313015
+          },
+          "lime_weights": {
+            "instance_5": {
+              "txn_amount > 319.39": 0.14482131563956438,
+              "sanctions_match <= 0.00": -0.08108902526192627,
+              "2.00 < num_txn_24h <= 4.00": -0.04382940241861828,
+              "is_pep <= 0.00": -0.042535187572006,
+              "25.31 < kyc_risk_score <= 35.75": -0.01907227520666101,
+              "avg_amount_7d > 275.76": 0.018509892127794258,
+              "2.00 < txn_type_code <= 6.00": 0.013901011199605956,
+              "destination_country_code <= 6.00": 0.007029176670672511,
+              "origin_country_code <= 5.00": -0.0061358643594181615,
+              "10.00 < ip_country_code <= 17.00": -0.006076782619886388
+            },
+            "instance_33": {
+              "num_txn_24h > 4.00": 0.21049092954998533,
+              "sanctions_match <= 0.00": -0.1126159176575153,
+              "is_pep <= 0.00": -0.05100289093989749,
+              "kyc_risk_score <= 25.31": -0.03676805535383143,
+              "97.38 < txn_amount <= 319.39": -0.022734154868951646,
+              "6.00 < txn_type_code <= 7.00": -0.012894158556312227,
+              "51.35 < avg_amount_7d <= 98.63": -0.010650266444348456,
+              "5.00 < payment_rail_code <= 9.00": -0.007949147244378445,
+              "origin_country_code <= 5.00": -0.007853927527891569,
+              "1769.00 < account_age_days <= 2728.25": 0.00710331882956053
+            },
+            "instance_45": {
+              "num_txn_24h > 4.00": 0.20723613511282732,
+              "txn_amount > 319.39": 0.13584194112327827,
+              "sanctions_match <= 0.00": -0.07662189894129509,
+              "is_pep > 0.00": 0.044542566443705085,
+              "kyc_risk_score <= 25.31": -0.03606949240848562,
+              "avg_amount_7d > 275.76": 0.026390647145367804,
+              "6.00 < txn_type_code <= 7.00": -0.017810700651307354,
+              "payment_rail_code > 9.00": 0.012355669396575873,
+              "10.00 < ip_country_code <= 17.00": -0.010459629723588243,
+              "3.00 < merchant_category_code <= 6.00": -0.007483914449879343
+            }
+          }
+        },
+        "explanations": {
+          "summary": [
+            "Permutation importance highlights: ['txn_amount', 'num_txn_24h', 'txn_type_code', 'kyc_risk_score', 'avg_amount_7d'].",
+            "SHAP plots not generated because SHAP is unavailable (No module named 'shap').",
+            "LIME generated local explanations for 3 instances; top contributors for instance_5: ['txn_amount > 319.39', 'sanctions_match <= 0.00', '2.00 < num_txn_24h <= 4.00', 'is_pep <= 0.00', '25.31 < kyc_risk_score <= 35.75'].",
+            "PDP plots show average effects for: ['avg_amount_7d', 'txn_amount', 'account_age_days', 'kyc_risk_score', 'num_txn_24h', 'origin_country_code'].",
+            "ICE plots show individual-level effects for: ['avg_amount_7d', 'txn_amount', 'account_age_days', 'kyc_risk_score']."
+          ],
+          "plots": {
+            "permutation_importance": "Bars show how much AUC drops when each feature is permuted.",
+            "shap_bar": "SHAP bar plot ranks global feature impact by mean absolute SHAP values.",
+            "shap_beeswarm": "SHAP beeswarm shows both impact size and direction per feature.",
+            "lime_explanation": "LIME bars show local feature contributions for selected instances.",
+            "pdp": "PDP curves show average model response as a feature varies.",
+            "ice": "ICE curves show per-instance responses as a feature varies."
+          }
+        }
+      }
+    },
+    "value_date_quarter=2024Q3": {
+      "effectiveness": {
+        "metrics": {
+          "auc_roc": 0.8431765913217376,
+          "auc_pr": 0.5444446183814559,
+          "precision": 0.6301369863013698,
+          "recall": 0.3231850117096019,
+          "f1": 0.4272445820433437,
+          "ks_statistic": 0.541562508223035,
+          "ks_threshold": 0.16,
+          "confusion_matrix": {
+            "TN": 2144,
+            "FP": 81,
+            "FN": 289,
+            "TP": 138
+          },
+          "precision_at_k": {
+            "10": 0.8,
+            "50": 0.84,
+            "100": 0.76,
+            "200": 0.64,
+            "500": 0.494
+          },
+          "recall_at_k": {
+            "10": 0.01873536299765808,
+            "50": 0.09836065573770492,
+            "100": 0.17798594847775176,
+            "200": 0.2997658079625293,
+            "500": 0.5784543325526932
+          }
+        },
+        "plots": {
+          "roc_curve": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/roc_curve.png",
+          "pr_curve": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/pr_curve.png",
+          "confusion_matrix": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/confusion_matrix.png",
+          "confusion_matrix_norm": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/confusion_matrix_norm.png",
+          "ks_curve": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/ks_curve.png",
+          "precision_recall_at_k": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/precision_recall_at_k.png",
+          "score_distribution": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/score_distribution.png",
+          "threshold_analysis": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/threshold_analysis.png"
+        },
+        "explanations": {
+          "summary": [
+            "Positive rate is 16.10%; AUC-ROC is 0.8432 (strong ranking).",
+            "AUC-PR is 0.5444, above the base rate 16.10%, indicating meaningful lift.",
+            "At threshold 0.50, precision=0.6301, recall=0.3232, F1=0.4272 (precision-heavy (fewer positives caught, fewer false alarms)).",
+            "Confusion matrix: TP=138, FP=81, FN=289, TN=2144 (FPR=3.64%, FNR=67.68%).",
+            "KS is 0.5416 at threshold 0.16, indicating very strong separation.",
+            "Top-10: precision=0.8000, recall=0.0187 shows the quality of the highest-risk shortlist.",
+            "Top-500: precision=0.4940, recall=0.5785 shows how much coverage you get with a larger queue."
+          ],
+          "plots": {
+            "roc_curve": "AUC-ROC=0.8432; curve above diagonal indicates strong separation.",
+            "pr_curve": "AUC-PR=0.5444 vs baseline 16.10%; higher curve implies better precision at recall.",
+            "confusion_matrix": "At threshold 0.50: TP=138, FP=81, FN=289, TN=2144.",
+            "confusion_matrix_norm": "Normalized rates: TPR=32.32%, TNR=96.36%.",
+            "ks_curve": "Maximum separation KS=0.5416 at threshold 0.16.",
+            "precision_recall_at_k": "Bars show precision/recall as you expand the review queue.",
+            "score_distribution": "Mean score: positive=0.378, negative=0.122 (larger gap is better).",
+            "threshold_analysis": "Best F1 in tested grid is 0.5446 at threshold 0.25."
+          }
+        }
+      },
+      "efficiency": {
+        "metrics": {
+          "fpr": 0.03640449438202247,
+          "tn": 2144,
+          "fp": 81,
+          "threshold": 0.5,
+          "fpr_at_thresholds": {
+            "t_0.05": 0.5631460674157304,
+            "t_0.10": 0.34786516853932586,
+            "t_0.15": 0.25707865168539323,
+            "t_0.20": 0.190561797752809,
+            "t_0.25": 0.14202247191011236,
+            "t_0.30": 0.11146067415730337,
+            "t_0.35": 0.08404494382022472,
+            "t_0.40": 0.06157303370786517,
+            "t_0.45": 0.04404494382022472,
+            "t_0.50": 0.03640449438202247,
+            "t_0.55": 0.029213483146067417,
+            "t_0.60": 0.019325842696629212,
+            "t_0.65": 0.00943820224719101,
+            "t_0.70": 0.004943820224719101,
+            "t_0.75": 0.0022471910112359553,
+            "t_0.80": 0.0008988764044943821,
+            "t_0.85": 0.0,
+            "t_0.90": 0.0,
+            "t_0.95": 0.0
+          }
+        },
+        "plots": {
+          "fpr_vs_threshold": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/fpr_vs_threshold.png",
+          "efficiency_frontier": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/efficiency_frontier.png",
+          "fpr_tpr_tradeoff": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/fpr_tpr_tradeoff.png"
+        },
+        "explanations": {
+          "summary": [
+            "At threshold 0.50, FPR=0.0364 (low); FP=81 out of 2225 negatives.",
+            "At the same threshold, TPR=0.3232 with TP=138 and FN=289, showing the capture rate of positives.",
+            "A threshold near 0.45 yields FPR\u22480.0440 with TPR\u22480.3794 if you want to target ~5% false positives."
+          ],
+          "plots": {
+            "fpr_vs_threshold": "FPR decreases as the threshold increases; use it to pick an operating point.",
+            "efficiency_frontier": "Each point shows the FPR/TPR tradeoff; move toward the top-left for better efficiency.",
+            "fpr_tpr_tradeoff": "FPR and TPR curves highlight how recall drops as you reduce false positives."
+          }
+        }
+      },
+      "stability": {
+        "metrics": {
+          "psi": 0.0223398317150929,
+          "cv_auc_roc_mean": 0.8433869564549102,
+          "cv_auc_roc_std": 0.013935869025663697,
+          "cv_auc_pr_mean": 0.5532068304078651,
+          "cv_auc_pr_std": 0.05358130688813721,
+          "bootstrap_auc_roc_mean": 0.8465762093968381,
+          "bootstrap_auc_roc_ci_lower": 0.8205290119223505,
+          "bootstrap_auc_roc_ci_upper": 0.8710862033730125,
+          "concept_drift_detected": false,
+          "concept_drift_score": 0.011245188759434404
+        },
+        "plots": {
+          "psi_distribution": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/psi_distribution.png",
+          "data_drift_heatmap": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/data_drift_heatmap.png",
+          "concept_drift": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/concept_drift.png",
+          "cv_results": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/cv_results.png",
+          "bootstrap_distribution": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/bootstrap_distribution.png",
+          "stability_summary": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/stability_summary.png"
+        },
+        "artifacts": {
+          "data_drift": {
+            "txn_amount": {
+              "ks_statistic": 0.024886877828054297,
+              "ks_pvalue": 0.806302769978849,
+              "mean_diff": 221.37309200603306,
+              "std_ratio": 0.5777282820496414,
+              "drift_detected": false
+            },
+            "account_age_days": {
+              "ks_statistic": 0.042232277526395176,
+              "ks_pvalue": 0.18777805528198832,
+              "mean_diff": 37.33484162895911,
+              "std_ratio": 1.0249820318334117,
+              "drift_detected": false
+            },
+            "kyc_risk_score": {
+              "ks_statistic": 0.033182503770739065,
+              "ks_pvalue": 0.45878885040437106,
+              "mean_diff": 0.5088947198487617,
+              "std_ratio": 1.0005781654678914,
+              "drift_detected": false
+            },
+            "num_txn_24h": {
+              "ks_statistic": 0.03092006033182504,
+              "ks_pvalue": 0.5505841559294767,
+              "mean_diff": 0.4547511312217196,
+              "std_ratio": 0.9107217235056442,
+              "drift_detected": false
+            },
+            "avg_amount_7d": {
+              "ks_statistic": 0.0392156862745098,
+              "ks_pvalue": 0.25975511866524914,
+              "mean_diff": 193.7715384615385,
+              "std_ratio": 0.5919135639724435,
+              "drift_detected": false
+            },
+            "is_pep": {
+              "ks_statistic": 0.0015082956259426848,
+              "ks_pvalue": 1.0,
+              "mean_diff": 0.0015082956259426829,
+              "std_ratio": 1.0355773166842377,
+              "drift_detected": false
+            },
+            "sanctions_match": {
+              "ks_statistic": 0.0015082956259426848,
+              "ks_pvalue": 1.0,
+              "mean_diff": 0.0015082956259426846,
+              "std_ratio": 1.0862875941087506,
+              "drift_detected": false
+            },
+            "is_cross_border": {
+              "ks_statistic": 0.01583710407239819,
+              "ks_pvalue": 0.9963384615048234,
+              "mean_diff": 0.015837104072398134,
+              "std_ratio": 0.9236794295894297,
+              "drift_detected": false
+            },
+            "is_fintech_rail": {
+              "ks_statistic": 0.00980392156862745,
+              "ks_pvalue": 0.9999999629605817,
+              "mean_diff": 0.009803921568627472,
+              "std_ratio": 0.9971510390612386,
+              "drift_detected": false
+            },
+            "origin_country_code": {
+              "ks_statistic": 0.024886877828054297,
+              "ks_pvalue": 0.806302769978849,
+              "mean_diff": 0.009803921568627416,
+              "std_ratio": 1.0246575783630063,
+              "drift_detected": false
+            },
+            "destination_country_code": {
+              "ks_statistic": 0.01583710407239819,
+              "ks_pvalue": 0.9963384615048234,
+              "mean_diff": 0.007541478129713397,
+              "std_ratio": 0.9839474247370709,
+              "drift_detected": false
+            },
+            "ip_country_code": {
+              "ks_statistic": 0.029411764705882353,
+              "ks_pvalue": 0.6150506837740175,
+              "mean_diff": 0.1463046757164399,
+              "std_ratio": 1.0110405119629924,
+              "drift_detected": false
+            },
+            "currency_code": {
+              "ks_statistic": 0.024132730015082957,
+              "ks_pvalue": 0.8349561434719869,
+              "mean_diff": 0.05731523378582182,
+              "std_ratio": 1.0225202635558976,
+              "drift_detected": false
+            },
+            "txn_channel_code": {
+              "ks_statistic": 0.029411764705882353,
+              "ks_pvalue": 0.6150506837740175,
+              "mean_diff": 0.010558069381598756,
+              "std_ratio": 1.0250891248011638,
+              "drift_detected": false
+            },
+            "payment_rail_code": {
+              "ks_statistic": 0.014328808446455505,
+              "ks_pvalue": 0.9992208446138505,
+              "mean_diff": 0.06711915535444923,
+              "std_ratio": 1.010731193902201,
+              "drift_detected": false
+            },
+            "txn_type_code": {
+              "ks_statistic": 0.02262443438914027,
+              "ks_pvalue": 0.8866864442061219,
+              "mean_diff": 0.08144796380090469,
+              "std_ratio": 0.9875641108297291,
+              "drift_detected": false
+            },
+            "merchant_category_code": {
+              "ks_statistic": 0.02790346907993967,
+              "ks_pvalue": 0.6804908067710511,
+              "mean_diff": 0.030165912518853588,
+              "std_ratio": 1.0319702200488436,
+              "drift_detected": false
+            },
+            "device_type_code": {
+              "ks_statistic": 0.02564102564102564,
+              "ks_pvalue": 0.7762116754891318,
+              "mean_diff": 0.012066365007541435,
+              "std_ratio": 0.9677688223174205,
+              "drift_detected": false
+            }
+          },
+          "cv_fold_scores": [
+            [
+              0.8564149464332376,
+              0.611712101823353
+            ],
+            [
+              0.8434544029265744,
+              0.5337088660511201
+            ],
+            [
+              0.8539325842696629,
+              0.6194168557738347
+            ],
+            [
+              0.8172372769332452,
+              0.5183834651698853
+            ],
+            [
+              0.8458955717118308,
+              0.4828128632211322
+            ]
+          ]
+        },
+        "explanations": {
+          "summary": [
+            "PSI is 0.0223, indicating negligible score distribution shift between reference and current data.",
+            "CV AUC-ROC is 0.8434 \u00b1 0.0139 (stable across folds).",
+            "CV AUC-PR is 0.5532 \u00b1 0.0536 (variable across folds).",
+            "Bootstrap AUC-ROC mean is 0.8466 with 95% CI [0.8205, 0.8711] (width 0.0506).",
+            "No concept drift detected (score 0.0112), suggesting stable performance over time.",
+            "Data drift flagged 0/18 numeric features; top drift signals: ['account_age_days', 'avg_amount_7d', 'kyc_risk_score']."
+          ],
+          "plots": {
+            "psi_distribution": "Score distributions overlap consistent with PSI=0.0223.",
+            "data_drift_heatmap": "0/18 features show drift; red bars highlight flagged features.",
+            "concept_drift": "AUC across time chunks shows whether performance is stable over time.",
+            "cv_results": "Fold scores cluster around ROC 0.8434 and PR 0.5532.",
+            "bootstrap_distribution": "Bootstrap CI [0.8205, 0.8711] reflects performance stability.",
+            "stability_summary": "Dashboard summarizes PSI, CV variance, and bootstrap CI width."
+          }
+        }
+      },
+      "interpretability": {
+        "metrics": {
+          "model_type": "tree",
+          "methods_used": [
+            "permutation",
+            "pdp",
+            "ice",
+            "lime"
+          ],
+          "shap_status": "unavailable",
+          "shap_reason": "No module named 'shap'",
+          "perm_top_features": [
+            "txn_amount",
+            "num_txn_24h",
+            "txn_type_code",
+            "kyc_risk_score",
+            "destination_country_code",
+            "avg_amount_7d",
+            "is_cross_border",
+            "account_age_days",
+            "payment_rail_code",
+            "ip_country_code",
+            "txn_channel_code",
+            "sanctions_match",
+            "currency_code",
+            "is_pep",
+            "origin_country_code",
+            "merchant_category_code",
+            "is_fintech_rail",
+            "device_type_code"
+          ],
+          "lime_instances": 3,
+          "pdp_features": [
+            "avg_amount_7d",
+            "txn_amount",
+            "account_age_days",
+            "kyc_risk_score",
+            "num_txn_24h",
+            "ip_country_code"
+          ],
+          "ice_features": [
+            "avg_amount_7d",
+            "txn_amount",
+            "account_age_days",
+            "kyc_risk_score"
+          ]
+        },
+        "plots": {
+          "permutation_importance": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/permutation_importance.png",
+          "lime_explanation": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/lime_explanation.png",
+          "pdp": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/pdp.png",
+          "ice": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q3/ice.png"
+        },
+        "artifacts": {
+          "perm_importances": {
+            "txn_amount": 0.05894429926442133,
+            "account_age_days": 0.00621733449477363,
+            "kyc_risk_score": 0.02407447735191649,
+            "num_txn_24h": 0.04998911149825793,
+            "avg_amount_7d": 0.0072432733255904935,
+            "is_pep": 0.0005879790940767516,
+            "sanctions_match": 0.000932781649245129,
+            "is_cross_border": 0.0064786585365854575,
+            "is_fintech_rail": 0.00033875338753398544,
+            "origin_country_code": 0.0005190185830430183,
+            "destination_country_code": 0.007612272551297028,
+            "ip_country_code": 0.002113579171506119,
+            "currency_code": 0.0007210607820364867,
+            "txn_channel_code": 0.0012001548586915377,
+            "payment_rail_code": 0.0032236014324429794,
+            "txn_type_code": 0.028795247773906442,
+            "merchant_category_code": 0.00047062524196678224,
+            "device_type_code": -0.0002528552071233925
+          },
+          "lime_weights": {
+            "instance_7": {
+              "sanctions_match <= 0.00": -0.07504681243142253,
+              "is_pep <= 0.00": -0.03744767585341339,
+              "115.70 < txn_amount <= 384.91": -0.03647816317750447,
+              "3.00 < num_txn_24h <= 5.00": -0.03553085685757229,
+              "merchant_category_code > 7.00": 0.010581965763281223,
+              "7.00 < payment_rail_code <= 12.00": 0.009635986764604572,
+              "6.00 < destination_country_code <= 11.00": 0.009234059345885033,
+              "39.51 < kyc_risk_score <= 50.68": -0.008410409507428303,
+              "110.48 < avg_amount_7d <= 327.94": -0.008376628318922434,
+              "txn_type_code <= 3.00": 0.008295827319570518
+            },
+            "instance_11": {
+              "num_txn_24h > 5.00": 0.23664642330880187,
+              "sanctions_match <= 0.00": -0.13000056746100755,
+              "is_pep <= 0.00": -0.05568458201241279,
+              "47.34 < txn_amount <= 115.70": -0.05093417487187822,
+              "ip_country_code <= 5.00": 0.014597983501882126,
+              "4.00 < currency_code <= 5.00": 0.010788350925288183,
+              "7.00 < payment_rail_code <= 12.00": 0.01065854339253706,
+              "txn_type_code <= 3.00": 0.00975919146761217,
+              "account_age_days <= 946.50": -0.007898857995883354,
+              "54.03 < avg_amount_7d <= 110.48": -0.007849762041403247
+            },
+            "instance_12": {
+              "num_txn_24h > 5.00": 0.2488458785721902,
+              "txn_amount > 384.91": 0.18980347175056342,
+              "sanctions_match <= 0.00": -0.09978716670760869,
+              "4.00 < txn_type_code <= 7.00": -0.053888168843930426,
+              "is_pep <= 0.00": -0.043634349449511556,
+              "avg_amount_7d > 327.94": 0.028059582733108837,
+              "11.00 < destination_country_code <= 15.50": 0.013948432156693098,
+              "39.51 < kyc_risk_score <= 50.68": -0.01104075482260619,
+              "0.00 < is_fintech_rail <= 1.00": 0.010148475909229557,
+              "1836.00 < account_age_days <= 2667.50": 0.009783186143889648
+            }
+          }
+        },
+        "explanations": {
+          "summary": [
+            "Permutation importance highlights: ['txn_amount', 'num_txn_24h', 'txn_type_code', 'kyc_risk_score', 'destination_country_code'].",
+            "SHAP plots not generated because SHAP is unavailable (No module named 'shap').",
+            "LIME generated local explanations for 3 instances; top contributors for instance_7: ['sanctions_match <= 0.00', 'is_pep <= 0.00', '115.70 < txn_amount <= 384.91', '3.00 < num_txn_24h <= 5.00', 'merchant_category_code > 7.00'].",
+            "PDP plots show average effects for: ['avg_amount_7d', 'txn_amount', 'account_age_days', 'kyc_risk_score', 'num_txn_24h', 'ip_country_code'].",
+            "ICE plots show individual-level effects for: ['avg_amount_7d', 'txn_amount', 'account_age_days', 'kyc_risk_score']."
+          ],
+          "plots": {
+            "permutation_importance": "Bars show how much AUC drops when each feature is permuted.",
+            "shap_bar": "SHAP bar plot ranks global feature impact by mean absolute SHAP values.",
+            "shap_beeswarm": "SHAP beeswarm shows both impact size and direction per feature.",
+            "lime_explanation": "LIME bars show local feature contributions for selected instances.",
+            "pdp": "PDP curves show average model response as a feature varies.",
+            "ice": "ICE curves show per-instance responses as a feature varies."
+          }
+        }
+      }
+    },
+    "value_date_quarter=2024Q4": {
+      "effectiveness": {
+        "metrics": {
+          "auc_roc": 0.8401192496214424,
+          "auc_pr": 0.6553908422398156,
+          "precision": 0.653555219364599,
+          "recall": 0.5366459627329192,
+          "f1": 0.5893587994542974,
+          "ks_statistic": 0.5594582767988969,
+          "ks_threshold": 0.24,
+          "confusion_matrix": {
+            "TN": 1744,
+            "FP": 229,
+            "FN": 373,
+            "TP": 432
+          },
+          "precision_at_k": {
+            "10": 1.0,
+            "50": 0.82,
+            "100": 0.8,
+            "200": 0.76,
+            "500": 0.678
+          },
+          "recall_at_k": {
+            "10": 0.012422360248447204,
+            "50": 0.05093167701863354,
+            "100": 0.09937888198757763,
+            "200": 0.18881987577639753,
+            "500": 0.42111801242236024
+          }
+        },
+        "plots": {
+          "roc_curve": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/roc_curve.png",
+          "pr_curve": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/pr_curve.png",
+          "confusion_matrix": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/confusion_matrix.png",
+          "confusion_matrix_norm": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/confusion_matrix_norm.png",
+          "ks_curve": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/ks_curve.png",
+          "precision_recall_at_k": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/precision_recall_at_k.png",
+          "score_distribution": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/score_distribution.png",
+          "threshold_analysis": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/threshold_analysis.png"
+        },
+        "explanations": {
+          "summary": [
+            "Positive rate is 28.98%; AUC-ROC is 0.8401 (strong ranking).",
+            "AUC-PR is 0.6554, above the base rate 28.98%, indicating meaningful lift.",
+            "At threshold 0.50, precision=0.6536, recall=0.5366, F1=0.5894 (precision-heavy (fewer positives caught, fewer false alarms)).",
+            "Confusion matrix: TP=432, FP=229, FN=373, TN=1744 (FPR=11.61%, FNR=46.34%).",
+            "KS is 0.5595 at threshold 0.24, indicating very strong separation.",
+            "Top-10: precision=1.0000, recall=0.0124 shows the quality of the highest-risk shortlist.",
+            "Top-500: precision=0.6780, recall=0.4211 shows how much coverage you get with a larger queue."
+          ],
+          "plots": {
+            "roc_curve": "AUC-ROC=0.8401; curve above diagonal indicates strong separation.",
+            "pr_curve": "AUC-PR=0.6554 vs baseline 28.98%; higher curve implies better precision at recall.",
+            "confusion_matrix": "At threshold 0.50: TP=432, FP=229, FN=373, TN=1744.",
+            "confusion_matrix_norm": "Normalized rates: TPR=53.66%, TNR=88.39%.",
+            "ks_curve": "Maximum separation KS=0.5595 at threshold 0.24.",
+            "precision_recall_at_k": "Bars show precision/recall as you expand the review queue.",
+            "score_distribution": "Mean score: positive=0.474, negative=0.174 (larger gap is better).",
+            "threshold_analysis": "Best F1 in tested grid is 0.6622 at threshold 0.25."
+          }
+        }
+      },
+      "efficiency": {
+        "metrics": {
+          "fpr": 0.11606690319310695,
+          "tn": 1744,
+          "fp": 229,
+          "threshold": 0.5,
+          "fpr_at_thresholds": {
+            "t_0.05": 0.6006082108464268,
+            "t_0.10": 0.4221996958945768,
+            "t_0.15": 0.3411049163710086,
+            "t_0.20": 0.2934617334009123,
+            "t_0.25": 0.2483527622909275,
+            "t_0.30": 0.21388748099341104,
+            "t_0.35": 0.1920932589964521,
+            "t_0.40": 0.16725798276735934,
+            "t_0.45": 0.13786112519006588,
+            "t_0.50": 0.11606690319310695,
+            "t_0.55": 0.08717688798783578,
+            "t_0.60": 0.06183476938672073,
+            "t_0.65": 0.04156107450582869,
+            "t_0.70": 0.01926001013684744,
+            "t_0.75": 0.005575266092245312,
+            "t_0.80": 0.0010136847440446021,
+            "t_0.85": 0.0,
+            "t_0.90": 0.0,
+            "t_0.95": 0.0
+          }
+        },
+        "plots": {
+          "fpr_vs_threshold": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/fpr_vs_threshold.png",
+          "efficiency_frontier": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/efficiency_frontier.png",
+          "fpr_tpr_tradeoff": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/fpr_tpr_tradeoff.png"
+        },
+        "explanations": {
+          "summary": [
+            "At threshold 0.50, FPR=0.1161 (high); FP=229 out of 1973 negatives.",
+            "At the same threshold, TPR=0.5366 with TP=432 and FN=373, showing the capture rate of positives.",
+            "A threshold near 0.65 yields FPR\u22480.0416 with TPR\u22480.2745 if you want to target ~5% false positives."
+          ],
+          "plots": {
+            "fpr_vs_threshold": "FPR decreases as the threshold increases; use it to pick an operating point.",
+            "efficiency_frontier": "Each point shows the FPR/TPR tradeoff; move toward the top-left for better efficiency.",
+            "fpr_tpr_tradeoff": "FPR and TPR curves highlight how recall drops as you reduce false positives."
+          }
+        }
+      },
+      "stability": {
+        "metrics": {
+          "psi": 0.021555933601730647,
+          "cv_auc_roc_mean": 0.8398066683881144,
+          "cv_auc_roc_std": 0.018830445534904684,
+          "cv_auc_pr_mean": 0.6578157573899786,
+          "cv_auc_pr_std": 0.03230870507865856,
+          "bootstrap_auc_roc_mean": 0.812916814398104,
+          "bootstrap_auc_roc_ci_lower": 0.792345280343074,
+          "bootstrap_auc_roc_ci_upper": 0.8354075949013411,
+          "concept_drift_detected": false,
+          "concept_drift_score": 0.02611589179937197
+        },
+        "plots": {
+          "psi_distribution": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/psi_distribution.png",
+          "data_drift_heatmap": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/data_drift_heatmap.png",
+          "concept_drift": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/concept_drift.png",
+          "cv_results": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/cv_results.png",
+          "bootstrap_distribution": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/bootstrap_distribution.png",
+          "stability_summary": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/stability_summary.png"
+        },
+        "artifacts": {
+          "data_drift": {
+            "txn_amount": {
+              "ks_statistic": 0.037437005039596835,
+              "ks_pvalue": 0.2847255250441674,
+              "mean_diff": 566.7702375809938,
+              "std_ratio": 0.40848977062793085,
+              "drift_detected": false
+            },
+            "account_age_days": {
+              "ks_statistic": 0.020158387329013677,
+              "ks_pvalue": 0.9405239675778025,
+              "mean_diff": 22.552915766738806,
+              "std_ratio": 0.9950785119881597,
+              "drift_detected": false
+            },
+            "kyc_risk_score": {
+              "ks_statistic": 0.02663786897048236,
+              "ks_pvalue": 0.7081006887050062,
+              "mean_diff": 0.04395240985127202,
+              "std_ratio": 0.9935922959551833,
+              "drift_detected": false
+            },
+            "num_txn_24h": {
+              "ks_statistic": 0.03959683225341973,
+              "ks_pvalue": 0.22629639644227864,
+              "mean_diff": 0.0806335493160546,
+              "std_ratio": 1.002329972107333,
+              "drift_detected": false
+            },
+            "avg_amount_7d": {
+              "ks_statistic": 0.05255579553635709,
+              "ks_pvalue": 0.04311772140546103,
+              "mean_diff": 517.0826205903522,
+              "std_ratio": 0.46019478056184404,
+              "drift_detected": true
+            },
+            "is_pep": {
+              "ks_statistic": 0.014398848092152628,
+              "ks_pvalue": 0.998755266710263,
+              "mean_diff": 0.014398848092152625,
+              "std_ratio": 1.080925186337375,
+              "drift_detected": false
+            },
+            "sanctions_match": {
+              "ks_statistic": 0.008639308855291577,
+              "ks_pvalue": 0.9999999995258771,
+              "mean_diff": 0.008639308855291575,
+              "std_ratio": 0.8528525923870732,
+              "drift_detected": false
+            },
+            "is_cross_border": {
+              "ks_statistic": 0.0007199424046076314,
+              "ks_pvalue": 0.9999999999999998,
+              "mean_diff": 0.0007199424046075986,
+              "std_ratio": 0.9957480363906347,
+              "drift_detected": false
+            },
+            "is_fintech_rail": {
+              "ks_statistic": 0.017998560115190784,
+              "ks_pvalue": 0.9781218767136873,
+              "mean_diff": 0.017998560115190798,
+              "std_ratio": 1.0086158813210566,
+              "drift_detected": false
+            },
+            "origin_country_code": {
+              "ks_statistic": 0.037437005039596835,
+              "ks_pvalue": 0.2847255250441674,
+              "mean_diff": 0.26277897768178526,
+              "std_ratio": 0.9763975724204069,
+              "drift_detected": false
+            },
+            "destination_country_code": {
+              "ks_statistic": 0.023758099352051837,
+              "ks_pvalue": 0.8281358340013804,
+              "mean_diff": 0.05975521958243313,
+              "std_ratio": 1.014670484608934,
+              "drift_detected": false
+            },
+            "ip_country_code": {
+              "ks_statistic": 0.023758099352051837,
+              "ks_pvalue": 0.8281358340013804,
+              "mean_diff": 0.010079193664505937,
+              "std_ratio": 0.9956946918637734,
+              "drift_detected": false
+            },
+            "currency_code": {
+              "ks_statistic": 0.032397408207343416,
+              "ks_pvalue": 0.4597307308039768,
+              "mean_diff": 0.12239020878329665,
+              "std_ratio": 0.9876314153061656,
+              "drift_detected": false
+            },
+            "txn_channel_code": {
+              "ks_statistic": 0.02159827213822894,
+              "ks_pvalue": 0.9024303909568245,
+              "mean_diff": 0.03599712023038126,
+              "std_ratio": 1.0343102438607994,
+              "drift_detected": false
+            },
+            "payment_rail_code": {
+              "ks_statistic": 0.02591792656587473,
+              "ks_pvalue": 0.7394724499603923,
+              "mean_diff": 0.17926565874729938,
+              "std_ratio": 0.9960300501020876,
+              "drift_detected": false
+            },
+            "txn_type_code": {
+              "ks_statistic": 0.024478041756659467,
+              "ks_pvalue": 0.7997857623877849,
+              "mean_diff": 0.030237580993520474,
+              "std_ratio": 0.9638734234195212,
+              "drift_detected": false
+            },
+            "merchant_category_code": {
+              "ks_statistic": 0.028077753779697623,
+              "ks_pvalue": 0.6442997853435692,
+              "mean_diff": 0.06983441324693995,
+              "std_ratio": 0.9551258610425233,
+              "drift_detected": false
+            },
+            "device_type_code": {
+              "ks_statistic": 0.012958963282937365,
+              "ks_pvalue": 0.9998155058883175,
+              "mean_diff": 0.03311735061195109,
+              "std_ratio": 1.0046943883191404,
+              "drift_detected": false
+            }
+          },
+          "cv_fold_scores": [
+            [
+              0.8376444689047882,
+              0.6367501004383892
+            ],
+            [
+              0.8418743611919177,
+              0.6584401427892504
+            ],
+            [
+              0.8516550043242395,
+              0.7001076702405893
+            ],
+            [
+              0.8618091244443042,
+              0.6839564535502547
+            ],
+            [
+              0.8060503830753223,
+              0.6098244199314091
+            ]
+          ]
+        },
+        "explanations": {
+          "summary": [
+            "PSI is 0.0216, indicating negligible score distribution shift between reference and current data.",
+            "CV AUC-ROC is 0.8398 \u00b1 0.0188 (moderate across folds).",
+            "CV AUC-PR is 0.6578 \u00b1 0.0323 (moderate across folds).",
+            "Bootstrap AUC-ROC mean is 0.8129 with 95% CI [0.7923, 0.8354] (width 0.0431).",
+            "No concept drift detected (score 0.0261), suggesting stable performance over time.",
+            "Data drift flagged 1/18 numeric features; top drift signals: ['avg_amount_7d', 'num_txn_24h', 'txn_amount']."
+          ],
+          "plots": {
+            "psi_distribution": "Score distributions overlap consistent with PSI=0.0216.",
+            "data_drift_heatmap": "1/18 features show drift; red bars highlight flagged features.",
+            "concept_drift": "AUC across time chunks shows whether performance is stable over time.",
+            "cv_results": "Fold scores cluster around ROC 0.8398 and PR 0.6578.",
+            "bootstrap_distribution": "Bootstrap CI [0.7923, 0.8354] reflects performance stability.",
+            "stability_summary": "Dashboard summarizes PSI, CV variance, and bootstrap CI width."
+          }
+        }
+      },
+      "interpretability": {
+        "metrics": {
+          "model_type": "tree",
+          "methods_used": [
+            "permutation",
+            "pdp",
+            "ice",
+            "lime"
+          ],
+          "shap_status": "unavailable",
+          "shap_reason": "No module named 'shap'",
+          "perm_top_features": [
+            "txn_amount",
+            "num_txn_24h",
+            "kyc_risk_score",
+            "txn_type_code",
+            "avg_amount_7d",
+            "account_age_days",
+            "payment_rail_code",
+            "is_pep",
+            "merchant_category_code",
+            "destination_country_code",
+            "is_cross_border",
+            "sanctions_match",
+            "ip_country_code",
+            "txn_channel_code",
+            "is_fintech_rail",
+            "device_type_code",
+            "origin_country_code",
+            "currency_code"
+          ],
+          "lime_instances": 3,
+          "pdp_features": [
+            "txn_amount",
+            "avg_amount_7d",
+            "account_age_days",
+            "kyc_risk_score",
+            "num_txn_24h",
+            "ip_country_code"
+          ],
+          "ice_features": [
+            "txn_amount",
+            "avg_amount_7d",
+            "account_age_days",
+            "kyc_risk_score"
+          ]
+        },
+        "plots": {
+          "permutation_importance": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/permutation_importance.png",
+          "lime_explanation": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/lime_explanation.png",
+          "pdp": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/pdp.png",
+          "ice": "./output_model_testing_bank_aml_tm_10k_local/_segments/value_date_quarter_2024Q4/ice.png"
+        },
+        "artifacts": {
+          "perm_importances": {
+            "txn_amount": 0.051386213489719355,
+            "account_age_days": 0.005839504587417788,
+            "kyc_risk_score": 0.025603213332762574,
+            "num_txn_24h": 0.04776193941469399,
+            "avg_amount_7d": 0.008045460382689062,
+            "is_pep": 0.0025883595165732244,
+            "sanctions_match": 0.001987643223035529,
+            "is_cross_border": 0.002088238231810857,
+            "is_fintech_rail": 0.0006991709829773484,
+            "origin_country_code": 7.063053807633279e-05,
+            "destination_country_code": 0.0022259321090706942,
+            "ip_country_code": 0.001568854073027759,
+            "currency_code": -0.0006948903443059762,
+            "txn_channel_code": 0.0008825250060642498,
+            "payment_rail_code": 0.0037641082716207918,
+            "txn_type_code": 0.023956594323873183,
+            "merchant_category_code": 0.002334374955410057,
+            "device_type_code": 0.0006114178902158707
+          },
+          "lime_weights": {
+            "instance_1": {
+              "num_txn_24h > 7.00": 0.22048517667717898,
+              "sanctions_match <= 0.00": -0.09226034864496713,
+              "2.00 < txn_type_code <= 4.00": 0.09150456496108587,
+              "62.83 < txn_amount <= 176.41": -0.08307201770281063,
+              "is_pep <= 0.00": -0.05516487796921289,
+              "31.06 < kyc_risk_score <= 43.44": -0.02714604988742986,
+              "1759.00 < account_age_days <= 2660.00": 0.016340549623774896,
+              "4.00 < payment_rail_code <= 10.00": -0.014816645365628324,
+              "9.00 < ip_country_code <= 17.00": -0.012100609695821607,
+              "10.00 < origin_country_code <= 17.00": 0.010356085581249326
+            },
+            "instance_3": {
+              "kyc_risk_score > 56.99": 0.13379993198896384,
+              "sanctions_match <= 0.00": -0.09502603209238984,
+              "2.00 < txn_type_code <= 4.00": 0.09228387132452583,
+              "is_pep <= 0.00": -0.0607120650290099,
+              "4.00 < num_txn_24h <= 7.00": 0.044930072266172016,
+              "176.41 < txn_amount <= 625.29": -0.03226985417709111,
+              "payment_rail_code > 12.00": 0.02244112708191483,
+              "153.52 < avg_amount_7d <= 501.86": -0.02199595999863785,
+              "ip_country_code <= 5.00": 0.019685105345588653,
+              "origin_country_code <= 5.00": -0.015503437437555645
+            },
+            "instance_7": {
+              "kyc_risk_score > 56.99": 0.14019332405157792,
+              "sanctions_match <= 0.00": -0.09444726386787738,
+              "2.00 < txn_type_code <= 4.00": 0.09151335650411963,
+              "2.00 < num_txn_24h <= 4.00": -0.08543683892018188,
+              "is_pep <= 0.00": -0.06337630502640135,
+              "176.41 < txn_amount <= 625.29": -0.03093753110285393,
+              "4.00 < currency_code <= 5.00": 0.0214334973685235,
+              "payment_rail_code <= 4.00": -0.02141594632261217,
+              "11.00 < destination_country_code <= 15.00": 0.019482478863766948,
+              "153.52 < avg_amount_7d <= 501.86": -0.015113501722826052
+            }
+          }
+        },
+        "explanations": {
+          "summary": [
+            "Permutation importance highlights: ['txn_amount', 'num_txn_24h', 'kyc_risk_score', 'txn_type_code', 'avg_amount_7d'].",
+            "SHAP plots not generated because SHAP is unavailable (No module named 'shap').",
+            "LIME generated local explanations for 3 instances; top contributors for instance_1: ['num_txn_24h > 7.00', 'sanctions_match <= 0.00', '2.00 < txn_type_code <= 4.00', '62.83 < txn_amount <= 176.41', 'is_pep <= 0.00'].",
+            "PDP plots show average effects for: ['txn_amount', 'avg_amount_7d', 'account_age_days', 'kyc_risk_score', 'num_txn_24h', 'ip_country_code'].",
+            "ICE plots show individual-level effects for: ['txn_amount', 'avg_amount_7d', 'account_age_days', 'kyc_risk_score']."
+          ],
+          "plots": {
+            "permutation_importance": "Bars show how much AUC drops when each feature is permuted.",
+            "shap_bar": "SHAP bar plot ranks global feature impact by mean absolute SHAP values.",
+            "shap_beeswarm": "SHAP beeswarm shows both impact size and direction per feature.",
+            "lime_explanation": "LIME bars show local feature contributions for selected instances.",
+            "pdp": "PDP curves show average model response as a feature varies.",
+            "ice": "ICE curves show per-instance responses as a feature varies."
+          }
+        }
+      }
+    }
+  },
+  "overall": {
+    "effectiveness": {
+      "metrics": {
+        "auc_roc": 0.8708683580893049,
+        "auc_pr": 0.5976883715580675,
+        "precision": 0.6630109670987039,
+        "recall": 0.42249047013977126,
+        "f1": 0.5161039968956151,
+        "ks_statistic": 0.5993711302614797,
+        "ks_threshold": 0.18,
+        "confusion_matrix": {
+          "TN": 8088,
+          "FP": 338,
+          "FN": 909,
+          "TP": 665
+        },
+        "precision_at_k": {
+          "10": 1.0,
+          "50": 0.9,
+          "100": 0.84,
+          "200": 0.815,
+          "500": 0.75
+        },
+        "recall_at_k": {
+          "10": 0.0063532401524777635,
+          "50": 0.028589580686149935,
+          "100": 0.053367217280813214,
+          "200": 0.10355781448538755,
+          "500": 0.23824650571791614
+        }
+      },
+      "plots": {
+        "roc_curve": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/roc_curve.png",
+        "pr_curve": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/pr_curve.png",
+        "confusion_matrix": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/confusion_matrix.png",
+        "confusion_matrix_norm": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/confusion_matrix_norm.png",
+        "ks_curve": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/ks_curve.png",
+        "precision_recall_at_k": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/precision_recall_at_k.png",
+        "score_distribution": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/score_distribution.png",
+        "threshold_analysis": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/threshold_analysis.png"
+      },
+      "explanations": {
+        "summary": [
+          "Positive rate is 15.74%; AUC-ROC is 0.8709 (strong ranking).",
+          "AUC-PR is 0.5977, above the base rate 15.74%, indicating meaningful lift.",
+          "At threshold 0.50, precision=0.6630, recall=0.4225, F1=0.5161 (precision-heavy (fewer positives caught, fewer false alarms)).",
+          "Confusion matrix: TP=665, FP=338, FN=909, TN=8088 (FPR=4.01%, FNR=57.75%).",
+          "KS is 0.5994 at threshold 0.18, indicating very strong separation.",
+          "Top-10: precision=1.0000, recall=0.0064 shows the quality of the highest-risk shortlist.",
+          "Top-500: precision=0.7500, recall=0.2382 shows how much coverage you get with a larger queue."
+        ],
+        "plots": {
+          "roc_curve": "AUC-ROC=0.8709; curve above diagonal indicates strong separation.",
+          "pr_curve": "AUC-PR=0.5977 vs baseline 15.74%; higher curve implies better precision at recall.",
+          "confusion_matrix": "At threshold 0.50: TP=665, FP=338, FN=909, TN=8088.",
+          "confusion_matrix_norm": "Normalized rates: TPR=42.25%, TNR=95.99%.",
+          "ks_curve": "Maximum separation KS=0.5994 at threshold 0.18.",
+          "precision_recall_at_k": "Bars show precision/recall as you expand the review queue.",
+          "score_distribution": "Mean score: positive=0.412, negative=0.108 (larger gap is better).",
+          "threshold_analysis": "Best F1 in tested grid is 0.5985 at threshold 0.25."
+        }
+      }
+    },
+    "efficiency": {
+      "metrics": {
+        "fpr": 0.04011393306432471,
+        "tn": 8088,
+        "fp": 338,
+        "threshold": 0.5,
+        "fpr_at_thresholds": {
+          "t_0.05": 0.4972703536672205,
+          "t_0.10": 0.2836458580583907,
+          "t_0.15": 0.19784001898884404,
+          "t_0.20": 0.14740090197009256,
+          "t_0.25": 0.11333966294801803,
+          "t_0.30": 0.09090909090909091,
+          "t_0.35": 0.07512461428910515,
+          "t_0.40": 0.060882981248516495,
+          "t_0.45": 0.04794683123664847,
+          "t_0.50": 0.04011393306432471,
+          "t_0.55": 0.030619511037265606,
+          "t_0.60": 0.021125089010206502,
+          "t_0.65": 0.013292190837882745,
+          "t_0.70": 0.006171374317588417,
+          "t_0.75": 0.002136244956088298,
+          "t_0.80": 0.00047472110135295516,
+          "t_0.85": 0.0,
+          "t_0.90": 0.0,
+          "t_0.95": 0.0
+        }
+      },
+      "plots": {
+        "fpr_vs_threshold": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/fpr_vs_threshold.png",
+        "efficiency_frontier": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/efficiency_frontier.png",
+        "fpr_tpr_tradeoff": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/fpr_tpr_tradeoff.png"
+      },
+      "explanations": {
+        "summary": [
+          "At threshold 0.50, FPR=0.0401 (low); FP=338 out of 8426 negatives.",
+          "At the same threshold, TPR=0.4225 with TP=665 and FN=909, showing the capture rate of positives.",
+          "A threshold near 0.45 yields FPR\u22480.0479 with TPR\u22480.4701 if you want to target ~5% false positives."
+        ],
+        "plots": {
+          "fpr_vs_threshold": "FPR decreases as the threshold increases; use it to pick an operating point.",
+          "efficiency_frontier": "Each point shows the FPR/TPR tradeoff; move toward the top-left for better efficiency.",
+          "fpr_tpr_tradeoff": "FPR and TPR curves highlight how recall drops as you reduce false positives."
+        }
+      }
+    },
+    "stability": {
+      "metrics": {
+        "psi": 0.4949724205921473,
+        "cv_auc_roc_mean": 0.8710813089984761,
+        "cv_auc_roc_std": 0.006291832540416697,
+        "cv_auc_pr_mean": 0.5991930544865786,
+        "cv_auc_pr_std": 0.024984852054438955,
+        "bootstrap_auc_roc_mean": 0.8512433670255323,
+        "bootstrap_auc_roc_ci_lower": 0.8353827236380277,
+        "bootstrap_auc_roc_ci_upper": 0.8629928746182142,
+        "concept_drift_detected": false,
+        "concept_drift_score": 0.025097128788817948
+      },
+      "plots": {
+        "psi_distribution": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/psi_distribution.png",
+        "data_drift_heatmap": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/data_drift_heatmap.png",
+        "concept_drift": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/concept_drift.png",
+        "cv_results": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/cv_results.png",
+        "bootstrap_distribution": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/bootstrap_distribution.png",
+        "stability_summary": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/stability_summary.png"
+      },
+      "artifacts": {
+        "data_drift": {
+          "txn_amount": {
+            "ks_statistic": 0.086,
+            "ks_pvalue": 1.6694608954814567e-16,
+            "mean_diff": 272.47321799999975,
+            "std_ratio": 1.1917017818883604,
+            "drift_detected": true
+          },
+          "account_age_days": {
+            "ks_statistic": 0.0126,
+            "ks_pvalue": 0.8223009941322108,
+            "mean_diff": 10.101999999999862,
+            "std_ratio": 1.012584976393122,
+            "drift_detected": false
+          },
+          "kyc_risk_score": {
+            "ks_statistic": 0.1316,
+            "ks_pvalue": 3.879180012250876e-38,
+            "mean_diff": 5.564012889011018,
+            "std_ratio": 1.086049270602999,
+            "drift_detected": true
+          },
+          "num_txn_24h": {
+            "ks_statistic": 0.2252,
+            "ks_pvalue": 1.7209352868470537e-111,
+            "mean_diff": 1.2652,
+            "std_ratio": 0.9420480230274396,
+            "drift_detected": true
+          },
+          "avg_amount_7d": {
+            "ks_statistic": 0.0748,
+            "ks_pvalue": 1.3848999032478102e-12,
+            "mean_diff": 215.9380299999999,
+            "std_ratio": 1.0768537402565574,
+            "drift_detected": true
+          },
+          "is_pep": {
+            "ks_statistic": 0.0268,
+            "ks_pvalue": 0.05512541363698675,
+            "mean_diff": 0.0268,
+            "std_ratio": 1.36560060603286,
+            "drift_detected": false
+          },
+          "sanctions_match": {
+            "ks_statistic": 0.0086,
+            "ks_pvalue": 0.9926334746377052,
+            "mean_diff": 0.0086,
+            "std_ratio": 1.3457512465801733,
+            "drift_detected": false
+          },
+          "is_cross_border": {
+            "ks_statistic": 0.0306,
+            "ks_pvalue": 0.01851977583259587,
+            "mean_diff": 0.03059999999999996,
+            "std_ratio": 0.8716494067383197,
+            "drift_detected": true
+          },
+          "is_fintech_rail": {
+            "ks_statistic": 0.0174,
+            "ks_pvalue": 0.43549127415019256,
+            "mean_diff": 0.017400000000000027,
+            "std_ratio": 1.0074932006455248,
+            "drift_detected": false
+          },
+          "origin_country_code": {
+            "ks_statistic": 0.014,
+            "ks_pvalue": 0.7112889960315587,
+            "mean_diff": 0.06119999999999948,
+            "std_ratio": 1.0103602734460884,
+            "drift_detected": false
+          },
+          "destination_country_code": {
+            "ks_statistic": 0.1298,
+            "ks_pvalue": 4.132717230918966e-37,
+            "mean_diff": 0.13339999999999996,
+            "std_ratio": 0.9910990144655629,
+            "drift_detected": true
+          },
+          "ip_country_code": {
+            "ks_statistic": 0.0162,
+            "ks_pvalue": 0.5280052696004953,
+            "mean_diff": 0.07240000000000002,
+            "std_ratio": 1.0043821442570555,
+            "drift_detected": false
+          },
+          "currency_code": {
+            "ks_statistic": 0.0176,
+            "ks_pvalue": 0.42096355203665886,
+            "mean_diff": 0.08560000000000034,
+            "std_ratio": 1.0098295447658279,
+            "drift_detected": false
+          },
+          "txn_channel_code": {
+            "ks_statistic": 0.0202,
+            "ks_pvalue": 0.25945194403220523,
+            "mean_diff": 0.022800000000000153,
+            "std_ratio": 1.0117292198888195,
+            "drift_detected": false
+          },
+          "payment_rail_code": {
+            "ks_statistic": 0.1982,
+            "ks_pvalue": 2.7529727088931867e-86,
+            "mean_diff": 1.9449999999999994,
+            "std_ratio": 0.9748001216597311,
+            "drift_detected": true
+          },
+          "txn_type_code": {
+            "ks_statistic": 0.1926,
+            "ks_pvalue": 1.7924684699506396e-81,
+            "mean_diff": 0.2816000000000001,
+            "std_ratio": 0.8241754873091842,
+            "drift_detected": true
+          },
+          "merchant_category_code": {
+            "ks_statistic": 0.0242,
+            "ks_pvalue": 0.10697090744102715,
+            "mean_diff": 0.14619999999999944,
+            "std_ratio": 0.9978960237180592,
+            "drift_detected": false
+          },
+          "device_type_code": {
+            "ks_statistic": 0.0088,
+            "ks_pvalue": 0.9902825317566453,
+            "mean_diff": 0.020199999999999996,
+            "std_ratio": 0.9975966990533042,
+            "drift_detected": false
+          }
+        },
+        "cv_fold_scores": [
+          [
+            0.879583456112912,
+            0.6420947874881078
+          ],
+          [
+            0.8741632518487118,
+            0.6117126861153829
+          ],
+          [
+            0.8693627243182139,
+            0.5843830894025538
+          ],
+          [
+            0.871828929395695,
+            0.5852093930678847
+          ],
+          [
+            0.860468183316848,
+            0.5725653163589633
+          ]
+        ]
+      },
+      "explanations": {
+        "summary": [
+          "PSI is 0.4950, indicating material score distribution shift between reference and current data.",
+          "CV AUC-ROC is 0.8711 \u00b1 0.0063 (stable across folds).",
+          "CV AUC-PR is 0.5992 \u00b1 0.0250 (moderate across folds).",
+          "Bootstrap AUC-ROC mean is 0.8512 with 95% CI [0.8354, 0.8630] (width 0.0276).",
+          "No concept drift detected (score 0.0251), suggesting stable performance over time.",
+          "Data drift flagged 8/18 numeric features; top drift signals: ['num_txn_24h', 'payment_rail_code', 'txn_type_code']."
+        ],
+        "plots": {
+          "psi_distribution": "Score distributions overlap consistent with PSI=0.4950.",
+          "data_drift_heatmap": "8/18 features show drift; red bars highlight flagged features.",
+          "concept_drift": "AUC across time chunks shows whether performance is stable over time.",
+          "cv_results": "Fold scores cluster around ROC 0.8711 and PR 0.5992.",
+          "bootstrap_distribution": "Bootstrap CI [0.8354, 0.8630] reflects performance stability.",
+          "stability_summary": "Dashboard summarizes PSI, CV variance, and bootstrap CI width."
+        }
+      }
+    },
+    "interpretability": {
+      "metrics": {
+        "model_type": "tree",
+        "methods_used": [
+          "permutation",
+          "pdp",
+          "ice",
+          "lime"
+        ],
+        "shap_status": "unavailable",
+        "shap_reason": "No module named 'shap'",
+        "perm_top_features": [
+          "txn_amount",
+          "num_txn_24h",
+          "txn_type_code",
+          "kyc_risk_score",
+          "avg_amount_7d",
+          "is_cross_border",
+          "account_age_days",
+          "payment_rail_code",
+          "destination_country_code",
+          "is_pep",
+          "ip_country_code",
+          "sanctions_match",
+          "txn_channel_code",
+          "merchant_category_code",
+          "is_fintech_rail",
+          "currency_code",
+          "origin_country_code",
+          "device_type_code"
+        ],
+        "lime_instances": 3,
+        "pdp_features": [
+          "txn_amount",
+          "avg_amount_7d",
+          "account_age_days",
+          "kyc_risk_score",
+          "num_txn_24h",
+          "origin_country_code"
+        ],
+        "ice_features": [
+          "txn_amount",
+          "avg_amount_7d",
+          "account_age_days",
+          "kyc_risk_score"
+        ]
+      },
+      "plots": {
+        "permutation_importance": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/permutation_importance.png",
+        "lime_explanation": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/lime_explanation.png",
+        "pdp": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/pdp.png",
+        "ice": "./output_model_testing_bank_aml_tm_10k_local/_segments/overall/ice.png"
+      },
+      "artifacts": {
+        "perm_importances": {
+          "txn_amount": 0.049727619093927665,
+          "account_age_days": 0.0063045282782957625,
+          "kyc_risk_score": 0.02192861657937519,
+          "num_txn_24h": 0.047338533779747505,
+          "avg_amount_7d": 0.008185840707964631,
+          "is_pep": 0.0026334206248871837,
+          "sanctions_match": 0.001320226865422891,
+          "is_cross_border": 0.0066974270988178096,
+          "is_fintech_rail": 0.0008202685430878653,
+          "origin_country_code": 0.00039602464539261194,
+          "destination_country_code": 0.0037715681916062117,
+          "ip_country_code": 0.001501698364846371,
+          "currency_code": 0.0004001924118865352,
+          "txn_channel_code": 0.0010882211972605082,
+          "payment_rail_code": 0.00434116294577741,
+          "txn_type_code": 0.022273933399091495,
+          "merchant_category_code": 0.0008594281824371164,
+          "device_type_code": 0.0002953904502578153
+        },
+        "lime_weights": {
+          "instance_17": {
+            "num_txn_24h > 4.00": 0.21757687399469194,
+            "kyc_risk_score > 50.79": 0.08825890176918187,
+            "2.00 < txn_type_code <= 4.00": 0.06978567012761176,
+            "44.19 < txn_amount <= 119.81": -0.06815019777794552,
+            "is_pep <= 0.00": -0.058821241849832555,
+            "sanctions_match <= 0.00": -0.05178512996259378,
+            "payment_rail_code > 11.00": 0.021254050931073857,
+            "3.00 < merchant_category_code <= 6.00": -0.012763842041819441,
+            "ip_country_code <= 5.00": 0.01129000636344588,
+            "device_type_code > 2.00": 0.010006927620344516
+          },
+          "instance_19": {
+            "num_txn_24h > 4.00": 0.2169629286119481,
+            "sanctions_match > 0.00": 0.10308844576917628,
+            "kyc_risk_score > 50.79": 0.08669128339161901,
+            "44.19 < txn_amount <= 119.81": -0.07034457543508175,
+            "2.00 < txn_type_code <= 4.00": 0.06425306152669111,
+            "is_pep <= 0.00": -0.057855863455959514,
+            "9.00 < ip_country_code <= 17.00": -0.020477310191398656,
+            "3.00 < merchant_category_code <= 6.00": -0.00980342351060891,
+            "11.00 < destination_country_code <= 16.00": 0.007498891265643055,
+            "is_fintech_rail <= 0.00": -0.006297285566973665
+          },
+          "instance_23": {
+            "txn_amount > 389.37": 0.2476234555098653,
+            "sanctions_match <= 0.00": -0.08958555918047843,
+            "num_txn_24h <= 1.00": -0.08617628710588127,
+            "kyc_risk_score > 50.79": 0.08396092421665534,
+            "is_pep <= 0.00": -0.0764919362567469,
+            "avg_amount_7d > 339.90": 0.0368569967353767,
+            "txn_type_code > 6.00": -0.035550812590476745,
+            "destination_country_code > 16.00": -0.02523041254310975,
+            "9.00 < ip_country_code <= 17.00": -0.016650294968079418,
+            "merchant_category_code > 7.00": 0.014485279150535008
+          }
+        }
+      },
+      "explanations": {
+        "summary": [
+          "Permutation importance highlights: ['txn_amount', 'num_txn_24h', 'txn_type_code', 'kyc_risk_score', 'avg_amount_7d'].",
+          "SHAP plots not generated because SHAP is unavailable (No module named 'shap').",
+          "LIME generated local explanations for 3 instances; top contributors for instance_17: ['num_txn_24h > 4.00', 'kyc_risk_score > 50.79', '2.00 < txn_type_code <= 4.00', '44.19 < txn_amount <= 119.81', 'is_pep <= 0.00'].",
+          "PDP plots show average effects for: ['txn_amount', 'avg_amount_7d', 'account_age_days', 'kyc_risk_score', 'num_txn_24h', 'origin_country_code'].",
+          "ICE plots show individual-level effects for: ['txn_amount', 'avg_amount_7d', 'account_age_days', 'kyc_risk_score']."
+        ],
+        "plots": {
+          "permutation_importance": "Bars show how much AUC drops when each feature is permuted.",
+          "shap_bar": "SHAP bar plot ranks global feature impact by mean absolute SHAP values.",
+          "shap_beeswarm": "SHAP beeswarm shows both impact size and direction per feature.",
+          "lime_explanation": "LIME bars show local feature contributions for selected instances.",
+          "pdp": "PDP curves show average model response as a feature varies.",
+          "ice": "ICE curves show per-instance responses as a feature varies."
+        }
+      }
+    }
+  }
+}
