@@ -11,9 +11,13 @@ This module provides a PySpark-based version of the Model Testing Agent. It uses
 
 ## Inputs
 
-- A Spark DataFrame or a dataset path (CSV/Parquet)
+- A Spark DataFrame or a labeled testing dataset provided through one of the following input modes:
+  - file input: CSV / Parquet
+  - SQL input: Spark SQL text / `.sql` file or JDBC-backed query
+  - Python loader input: `.py` file that returns a Spark DataFrame, pandas DataFrame, or `(df, label_col, feature_cols)`
 - A scikit-learn compatible model saved via `joblib`
 - Label column name
+- Optional: segmentation config to run the full testing pipeline by segment or time window
 
 ## Outputs
 
@@ -44,6 +48,74 @@ results = agent.run(
 agent.generate_report(results)
 ```
 
+### Load Data from SQL
+
+```python
+from adm_central_utility.model_testing_agent_pyspark import ModelTestingAgentSpark
+
+model = ModelTestingAgentSpark.load_model("./path/to/your_model.joblib")
+spark_df, label_col, feature_cols = ModelTestingAgentSpark.load_data(
+    sql="./queries/model_testing_query.sql",      # or raw Spark SQL text
+    conn="jdbc:postgresql://host:5432/db_name",   # omit conn to use spark.sql(...)
+    label_col="your_label",
+    jdbc_options={
+        "user": "your_user",
+        "password": "your_password",
+        "driver": "org.postgresql.Driver",
+    },
+)
+```
+
+### Load Data from a Python Loader
+
+```python
+from adm_central_utility.model_testing_agent_pyspark import ModelTestingAgentSpark
+
+model = ModelTestingAgentSpark.load_model("./path/to/your_model.joblib")
+spark_df, label_col, feature_cols = ModelTestingAgentSpark.load_data(
+    loader_py="./loaders/custom_testing_input_spark.py",
+    loader_fn="load_data",  # optional, defaults to load_data
+    spark=spark,
+    label_col="your_label",
+)
+```
+
+### Run the Full Pipeline by Segment or Time Window
+
+```python
+results = agent.run(
+    model=model,
+    df=spark_df,
+    label_col=label_col,
+    feature_cols=feature_cols,
+    columns=["score_feature", "amount", "balance"],
+    segmentation={
+        "column": "event_time",
+        "include_overall": True,
+        "min_rows": 1000,
+        "segments": [
+            {"name": "jan_2024", "start": "2024-01-01", "end": "2024-02-01"},
+            {"name": "feb_2024", "start": "2024-02-01", "end": "2024-03-01"},
+        ],
+    },
+)
+
+agent.generate_report(results, filename="segmented_model_testing_report_pyspark.pdf")
+agent.save_results(results, filename="segmented_results_pyspark.json")
+```
+
+For value-based segmentation, use `values` instead of `start` / `end`:
+
+```python
+segmentation = {
+    "column": "customer_segment",
+    "segments": [
+        {"name": "retail", "values": ["retail"]},
+        {"name": "commercial", "values": ["commercial"]},
+    ],
+}
+```
+
 The PySpark report filename is:
 
 - `model_testing_agent_Model_Testing_Report_pyspark.pdf`
@@ -63,6 +135,31 @@ agent.run_interactive(model=model, df=spark_df, label_col=label_col, feature_col
 model-testing-agent-spark \
   --model ./path/to/your_model.joblib \
   --data ./path/to/your_dataset.csv \
+  --label_col your_label \
+  --output ./output
+```
+
+SQL input:
+
+```bash
+model-testing-agent-spark \
+  --model ./path/to/your_model.joblib \
+  --sql ./queries/model_testing_query.sql \
+  --conn jdbc:postgresql://host:5432/db_name \
+  --jdbc-option user=your_user \
+  --jdbc-option password=your_password \
+  --jdbc-option driver=org.postgresql.Driver \
+  --label_col your_label \
+  --output ./output
+```
+
+Python loader input:
+
+```bash
+model-testing-agent-spark \
+  --model ./path/to/your_model.joblib \
+  --loader-py ./loaders/custom_testing_input_spark.py \
+  --loader-fn load_data \
   --label_col your_label \
   --output ./output
 ```
@@ -88,6 +185,23 @@ model-testing-agent-spark \
   --sections effectiveness,stability,interpretability \
   --columns-stability col_a,col_b \
   --columns-interpretability col_a,col_b \
+  --output ./output
+```
+
+Segmented execution:
+
+Use the shared template at [examples/model_testing_segmentation.json](/Users/felicia/Desktop/Felicia/DB_work/adm_central_utility/model_agent_ai_agent/examples/model_testing_segmentation.json) and edit it for your own grouping or time-window logic.
+
+```bash
+model-testing-agent-spark \
+  --model ./models/bank_aml_gbt.joblib \
+  --sql ./queries/model_testing_query.sql \
+  --conn jdbc:postgresql://host:5432/db_name \
+  --jdbc-option user=your_user \
+  --jdbc-option password=your_password \
+  --jdbc-option driver=org.postgresql.Driver \
+  --label_col is_suspicious \
+  --segmentation ./examples/model_testing_segmentation.json \
   --output ./output
 ```
 
@@ -126,6 +240,8 @@ model-testing-agent-spark \
 - If your model expects raw string categorical columns with a ColumnTransformer, you must ensure consistent feature preprocessing.
 - SHAP is removed in the PySpark interpretability module.
 - `joblib` is required for loading `.joblib` models. If `joblib` is not available in CML, either install it or export the model as `.pkl`.
+- Segmentation requires a named column in the dataset and runs the full pipeline once per segment.
+- Segmented runs write plot artifacts into per-segment subdirectories to avoid overwriting outputs.
 
 ## Column Selection Rules
 

@@ -125,8 +125,12 @@ conda install -y -c conda-forge ^
 ## Inputs
 
 - A scikit-learn compatible model or pipeline saved via `joblib`
-- A dataset file (CSV/Parquet) with a label column
+- A labeled testing dataset provided through one of the following input modes:
+  - file input: CSV / Parquet / Excel
+  - SQL input: query text or `.sql` file plus connection string
+  - Python loader input: `.py` file that returns a DataFrame or `(X, y, feature_names)`
 - Optional: section and column selection
+- Optional: segmentation config to run the full testing pipeline by segment or time window
 
 ## Outputs
 
@@ -150,6 +154,32 @@ X, y, feature_names = ModelTestingAgent.load_data(
 agent = ModelTestingAgent(output_dir="./output")
 results = agent.run(model=model, X=X, y=y, feature_names=feature_names)
 agent.generate_report(results)
+```
+
+### Load Data from SQL
+
+```python
+from adm_central_utility.model_testing_agent import ModelTestingAgent
+
+model = ModelTestingAgent.load_model("./path/to/your_model.joblib")
+X, y, feature_names = ModelTestingAgent.load_data(
+    sql="./queries/model_testing_query.sql",  # or raw SQL text
+    conn="sqlite:///./data/demo.db",          # or another SQLAlchemy connection string
+    label_col="your_label",
+)
+```
+
+### Load Data from a Python Loader
+
+```python
+from adm_central_utility.model_testing_agent import ModelTestingAgent
+
+model = ModelTestingAgent.load_model("./path/to/your_model.joblib")
+X, y, feature_names = ModelTestingAgent.load_data(
+    loader_py="./loaders/custom_testing_input.py",
+    loader_fn="load_data",  # optional, defaults to load_data
+    label_col="your_label",
+)
 ```
 
 ### Interactive Mode (Pick Matrices and Columns)
@@ -178,6 +208,42 @@ results = agent.run(
 )
 ```
 
+### Run the Full Pipeline by Segment or Time Window
+
+```python
+results = agent.run(
+    model=model,
+    X=X,
+    y=y,
+    feature_names=feature_names,
+    columns=["score_feature", "amount", "balance"],
+    segmentation={
+        "column": "event_time",
+        "include_overall": True,
+        "min_rows": 100,
+        "segments": [
+            {"name": "jan_2024", "start": "2024-01-01", "end": "2024-02-01"},
+            {"name": "feb_2024", "start": "2024-02-01", "end": "2024-03-01"},
+        ],
+    },
+)
+
+agent.generate_report(results, filename="segmented_model_testing_report.pdf")
+agent.save_results(results, filename="segmented_results.json")
+```
+
+For value-based segmentation, use `values` instead of `start` / `end`:
+
+```python
+segmentation = {
+    "column": "customer_segment",
+    "segments": [
+        {"name": "retail", "values": ["retail"]},
+        {"name": "commercial", "values": ["commercial"]},
+    ],
+}
+```
+
 ## CLI Usage
 
 ### Non-Interactive
@@ -186,6 +252,28 @@ results = agent.run(
 model-testing-agent \
   --model ./path/to/your_model.joblib \
   --data ./path/to/your_dataset.csv \
+  --label_col your_label \
+  --output ./output
+```
+
+### SQL Input
+
+```bash
+model-testing-agent \
+  --model ./path/to/your_model.joblib \
+  --sql ./queries/model_testing_query.sql \
+  --conn sqlite:///./data/demo.db \
+  --label_col your_label \
+  --output ./output
+```
+
+### Python Loader Input
+
+```bash
+model-testing-agent \
+  --model ./path/to/your_model.joblib \
+  --loader-py ./loaders/custom_testing_input.py \
+  --loader-fn load_data \
   --label_col your_label \
   --output ./output
 ```
@@ -199,6 +287,20 @@ model-testing-agent \
   --label_col your_label \
   --output ./output \
   --interactive
+```
+
+### Segmented Execution
+
+Use the shared template at [examples/model_testing_segmentation.json](/Users/felicia/Desktop/Felicia/DB_work/adm_central_utility/model_agent_ai_agent/examples/model_testing_segmentation.json) and edit it for your own grouping or time-window logic.
+
+```bash
+model-testing-agent \
+  --model ./models/bank_aml_gbt.joblib \
+  --sql ./queries/model_testing_query.sql \
+  --conn sqlite:///./data/demo.db \
+  --label_col is_suspicious \
+  --segmentation ./examples/model_testing_segmentation.json \
+  --output ./output
 ```
 
 ## Example (Using Scripts 03/04)
@@ -234,3 +336,5 @@ model-testing-agent \
 - The model should support `predict_proba` for full metrics and interpretability.
 - If only `decision_function` exists, AUC metrics still work but LIME may be limited.
 - The feature schema must match what the model expects.
+- Segmentation requires a named column in the dataset and runs the full pipeline once per segment.
+- Segmented runs write plot artifacts into per-segment subdirectories to avoid overwriting outputs.

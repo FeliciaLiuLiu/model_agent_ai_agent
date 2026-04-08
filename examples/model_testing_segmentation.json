@@ -1,0 +1,22 @@
+{
+  "column": "event_time",
+  "include_overall": true,
+  "min_rows": 100,
+  "segments": [
+    {
+      "name": "jan_2024",
+      "start": "2024-01-01",
+      "end": "2024-02-01"
+    },
+    {
+      "name": "feb_2024",
+      "start": "2024-02-01",
+      "end": "2024-03-01"
+    },
+    {
+      "name": "mar_2024",
+      "start": "2024-03-01",
+      "end": "2024-04-01"
+    }
+  ]
+}
