@@ -52,10 +52,11 @@ def main():
         loader_fn=args.loader_fn,
     )
     if y is None: print("Error: No label column"); sys.exit(1)
+    segmentation = _load_json_arg(args.segmentation) if args.segmentation else None
 
     if args.interactive:
         agent = InteractiveAgent(output_dir=args.output)
-        agent.run_interactive(model=model, X=X, y=y, feature_names=features)
+        agent.run_interactive(model=model, X=X, y=y, feature_names=features, segmentation=segmentation)
     else:
         sections = [s.strip() for s in args.sections.split(',')] if args.sections else None
         def parse_cols(value):
@@ -70,7 +71,6 @@ def main():
             'interpretability': parse_cols(args.columns_interpretability),
         }
         columns = parse_cols(args.columns)
-        segmentation = _load_json_arg(args.segmentation) if args.segmentation else None
         agent = ModelTestingAgent(output_dir=args.output)
         results = agent.run(
             model=model,

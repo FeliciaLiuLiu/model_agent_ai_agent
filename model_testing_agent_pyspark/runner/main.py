@@ -75,6 +75,146 @@ class ModelTestingAgentSpark:
             raise ValueError("Segmentation must be a dict, JSON string, or path to a JSON file.")
         return segmentation
 
+    def _prepare_segment_features(
+        self,
+        df: DataFrame,
+        feature_cols: Optional[List[str]],
+        columns: Optional[List[str]],
+        section_columns: Optional[Dict[str, List[str]]],
+        segment_column: str,
+        keep_column_in_features: bool,
+        label_col: str,
+    ):
+        """Drop a segmentation-only column from model inputs unless explicitly retained."""
+        if keep_column_in_features:
+            return df, feature_cols, columns, section_columns
+
+        feature_cols_all = list(feature_cols or [c for c in df.columns if c != label_col])
+        if segment_column not in feature_cols_all:
+            return df, feature_cols_all, columns, section_columns
+
+        segment_index = feature_cols_all.index(segment_column)
+
+        def sanitize(selected_cols, scope_name):
+            if not selected_cols:
+                return None
+            if isinstance(selected_cols, str):
+                selected_cols = [c.strip() for c in selected_cols.split(",") if c.strip()]
+
+            filtered = []
+            for item in selected_cols:
+                if isinstance(item, int):
+                    if item == segment_index:
+                        continue
+                    filtered.append(item - 1 if item > segment_index else item)
+                    continue
+                if item != segment_column:
+                    filtered.append(item)
+
+            if not filtered:
+                raise ValueError(
+                    f"Selected columns for {scope_name} contain only the segmentation column "
+                    f"'{segment_column}'. Set keep_column_in_features=true to evaluate it."
+                )
+            return filtered
+
+        feature_cols_eval = [col for col in feature_cols_all if col != segment_column]
+        df_eval = df.select(*(feature_cols_eval + [label_col]))
+        columns_eval = sanitize(columns, "all sections")
+        section_columns_eval = {}
+        for section, selected in (section_columns or {}).items():
+            if selected:
+                section_columns_eval[section] = sanitize(selected, f"section '{section}'")
+        return df_eval, feature_cols_eval, columns_eval, section_columns_eval
+
+    def _time_group_expr(self, column: str, freq: str):
+        """Derive a Spark SQL expression for datetime-based grouping."""
+        ts_col = F.to_timestamp(F.col(column))
+        freq = (freq or "month").lower()
+        if freq == "month":
+            return F.date_format(ts_col, "yyyy-MM")
+        if freq == "quarter":
+            return F.concat(F.year(ts_col).cast("string"), F.lit("Q"), F.quarter(ts_col).cast("string"))
+        if freq == "year":
+            return F.date_format(ts_col, "yyyy")
+        if freq == "day":
+            return F.date_format(ts_col, "yyyy-MM-dd")
+        if freq == "week":
+            return F.concat(
+                F.year(ts_col).cast("string"),
+                F.lit("-W"),
+                F.lpad(F.weekofyear(ts_col).cast("string"), 2, "0"),
+            )
+        raise ValueError("Unsupported groupby time frequency. Use day, week, month, quarter, or year.")
+
+    def _segment_dataset_groupby(self, df: DataFrame, label_col: str, column: str, segmentation: Dict[str, Any]):
+        """Split a Spark dataset by derived or direct group labels."""
+        include_overall = bool(segmentation.get("include_overall", True))
+        min_rows = int(segmentation.get("min_rows", 1))
+        dropna = bool(segmentation.get("dropna", True))
+        groupby_cfg = segmentation.get("groupby") or {}
+        kind = (groupby_cfg.get("kind") or ("time" if groupby_cfg.get("freq") else "value")).lower()
+        selected_groups = groupby_cfg.get("selected_groups") or segmentation.get("selected_groups")
+        name_prefix = groupby_cfg.get("name_prefix")
+
+        if kind == "time":
+            freq = groupby_cfg.get("freq", "month")
+            group_expr = self._time_group_expr(column, freq)
+            default_prefix = name_prefix or f"{column}_{freq}"
+            criteria_base = {"mode": "groupby", "kind": "time", "freq": freq}
+        elif kind == "value":
+            group_expr = F.col(column).cast("string")
+            default_prefix = name_prefix or column
+            criteria_base = {"mode": "groupby", "kind": "value"}
+        else:
+            raise ValueError("Groupby segmentation kind must be either 'time' or 'value'.")
+
+        df_groups = df.withColumn("__segment_group", group_expr)
+        if dropna:
+            df_groups = df_groups.where(F.col("__segment_group").isNotNull())
+
+        if selected_groups:
+            groups_to_run = [str(group) for group in selected_groups]
+        else:
+            groups_to_run = sorted(
+                row["__segment_group"]
+                for row in df_groups.select("__segment_group").distinct().collect()
+                if row["__segment_group"] is not None
+            )
+
+        segments = []
+        meta_segments = []
+        for group_value in groups_to_run:
+            df_seg = df_groups.where(F.col("__segment_group") == F.lit(str(group_value))).drop("__segment_group")
+            row_count = df_seg.count()
+            meta = {
+                "name": f"{default_prefix}={group_value}",
+                "row_count": int(row_count),
+                "criteria": {**criteria_base, "group": str(group_value)},
+            }
+            if row_count == 0:
+                meta["status"] = "skipped"
+                meta["reason"] = "group not found in dataset"
+                meta_segments.append(meta)
+                continue
+            if row_count < min_rows:
+                meta["status"] = "skipped"
+                meta["reason"] = f"row_count < min_rows ({min_rows})"
+                meta_segments.append(meta)
+                continue
+
+            meta["status"] = "completed"
+            meta_segments.append(meta)
+            segments.append((meta["name"], df_seg))
+
+        return {
+            "column": column,
+            "include_overall": include_overall,
+            "min_rows": min_rows,
+            "mode": "groupby",
+            "segments": meta_segments,
+        }, segments
+
     def _segment_dataset(self, df: DataFrame, label_col: str, segmentation: Dict[str, Any]):
         """Split a Spark DataFrame into user-defined segments."""
         column = segmentation.get("column")
@@ -82,6 +222,10 @@ class ModelTestingAgentSpark:
             raise ValueError("Segmentation requires a 'column'.")
         if column not in df.columns:
             raise ValueError(f"Segmentation column '{column}' not found in dataset.")
+
+        mode = (segmentation.get("mode") or ("groupby" if segmentation.get("groupby") else "segments")).lower()
+        if mode == "groupby":
+            return self._segment_dataset_groupby(df, label_col, column, segmentation)
 
         include_overall = bool(segmentation.get("include_overall", True))
         min_rows = int(segmentation.get("min_rows", 1))
@@ -253,34 +397,54 @@ class ModelTestingAgentSpark:
             )
 
         seg_meta, segments = self._segment_dataset(df, label_col, segmentation_cfg)
+        keep_column_in_features = bool(segmentation_cfg.get("keep_column_in_features", False))
+        seg_meta["keep_column_in_features"] = keep_column_in_features
         results = {"segmentation": seg_meta, "segments": {}}
+
+        df_eval, feature_cols_eval, columns_eval, section_columns_eval = self._prepare_segment_features(
+            df=df,
+            feature_cols=feature_cols,
+            columns=columns,
+            section_columns=section_columns,
+            segment_column=seg_meta["column"],
+            keep_column_in_features=keep_column_in_features,
+            label_col=label_col,
+        )
 
         if seg_meta.get("include_overall", True):
             results["overall"] = self._run_single(
                 model=model,
-                df=df,
+                df=df_eval,
                 label_col=label_col,
-                feature_cols=feature_cols,
+                feature_cols=feature_cols_eval,
                 sections=sections,
                 threshold=threshold,
-                columns=columns,
-                section_columns=section_columns,
+                columns=columns_eval,
+                section_columns=section_columns_eval,
                 artifact_scope="overall",
                 **kwargs,
             )
 
         for segment_name, df_seg in segments:
             print(f"Running segmented model testing for: {segment_name}")
-            segment_feature_cols = feature_cols or [c for c in df_seg.columns if c != label_col]
+            df_seg_eval, segment_feature_cols, columns_seg, section_columns_seg = self._prepare_segment_features(
+                df=df_seg,
+                feature_cols=feature_cols,
+                columns=columns,
+                section_columns=section_columns,
+                segment_column=seg_meta["column"],
+                keep_column_in_features=keep_column_in_features,
+                label_col=label_col,
+            )
             results["segments"][segment_name] = self._run_single(
                 model=model,
-                df=df_seg,
+                df=df_seg_eval,
                 label_col=label_col,
                 feature_cols=segment_feature_cols,
                 sections=sections,
                 threshold=threshold,
-                columns=columns,
-                section_columns=section_columns,
+                columns=columns_seg,
+                section_columns=section_columns_seg,
                 artifact_scope=segment_name,
                 **kwargs,
             )

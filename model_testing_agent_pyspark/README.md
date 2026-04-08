@@ -116,6 +116,35 @@ segmentation = {
 }
 ```
 
+For generic group-by segmentation across any column, use `mode="groupby"` with either `kind="value"` or `kind="time"`. The segmentation column is excluded from model features by default unless `keep_column_in_features=True`.
+
+```python
+segmentation = {
+    "column": "txn_type",
+    "mode": "groupby",
+    "include_overall": True,
+    "min_rows": 1000,
+    "keep_column_in_features": False,
+    "groupby": {
+        "kind": "value",
+        "selected_groups": ["ACH", "wire"],
+    },
+}
+```
+
+```python
+segmentation = {
+    "column": "event_time",
+    "mode": "groupby",
+    "include_overall": True,
+    "groupby": {
+        "kind": "time",
+        "freq": "month",
+        "selected_groups": ["2024-01", "2024-02", "2024-03"],
+    },
+}
+```
+
 The PySpark report filename is:
 
 - `model_testing_agent_Model_Testing_Report_pyspark.pdf`
@@ -128,6 +157,14 @@ from adm_central_utility.model_testing_agent_pyspark import InteractiveAgentSpar
 agent = InteractiveAgentSpark(output_dir="./output")
 agent.run_interactive(model=model, df=spark_df, label_col=label_col, feature_cols=feature_cols)
 ```
+
+Interactive mode can now:
+
+- choose matrices and per-matrix columns
+- define segmented runs from any dataset column
+- group by distinct values such as account, customer, or transaction type
+- group by time buckets such as day, week, month, quarter, or year
+- generate one report containing overall and per-segment results
 
 ## CLI Usage
 
@@ -190,7 +227,7 @@ model-testing-agent-spark \
 
 Segmented execution:
 
-Use the shared template at [examples/model_testing_segmentation.json](/Users/felicia/Desktop/Felicia/DB_work/adm_central_utility/model_agent_ai_agent/examples/model_testing_segmentation.json) and edit it for your own grouping or time-window logic.
+Use [examples/model_testing_segmentation.json](/Users/felicia/Desktop/Felicia/DB_work/adm_central_utility/model_agent_ai_agent/examples/model_testing_segmentation.json) for explicit time windows, or [examples/model_testing_segmentation_groupby.json](/Users/felicia/Desktop/Felicia/DB_work/adm_central_utility/model_agent_ai_agent/examples/model_testing_segmentation_groupby.json) for reusable group-by segmentation.
 
 ```bash
 model-testing-agent-spark \

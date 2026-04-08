@@ -87,10 +87,17 @@ def main():
     if label_col is None:
         print("Error: No label column detected.")
         sys.exit(1)
+    segmentation = _load_json_arg(args.segmentation) if args.segmentation else None
 
     if args.interactive:
         agent = InteractiveAgentSpark(output_dir=args.output)
-        agent.run_interactive(model=model, df=df, label_col=label_col, feature_cols=feature_cols)
+        agent.run_interactive(
+            model=model,
+            df=df,
+            label_col=label_col,
+            feature_cols=feature_cols,
+            segmentation=segmentation,
+        )
     else:
         sections = _parse_list(args.sections)
         columns = _parse_list(args.columns)
@@ -100,7 +107,6 @@ def main():
             "stability": _parse_list(args.columns_stability),
             "interpretability": _parse_list(args.columns_interpretability),
         }
-        segmentation = _load_json_arg(args.segmentation) if args.segmentation else None
         agent = ModelTestingAgentSpark(output_dir=args.output)
         results = agent.run(
             model=model,

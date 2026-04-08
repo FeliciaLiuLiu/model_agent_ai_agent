@@ -1,0 +1,11 @@
+{
+  "column": "txn_type",
+  "mode": "groupby",
+  "include_overall": true,
+  "min_rows": 100,
+  "keep_column_in_features": false,
+  "groupby": {
+    "kind": "value",
+    "selected_groups": ["ACH", "wire"]
+  }
+}

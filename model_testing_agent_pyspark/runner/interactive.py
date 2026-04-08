@@ -1,13 +1,11 @@
 """Interactive CLI mode (PySpark)."""
 import os
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
-from ..core.report import ReportBuilder
-from ..core.utils import get_numeric_columns
-from ..matrices.effectiveness import ModelEffectivenessSpark
-from ..matrices.efficiency import ModelEfficiencySpark
-from ..matrices.stability import ModelStabilitySpark
-from ..matrices.interpretability import ModelInterpretabilitySpark
+from pyspark.sql import DataFrame
+from pyspark.sql import functions as F
+
+from .main import ModelTestingAgentSpark
 
 
 class InteractiveAgentSpark:
@@ -20,16 +18,34 @@ class InteractiveAgentSpark:
         4: ("interpretability", "Interpretability (Perm Imp, LIME, PDP, ICE)"),
     }
 
-    def __init__(self, output_dir="./output"):
+    GROUPBY_MODES = {
+        1: ("value", "Group by distinct values in a column"),
+        2: ("time", "Group by time buckets derived from a datetime-like column"),
+    }
+
+    TIME_FREQS = {
+        1: "day",
+        2: "week",
+        3: "month",
+        4: "quarter",
+        5: "year",
+    }
+
+    def __init__(self, output_dir="./output", spark=None):
         self.output_dir = output_dir
         os.makedirs(output_dir, exist_ok=True)
-        self.effectiveness = ModelEffectivenessSpark(data_dir=output_dir)
-        self.efficiency = ModelEfficiencySpark(data_dir=output_dir)
-        self.stability = ModelStabilitySpark(data_dir=output_dir)
-        self.interpretability = ModelInterpretabilitySpark(data_dir=output_dir)
-        self.report_builder = ReportBuilder(output_dir=output_dir, tag="interactive_pyspark")
+        self.agent = ModelTestingAgentSpark(
+            output_dir=output_dir, experiment_tag="interactive_pyspark", spark=spark
+        )
 
-    def run_interactive(self, model, df, label_col: str, feature_cols: List[str]) -> Dict[str, Any]:
+    def run_interactive(
+        self,
+        model,
+        df: DataFrame,
+        label_col: str,
+        feature_cols: List[str],
+        segmentation=None,
+    ) -> Dict[str, Any]:
         print("\n" + "=" * 60)
         print("MODEL TESTING AGENT (PYSPARK) - INTERACTIVE MODE")
         print("=" * 60)
@@ -38,48 +54,53 @@ class InteractiveAgentSpark:
         if not selected:
             return {}
 
-        results = {}
-        numeric_cols = [c for c in feature_cols if c in get_numeric_columns(df)]
+        sections = []
+        section_columns = {}
+        numeric_cols = [c for c in feature_cols if c in self._get_numeric_columns(df)]
 
         for key in selected:
             name, desc = self.MATRICES[key]
+            sections.append(name)
             print(f"\n{'=' * 60}\nConfiguring: {desc}\n{'=' * 60}")
-            if name == "interpretability" and numeric_cols:
-                cols = self._select_columns(numeric_cols, name)
-            else:
-                cols = self._select_columns(feature_cols, name)
-
-            df_sel = df.select(*(cols + [label_col])) if cols else df
+            available_cols = numeric_cols if (name == "interpretability" and numeric_cols) else feature_cols
+            cols = self._select_columns(available_cols, name)
             if cols:
-                feat_sel = cols
-            else:
-                feat_sel = numeric_cols if (name == "interpretability" and numeric_cols) else feature_cols
+                section_columns[name] = cols
 
-            print(f"\nRunning {name}...")
-            if name == "effectiveness":
-                m, p, e = self.effectiveness.evaluate(model, df_sel, label_col=label_col, feature_cols=feat_sel)
-                results["effectiveness"] = {"metrics": m, "plots": p, "explanations": e}
-            elif name == "efficiency":
-                m, p, e = self.efficiency.evaluate(model, df_sel, label_col=label_col, feature_cols=feat_sel)
-                results["efficiency"] = {"metrics": m, "plots": p, "explanations": e}
-            elif name == "stability":
-                m, p, a, e = self.stability.evaluate(model, df_sel, label_col=label_col, feature_cols=feat_sel)
-                results["stability"] = {"metrics": m, "plots": p, "artifacts": a, "explanations": e}
-            elif name == "interpretability":
-                results["interpretability"] = self.interpretability.evaluate(model, df_sel, label_col=label_col, feature_cols=feat_sel)
+        segmentation_cfg = self._select_segmentation(df, feature_cols, preset=segmentation)
 
-            print(f"Completed {name}!")
+        print("\n" + "=" * 60 + "\nRUNNING MODEL TESTING\n" + "=" * 60)
+        results = self.agent.run(
+            model=model,
+            df=df,
+            label_col=label_col,
+            feature_cols=feature_cols,
+            sections=sections,
+            section_columns=section_columns or None,
+            segmentation=segmentation_cfg,
+        )
 
         print("\n" + "=" * 60 + "\nGENERATING REPORT\n" + "=" * 60)
-        pdf = self.report_builder.build(results)
+        pdf = self.agent.generate_report(
+            results, filename="model_testing_agent_Interactive_Model_Testing_Report_pyspark.pdf"
+        )
+        json_path = self.agent.save_results(results, filename="interactive_results_pyspark.json")
         print(f"\nPDF Report: {pdf}")
+        print(f"JSON Results: {json_path}")
         self._print_summary(results)
         return results
 
+    def _get_numeric_columns(self, df: DataFrame) -> List[str]:
+        return [
+            field.name
+            for field in df.schema.fields
+            if field.name != "__segment_group" and field.dataType.typeName() in {"byte", "short", "integer", "long", "float", "double", "decimal"}
+        ]
+
     def _select_matrices(self) -> List[int]:
         print("\nAvailable Matrices:\n" + "-" * 40)
-        for k, (_, d) in self.MATRICES.items():
-            print(f"  {k}. {d}")
+        for k, (_, desc) in self.MATRICES.items():
+            print(f"  {k}. {desc}")
         print("  0. Select ALL\n" + "-" * 40)
         while True:
             inp = input("\nEnter matrix numbers (e.g., 1,2,4 or 0): ").strip()
@@ -96,8 +117,8 @@ class InteractiveAgentSpark:
 
     def _select_columns(self, feature_cols, matrix_name) -> Optional[List[str]]:
         print(f"\nColumns for {matrix_name}:\n" + "-" * 40)
-        for i, n in enumerate(feature_cols):
-            print(f"  {i}. {n}")
+        for i, name in enumerate(feature_cols):
+            print(f"  {i}. {name}")
         print("  a. ALL columns\n" + "-" * 40)
         while True:
             inp = input("\nEnter column numbers (e.g., 0,1,5) or 'a': ").strip().lower()
@@ -112,17 +133,184 @@ class InteractiveAgentSpark:
                 pass
             print("Invalid input.")
 
+    def _prompt_yes_no(self, prompt: str, default: bool = False) -> bool:
+        suffix = " [Y/n]: " if default else " [y/N]: "
+        while True:
+            inp = input(prompt + suffix).strip().lower()
+            if not inp:
+                return default
+            if inp in {"y", "yes"}:
+                return True
+            if inp in {"n", "no"}:
+                return False
+            print("Invalid input.")
+
+    def _prompt_int(self, prompt: str, default: int) -> int:
+        while True:
+            inp = input(f"{prompt} [{default}]: ").strip()
+            if not inp:
+                return default
+            try:
+                value = int(inp)
+                if value > 0:
+                    return value
+            except Exception:
+                pass
+            print("Invalid input.")
+
+    def _select_segmentation(self, df: DataFrame, feature_cols: List[str], preset=None) -> Optional[Dict[str, Any]]:
+        if preset:
+            print("\nUsing segmentation config provided by the caller.")
+            return preset
+
+        if not self._prompt_yes_no("Do you want to run segmented testing?", default=False):
+            return None
+
+        print("\nSegmentation columns:\n" + "-" * 40)
+        for i, name in enumerate(feature_cols):
+            print(f"  {i}. {name}")
+        print("-" * 40)
+        while True:
+            inp = input("\nEnter the segmentation column number: ").strip()
+            try:
+                idx = int(inp)
+                if 0 <= idx < len(feature_cols):
+                    break
+            except Exception:
+                pass
+            print("Invalid input.")
+
+        column = feature_cols[idx]
+        include_overall = self._prompt_yes_no("Include overall results in the final report?", default=True)
+        min_rows = self._prompt_int("Minimum rows required per segment", default=1)
+        keep_column = self._prompt_yes_no(
+            "Keep the segmentation column in model features?", default=False
+        )
+
+        print("\nSegmentation modes:\n" + "-" * 40)
+        for key, (_, desc) in self.GROUPBY_MODES.items():
+            print(f"  {key}. {desc}")
+        print("-" * 40)
+        while True:
+            inp = input("\nEnter segmentation mode number: ").strip()
+            try:
+                mode_key = int(inp)
+                if mode_key in self.GROUPBY_MODES:
+                    break
+            except Exception:
+                pass
+            print("Invalid input.")
+
+        mode, _ = self.GROUPBY_MODES[mode_key]
+        groupby_cfg: Dict[str, Any] = {"kind": mode}
+        if mode == "time":
+            print("\nTime grouping frequency:\n" + "-" * 40)
+            for key, freq in self.TIME_FREQS.items():
+                print(f"  {key}. {freq}")
+            print("-" * 40)
+            while True:
+                inp = input("\nEnter frequency number: ").strip()
+                try:
+                    freq_key = int(inp)
+                    if freq_key in self.TIME_FREQS:
+                        break
+                except Exception:
+                    pass
+                print("Invalid input.")
+            groupby_cfg["freq"] = self.TIME_FREQS[freq_key]
+
+        available_groups = self._available_groups(df, column, groupby_cfg)
+        selected_groups = self._prompt_selected_groups(available_groups)
+        if selected_groups:
+            groupby_cfg["selected_groups"] = selected_groups
+
+        return {
+            "column": column,
+            "mode": "groupby",
+            "include_overall": include_overall,
+            "min_rows": min_rows,
+            "keep_column_in_features": keep_column,
+            "groupby": groupby_cfg,
+        }
+
+    def _available_groups(self, df: DataFrame, column: str, groupby_cfg: Dict[str, Any]) -> List[str]:
+        if groupby_cfg["kind"] == "time":
+            group_expr = self.agent._time_group_expr(column, groupby_cfg["freq"])
+            grouped = df.withColumn("__segment_group", group_expr)
+        else:
+            grouped = df.withColumn("__segment_group", F.col(column).cast("string"))
+        values = [
+            row["__segment_group"]
+            for row in grouped.select("__segment_group").where(F.col("__segment_group").isNotNull()).distinct().collect()
+        ]
+        return sorted(str(value) for value in values)
+
+    def _prompt_selected_groups(self, available_groups: List[str]) -> Optional[List[str]]:
+        if not available_groups:
+            print("\nNo non-null groups were found for the selected segmentation column.")
+            return []
+
+        preview = ", ".join(available_groups[:10])
+        suffix = " ..." if len(available_groups) > 10 else ""
+        print(f"\nAvailable groups ({len(available_groups)} total): {preview}{suffix}")
+        if self._prompt_yes_no("Run all available groups?", default=True):
+            return None
+
+        while True:
+            raw = input(
+                "Enter group labels to run, separated by commas (labels are case-sensitive): "
+            ).strip()
+            selected = [item.strip() for item in raw.split(",") if item.strip()]
+            if selected:
+                return selected
+            print("Invalid input.")
+
+    def _print_payload_summary(self, title: str, payload: Dict[str, Any]) -> None:
+        if not payload:
+            return
+
+        print(f"\n{title}")
+        if "effectiveness" in payload:
+            metrics = payload["effectiveness"]["metrics"]
+            print(
+                f"  Effectiveness: AUC-ROC={metrics.get('auc_roc', 0):.4f}, "
+                f"F1={metrics.get('f1', 0):.4f}, KS={metrics.get('ks_statistic', 0):.4f}"
+            )
+        if "efficiency" in payload:
+            print(f"  Efficiency: FPR={payload['efficiency']['metrics'].get('fpr', 0):.4f}")
+        if "stability" in payload:
+            metrics = payload["stability"]["metrics"]
+            print(
+                f"  Stability: PSI={metrics.get('psi', 0):.4f}, "
+                f"CV={metrics.get('cv_auc_roc_mean', 0):.4f}±{metrics.get('cv_auc_roc_std', 0):.4f}"
+            )
+        if "interpretability" in payload:
+            top = payload["interpretability"].get("metrics", {}).get("perm_top_features", [])[:5]
+            print(f"  Interpretability: Top features={top}")
+
     def _print_summary(self, results):
         print("\n" + "=" * 60 + "\nRESULTS SUMMARY\n" + "=" * 60)
-        if "effectiveness" in results:
-            e = results["effectiveness"]["metrics"]
-            print(f"\nEffectiveness: AUC-ROC={e.get('auc_roc', 0):.4f}, F1={e.get('f1', 0):.4f}, KS={e.get('ks_statistic', 0):.4f}")
-        if "efficiency" in results:
-            print(f"Efficiency: FPR={results['efficiency']['metrics'].get('fpr', 0):.4f}")
-        if "stability" in results:
-            s = results["stability"]["metrics"]
-            print(f"Stability: PSI={s.get('psi', 0):.4f}, CV={s.get('cv_auc_roc_mean', 0):.4f}±{s.get('cv_auc_roc_std', 0):.4f}")
-        if "interpretability" in results:
-            top = results["interpretability"].get("metrics", {}).get("perm_top_features", [])[:5]
-            print(f"Interpretability: Top features={top}")
+        if "segmentation" not in results:
+            self._print_payload_summary("Overall", results)
+            print("\n" + "=" * 60 + "\nDONE!\n" + "=" * 60)
+            return
+
+        meta = results["segmentation"]
+        print(
+            f"\nSegmentation column: {meta.get('column')} "
+            f"(mode={meta.get('mode', 'segments')}, "
+            f"keep_column_in_features={meta.get('keep_column_in_features', False)})"
+        )
+        skipped = [item for item in meta.get("segments", []) if item.get("status") == "skipped"]
+        if skipped:
+            print("Skipped segments:")
+            for item in skipped:
+                print(f"  - {item['name']}: {item.get('reason', 'skipped')}")
+
+        if "overall" in results:
+            self._print_payload_summary("Overall", results["overall"])
+
+        for name, payload in results.get("segments", {}).items():
+            self._print_payload_summary(f"Segment: {name}", payload)
+
         print("\n" + "=" * 60 + "\nDONE!\n" + "=" * 60)
