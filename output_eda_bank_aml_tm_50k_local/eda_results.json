@@ -1,0 +1,3076 @@
+{
+  "results": {
+    "data_quality": {
+      "metrics": {
+        "rows": 50000,
+        "columns": 35,
+        "duplicate_ratio": 0.0,
+        "duplicate_id_ratio": 0.0,
+        "missingness_payload": {
+          "missing_columns": [
+            {
+              "column": "merchant_category",
+              "missing_count": 997,
+              "missing_rate": 0.01994
+            },
+            {
+              "column": "counterparty_account_id",
+              "missing_count": 734,
+              "missing_rate": 0.01468
+            },
+            {
+              "column": "device_type",
+              "missing_count": 629,
+              "missing_rate": 0.01258
+            }
+          ],
+          "non_missing_columns": [
+            "txn_id",
+            "txn_datetime",
+            "customer_id",
+            "account_id",
+            "txn_amount",
+            "currency",
+            "origin_country",
+            "destination_country",
+            "txn_channel",
+            "payment_rail",
+            "txn_type",
+            "device_id",
+            "ip_country",
+            "account_age_days",
+            "kyc_risk_score",
+            "num_txn_24h",
+            "avg_amount_7d",
+            "is_pep",
+            "sanctions_match",
+            "is_cross_border",
+            "is_fintech_rail",
+            "origin_country_code",
+            "destination_country_code",
+            "ip_country_code",
+            "currency_code",
+            "txn_channel_code",
+            "payment_rail_code",
+            "txn_type_code",
+            "merchant_category_code",
+            "device_type_code",
+            "value_date",
+            "sar_label"
+          ]
+        },
+        "null_like_payload": [
+          {
+            "column": "merchant_category",
+            "null_like_count": 339,
+            "null_like_rate": 0.00678,
+            "examples": [
+              "unknown"
+            ]
+          },
+          {
+            "column": "device_type",
+            "null_like_count": 323,
+            "null_like_rate": 0.00646,
+            "examples": [
+              "unknown"
+            ]
+          }
+        ]
+      },
+      "tables": [
+        {
+          "title": "Missingness",
+          "headers": [
+            "Column",
+            "Missing Count",
+            "Missing Rate"
+          ],
+          "rows": [
+            [
+              "merchant_category",
+              997,
+              0.01994
+            ],
+            [
+              "counterparty_account_id",
+              734,
+              0.01468
+            ],
+            [
+              "device_type",
+              629,
+              0.01258
+            ]
+          ],
+          "style": "missingness"
+        },
+        {
+          "title": "Column Type Classification",
+          "headers": [
+            "Type",
+            "Columns"
+          ],
+          "rows": [
+            [
+              "numeric",
+              "txn_amount"
+            ],
+            [
+              "numeric",
+              "account_age_days"
+            ],
+            [
+              "numeric",
+              "kyc_risk_score"
+            ],
+            [
+              "numeric",
+              "num_txn_24h"
+            ],
+            [
+              "numeric",
+              "avg_amount_7d"
+            ],
+            [
+              "numeric",
+              "origin_country_code"
+            ],
+            [
+              "numeric",
+              "destination_country_code"
+            ],
+            [
+              "numeric",
+              "ip_country_code"
+            ],
+            [
+              "numeric",
+              "currency_code"
+            ],
+            [
+              "numeric",
+              "txn_channel_code"
+            ],
+            [
+              "numeric",
+              "payment_rail_code"
+            ],
+            [
+              "numeric",
+              "txn_type_code"
+            ],
+            [
+              "numeric",
+              "merchant_category_code"
+            ],
+            [
+              "numeric",
+              "device_type_code"
+            ],
+            [
+              "categorical",
+              "currency"
+            ],
+            [
+              "categorical",
+              "origin_country"
+            ],
+            [
+              "categorical",
+              "destination_country"
+            ],
+            [
+              "categorical",
+              "txn_channel"
+            ],
+            [
+              "categorical",
+              "payment_rail"
+            ],
+            [
+              "categorical",
+              "txn_type"
+            ],
+            [
+              "categorical",
+              "merchant_category"
+            ],
+            [
+              "categorical",
+              "device_type"
+            ],
+            [
+              "categorical",
+              "ip_country"
+            ],
+            [
+              "datetime",
+              "txn_datetime"
+            ],
+            [
+              "datetime",
+              "value_date"
+            ],
+            [
+              "boolean",
+              "is_pep"
+            ],
+            [
+              "boolean",
+              "sanctions_match"
+            ],
+            [
+              "boolean",
+              "is_cross_border"
+            ],
+            [
+              "boolean",
+              "is_fintech_rail"
+            ],
+            [
+              "boolean",
+              "sar_label"
+            ]
+          ]
+        },
+        {
+          "title": "Outlier Ratio (IQR)",
+          "headers": [
+            "Column",
+            "Outlier Ratio"
+          ],
+          "rows": [
+            [
+              "avg_amount_7d",
+              0.13994
+            ],
+            [
+              "txn_amount",
+              0.1342
+            ],
+            [
+              "num_txn_24h",
+              0.02812
+            ],
+            [
+              "kyc_risk_score",
+              0.01752
+            ],
+            [
+              "account_age_days",
+              0.0
+            ],
+            [
+              "ip_country_code",
+              0.0
+            ],
+            [
+              "origin_country_code",
+              0.0
+            ],
+            [
+              "destination_country_code",
+              0.0
+            ],
+            [
+              "payment_rail_code",
+              0.0
+            ],
+            [
+              "currency_code",
+              0.0
+            ]
+          ]
+        }
+      ],
+      "plots": {
+        "missingness": "./output_eda_bank_aml_tm_50k_local/missingness.png",
+        "outlier_iqr": "./output_eda_bank_aml_tm_50k_local/outlier_iqr.png"
+      },
+      "summary": [
+        "Dataset has 50000 rows and 35 columns.",
+        "Duplicate row ratio: 0.00%.",
+        "Highest missing rate is 1.99% in 'merchant_category'."
+      ]
+    },
+    "target": {
+      "metrics": {
+        "target_column": "sar_label",
+        "target_mapping": {
+          "kind": "numeric"
+        }
+      },
+      "tables": [
+        {
+          "title": "Target Distribution",
+          "headers": [
+            "Value",
+            "Count",
+            "Rate"
+          ],
+          "rows": [
+            [
+              "0",
+              42002,
+              0.84004
+            ],
+            [
+              "1",
+              7998,
+              0.15996
+            ]
+          ]
+        },
+        {
+          "title": "Target Rate by origin_country",
+          "headers": [
+            "origin_country",
+            "Target Rate"
+          ],
+          "rows": [
+            [
+              "NG",
+              0.254255
+            ],
+            [
+              "AE",
+              0.24985
+            ],
+            [
+              "TR",
+              0.22756
+            ],
+            [
+              "MA",
+              0.226087
+            ],
+            [
+              "MX",
+              0.217059
+            ],
+            [
+              "DE",
+              0.155983
+            ],
+            [
+              "SG",
+              0.155429
+            ],
+            [
+              "HK",
+              0.154567
+            ],
+            [
+              "GB",
+              0.151984
+            ],
+            [
+              "CH",
+              0.150643
+            ]
+          ]
+        },
+        {
+          "title": "Target Rate by destination_country",
+          "headers": [
+            "destination_country",
+            "Target Rate"
+          ],
+          "rows": [
+            [
+              "NG",
+              0.361279
+            ],
+            [
+              "TR",
+              0.334881
+            ],
+            [
+              "MX",
+              0.327361
+            ],
+            [
+              "MA",
+              0.323218
+            ],
+            [
+              "AE",
+              0.321376
+            ],
+            [
+              "SG",
+              0.084494
+            ],
+            [
+              "IN",
+              0.083019
+            ],
+            [
+              "GB",
+              0.080906
+            ],
+            [
+              "IT",
+              0.079194
+            ],
+            [
+              "BR",
+              0.074448
+            ]
+          ]
+        },
+        {
+          "title": "Target Rate by ip_country",
+          "headers": [
+            "ip_country",
+            "Target Rate"
+          ],
+          "rows": [
+            [
+              "ES",
+              0.173152
+            ],
+            [
+              "AE",
+              0.170272
+            ],
+            [
+              "CN",
+              0.167232
+            ],
+            [
+              "DE",
+              0.166349
+            ],
+            [
+              "SG",
+              0.164511
+            ],
+            [
+              "MA",
+              0.163751
+            ],
+            [
+              "US",
+              0.161587
+            ],
+            [
+              "IN",
+              0.160759
+            ],
+            [
+              "HK",
+              0.159722
+            ],
+            [
+              "FR",
+              0.157381
+            ]
+          ]
+        },
+        {
+          "title": "Target Rate by currency",
+          "headers": [
+            "currency",
+            "Target Rate"
+          ],
+          "rows": [
+            [
+              "NGN",
+              0.254255
+            ],
+            [
+              "AED",
+              0.24985
+            ],
+            [
+              "TRY",
+              0.22756
+            ],
+            [
+              "MAD",
+              0.226087
+            ],
+            [
+              "MXN",
+              0.217059
+            ],
+            [
+              "SGD",
+              0.155429
+            ],
+            [
+              "HKD",
+              0.154567
+            ],
+            [
+              "GBP",
+              0.151984
+            ],
+            [
+              "CHF",
+              0.150643
+            ],
+            [
+              "EUR",
+              0.150431
+            ]
+          ]
+        },
+        {
+          "title": "Target Rate by payment_rail",
+          "headers": [
+            "payment_rail",
+            "Target Rate"
+          ],
+          "rows": [
+            [
+              "swift",
+              0.314798
+            ],
+            [
+              "wire",
+              0.293984
+            ],
+            [
+              "zelle",
+              0.241124
+            ],
+            [
+              "cashapp",
+              0.23858
+            ],
+            [
+              "paypal",
+              0.129977
+            ],
+            [
+              "google_pay",
+              0.124516
+            ],
+            [
+              "stripe",
+              0.121646
+            ],
+            [
+              "adyen",
+              0.117128
+            ],
+            [
+              "apple_pay",
+              0.094023
+            ],
+            [
+              "venmo",
+              0.093807
+            ]
+          ]
+        },
+        {
+          "title": "Target Rate by merchant_category",
+          "headers": [
+            "merchant_category",
+            "Target Rate"
+          ],
+          "rows": [
+            [
+              "luxury",
+              0.193527
+            ],
+            [
+              "travel",
+              0.185583
+            ],
+            [
+              "charity",
+              0.160948
+            ],
+            [
+              "grocery",
+              0.158391
+            ],
+            [
+              "electronics",
+              0.156851
+            ],
+            [
+              "utilities",
+              0.156456
+            ],
+            [
+              "restaurants",
+              0.155069
+            ],
+            [
+              "gaming",
+              0.151124
+            ],
+            [
+              "rideshare",
+              0.150998
+            ],
+            [
+              "crypto",
+              0.150147
+            ]
+          ]
+        },
+        {
+          "title": "Target Rate by txn_type",
+          "headers": [
+            "txn_type",
+            "Target Rate"
+          ],
+          "rows": [
+            [
+              "international_remit",
+              0.351205
+            ],
+            [
+              "crypto_exchange",
+              0.334045
+            ],
+            [
+              "cash_withdrawal",
+              0.213023
+            ],
+            [
+              "p2p_transfer",
+              0.091753
+            ],
+            [
+              "bill_pay",
+              0.07808
+            ],
+            [
+              "merchant_pay",
+              0.076307
+            ],
+            [
+              "loan_payment",
+              0.073508
+            ],
+            [
+              "cash_deposit",
+              0.069335
+            ]
+          ]
+        },
+        {
+          "title": "Target Rate by txn_channel",
+          "headers": [
+            "txn_channel",
+            "Target Rate"
+          ],
+          "rows": [
+            [
+              "api",
+              0.176147
+            ],
+            [
+              "web",
+              0.161224
+            ],
+            [
+              "mobile_app",
+              0.157664
+            ],
+            [
+              "branch",
+              0.153086
+            ],
+            [
+              "call_center",
+              0.152245
+            ]
+          ]
+        },
+        {
+          "title": "Target Rate by device_type",
+          "headers": [
+            "device_type",
+            "Target Rate"
+          ],
+          "rows": [
+            [
+              "UNKNOWN",
+              0.170279
+            ],
+            [
+              "ios",
+              0.162451
+            ],
+            [
+              "android",
+              0.161003
+            ],
+            [
+              "web",
+              0.158566
+            ],
+            [
+              "api",
+              0.151237
+            ]
+          ]
+        },
+        {
+          "title": "Target Rate by is_pep",
+          "headers": [
+            "is_pep",
+            "Target Rate"
+          ],
+          "rows": [
+            [
+              "1",
+              0.495524
+            ],
+            [
+              "0",
+              0.144266
+            ]
+          ]
+        }
+      ],
+      "plots": {
+        "target_rate_over_time": "./output_eda_bank_aml_tm_50k_local/target_rate_over_time.png",
+        "target_rate_by_origin_country": "./output_eda_bank_aml_tm_50k_local/target_rate_by_origin_country.png",
+        "target_rate_by_destination_country": "./output_eda_bank_aml_tm_50k_local/target_rate_by_destination_country.png",
+        "target_rate_by_ip_country": "./output_eda_bank_aml_tm_50k_local/target_rate_by_ip_country.png",
+        "target_rate_by_currency": "./output_eda_bank_aml_tm_50k_local/target_rate_by_currency.png",
+        "target_rate_by_payment_rail": "./output_eda_bank_aml_tm_50k_local/target_rate_by_payment_rail.png",
+        "target_rate_by_merchant_category": "./output_eda_bank_aml_tm_50k_local/target_rate_by_merchant_category.png",
+        "target_rate_by_txn_type": "./output_eda_bank_aml_tm_50k_local/target_rate_by_txn_type.png",
+        "target_rate_by_txn_channel": "./output_eda_bank_aml_tm_50k_local/target_rate_by_txn_channel.png",
+        "target_rate_by_device_type": "./output_eda_bank_aml_tm_50k_local/target_rate_by_device_type.png",
+        "target_rate_by_is_pep": "./output_eda_bank_aml_tm_50k_local/target_rate_by_is_pep.png"
+      },
+      "summary": [
+        "Target 'sar_label' has 2 classes.",
+        "Target rate over time plotted."
+      ]
+    },
+    "univariate": {
+      "metrics": {},
+      "tables": [
+        {
+          "title": "Numeric Summary Statistics",
+          "headers": [
+            "Column",
+            "count",
+            "mean",
+            "std",
+            "min",
+            "25%",
+            "50%",
+            "75%",
+            "max"
+          ],
+          "rows": [
+            [
+              "txn_amount",
+              50000.0,
+              1347.007557,
+              17824.97057,
+              0.44,
+              46.7775,
+              127.275,
+              423.37,
+              1826089.88
+            ],
+            [
+              "avg_amount_7d",
+              50000.0,
+              1214.220867,
+              16879.335442,
+              2.68,
+              53.92,
+              118.16,
+              360.4575,
+              1683265.61
+            ],
+            [
+              "account_age_days",
+              50000.0,
+              1831.73742,
+              1050.634398,
+              1.0,
+              925.0,
+              1839.5,
+              2747.0,
+              3649.0
+            ],
+            [
+              "kyc_risk_score",
+              50000.0,
+              39.880374,
+              18.147165,
+              0.0,
+              27.53,
+              38.671362,
+              50.722296,
+              100.0
+            ],
+            [
+              "num_txn_24h",
+              50000.0,
+              4.24914,
+              7.759183,
+              0.0,
+              1.0,
+              3.0,
+              5.0,
+              89.0
+            ],
+            [
+              "ip_country_code",
+              50000.0,
+              9.96626,
+              5.728404,
+              0.0,
+              5.0,
+              9.0,
+              17.0,
+              17.0
+            ],
+            [
+              "origin_country_code",
+              50000.0,
+              9.99068,
+              5.725533,
+              0.0,
+              5.0,
+              10.0,
+              17.0,
+              17.0
+            ],
+            [
+              "destination_country_code",
+              50000.0,
+              10.10976,
+              5.646644,
+              0.0,
+              5.0,
+              11.0,
+              16.0,
+              17.0
+            ],
+            [
+              "payment_rail_code",
+              50000.0,
+              6.75662,
+              4.499666,
+              0.0,
+              3.0,
+              7.0,
+              11.0,
+              13.0
+            ],
+            [
+              "currency_code",
+              50000.0,
+              7.20622,
+              4.335425,
+              0.0,
+              4.0,
+              5.0,
+              13.0,
+              13.0
+            ]
+          ],
+          "style": "wide_numeric_stats",
+          "col_widths": [
+            1.45,
+            0.65,
+            0.75,
+            0.75,
+            0.7,
+            0.65,
+            0.65,
+            0.65,
+            0.75
+          ]
+        },
+        {
+          "title": "Top K: origin_country",
+          "headers": [
+            "Category",
+            "Count",
+            "Rate"
+          ],
+          "rows": [
+            [
+              "US",
+              13639,
+              0.27278
+            ],
+            [
+              "DE",
+              4103,
+              0.08206
+            ],
+            [
+              "GB",
+              4007,
+              0.08014
+            ],
+            [
+              "FR",
+              3289,
+              0.06578
+            ],
+            [
+              "ES",
+              2726,
+              0.05452
+            ],
+            [
+              "IT",
+              2711,
+              0.05422
+            ],
+            [
+              "BR",
+              2053,
+              0.04106
+            ],
+            [
+              "CN",
+              2052,
+              0.04104
+            ],
+            [
+              "IN",
+              2022,
+              0.04044
+            ],
+            [
+              "NL",
+              2015,
+              0.0403
+            ]
+          ],
+          "style": "categorical_topk",
+          "col_widths": [
+            3.0,
+            0.9,
+            0.9
+          ]
+        },
+        {
+          "title": "Top K: destination_country",
+          "headers": [
+            "Category",
+            "Count",
+            "Rate"
+          ],
+          "rows": [
+            [
+              "US",
+              10630,
+              0.2126
+            ],
+            [
+              "MX",
+              3516,
+              0.07032
+            ],
+            [
+              "MA",
+              3493,
+              0.06986
+            ],
+            [
+              "TR",
+              3446,
+              0.06892
+            ],
+            [
+              "AE",
+              3401,
+              0.06802
+            ],
+            [
+              "DE",
+              3148,
+              0.06296
+            ],
+            [
+              "GB",
+              3090,
+              0.0618
+            ],
+            [
+              "NG",
+              2970,
+              0.0594
+            ],
+            [
+              "FR",
+              2601,
+              0.05202
+            ],
+            [
+              "IT",
+              2134,
+              0.04268
+            ]
+          ],
+          "style": "categorical_topk",
+          "col_widths": [
+            3.0,
+            0.9,
+            0.9
+          ]
+        },
+        {
+          "title": "Top K: ip_country",
+          "headers": [
+            "Category",
+            "Count",
+            "Rate"
+          ],
+          "rows": [
+            [
+              "US",
+              14011,
+              0.28022
+            ],
+            [
+              "DE",
+              4196,
+              0.08392
+            ],
+            [
+              "GB",
+              4084,
+              0.08168
+            ],
+            [
+              "FR",
+              3482,
+              0.06964
+            ],
+            [
+              "ES",
+              2801,
+              0.05602
+            ],
+            [
+              "IT",
+              2776,
+              0.05552
+            ],
+            [
+              "BR",
+              2068,
+              0.04136
+            ],
+            [
+              "CN",
+              2063,
+              0.04126
+            ],
+            [
+              "NL",
+              2025,
+              0.0405
+            ],
+            [
+              "IN",
+              2003,
+              0.04006
+            ]
+          ],
+          "style": "categorical_topk",
+          "col_widths": [
+            3.0,
+            0.9,
+            0.9
+          ]
+        },
+        {
+          "title": "Top K: currency",
+          "headers": [
+            "Category",
+            "Count",
+            "Rate"
+          ],
+          "rows": [
+            [
+              "EUR",
+              14844,
+              0.29688
+            ],
+            [
+              "USD",
+              13639,
+              0.27278
+            ],
+            [
+              "GBP",
+              4007,
+              0.08014
+            ],
+            [
+              "BRL",
+              2053,
+              0.04106
+            ],
+            [
+              "CNY",
+              2052,
+              0.04104
+            ],
+            [
+              "INR",
+              2022,
+              0.04044
+            ],
+            [
+              "AED",
+              1669,
+              0.03338
+            ],
+            [
+              "MAD",
+              1610,
+              0.0322
+            ],
+            [
+              "TRY",
+              1582,
+              0.03164
+            ],
+            [
+              "MXN",
+              1571,
+              0.03142
+            ]
+          ],
+          "style": "categorical_topk",
+          "col_widths": [
+            3.0,
+            0.9,
+            0.9
+          ]
+        },
+        {
+          "title": "Top K: payment_rail",
+          "headers": [
+            "Category",
+            "Count",
+            "Rate"
+          ],
+          "rows": [
+            [
+              "wire",
+              8361,
+              0.16722
+            ],
+            [
+              "ACH",
+              8321,
+              0.16642
+            ],
+            [
+              "paypal",
+              5701,
+              0.11402
+            ],
+            [
+              "swift",
+              4460,
+              0.0892
+            ],
+            [
+              "card",
+              4100,
+              0.082
+            ],
+            [
+              "zelle",
+              4056,
+              0.08112
+            ],
+            [
+              "cashapp",
+              3043,
+              0.06086
+            ],
+            [
+              "rtp",
+              2735,
+              0.0547
+            ],
+            [
+              "venmo",
+              2196,
+              0.04392
+            ],
+            [
+              "sepa",
+              2076,
+              0.04152
+            ]
+          ],
+          "style": "categorical_topk",
+          "col_widths": [
+            3.0,
+            0.9,
+            0.9
+          ]
+        },
+        {
+          "title": "Top K: merchant_category",
+          "headers": [
+            "Category",
+            "Count",
+            "Rate"
+          ],
+          "rows": [
+            [
+              "restaurants",
+              8867,
+              0.17734
+            ],
+            [
+              "grocery",
+              7311,
+              0.14622
+            ],
+            [
+              "utilities",
+              6839,
+              0.13678
+            ],
+            [
+              "rideshare",
+              5861,
+              0.11722
+            ],
+            [
+              "electronics",
+              4890,
+              0.0978
+            ],
+            [
+              "travel",
+              3912,
+              0.07824
+            ],
+            [
+              "gaming",
+              3871,
+              0.07742
+            ],
+            [
+              "luxury",
+              2966,
+              0.05932
+            ],
+            [
+              "charity",
+              2448,
+              0.04896
+            ],
+            [
+              "crypto",
+              2038,
+              0.04076
+            ]
+          ],
+          "style": "categorical_topk",
+          "col_widths": [
+            3.0,
+            0.9,
+            0.9
+          ]
+        },
+        {
+          "title": "Top K: txn_type",
+          "headers": [
+            "Category",
+            "Count",
+            "Rate"
+          ],
+          "rows": [
+            [
+              "p2p_transfer",
+              11956,
+              0.23912
+            ],
+            [
+              "merchant_pay",
+              8243,
+              0.16486
+            ],
+            [
+              "international_remit",
+              7386,
+              0.14772
+            ],
+            [
+              "bill_pay",
+              6186,
+              0.12372
+            ],
+            [
+              "crypto_exchange",
+              5155,
+              0.1031
+            ],
+            [
+              "cash_withdrawal",
+              4807,
+              0.09614
+            ],
+            [
+              "loan_payment",
+              3469,
+              0.06938
+            ],
+            [
+              "cash_deposit",
+              2798,
+              0.05596
+            ]
+          ],
+          "style": "categorical_topk",
+          "col_widths": [
+            3.0,
+            0.9,
+            0.9
+          ]
+        },
+        {
+          "title": "Top K: txn_channel",
+          "headers": [
+            "Category",
+            "Count",
+            "Rate"
+          ],
+          "rows": [
+            [
+              "mobile_app",
+              22345,
+              0.4469
+            ],
+            [
+              "web",
+              14973,
+              0.29946
+            ],
+            [
+              "api",
+              5274,
+              0.10548
+            ],
+            [
+              "branch",
+              4958,
+              0.09916
+            ],
+            [
+              "call_center",
+              2450,
+              0.049
+            ]
+          ],
+          "style": "categorical_topk",
+          "col_widths": [
+            3.0,
+            0.9,
+            0.9
+          ]
+        },
+        {
+          "title": "Top K: device_type",
+          "headers": [
+            "Category",
+            "Count",
+            "Rate"
+          ],
+          "rows": [
+            [
+              "android",
+              17304,
+              0.34608
+            ],
+            [
+              "ios",
+              14669,
+              0.29338
+            ],
+            [
+              "web",
+              12386,
+              0.24772
+            ],
+            [
+              "api",
+              5012,
+              0.10024
+            ],
+            [
+              "UNKNOWN",
+              323,
+              0.00646
+            ],
+            [
+              "nan",
+              306,
+              0.00612
+            ]
+          ],
+          "style": "categorical_topk",
+          "col_widths": [
+            3.0,
+            0.9,
+            0.9
+          ]
+        },
+        {
+          "title": "Top K: is_pep",
+          "headers": [
+            "Category",
+            "Count",
+            "Rate"
+          ],
+          "rows": [
+            [
+              "0",
+              47766,
+              0.95532
+            ],
+            [
+              "1",
+              2234,
+              0.04468
+            ]
+          ],
+          "style": "categorical_topk",
+          "col_widths": [
+            3.0,
+            0.9,
+            0.9
+          ]
+        }
+      ],
+      "plots": {
+        "hist_txn_amount": "./output_eda_bank_aml_tm_50k_local/hist_txn_amount.png",
+        "hist_avg_amount_7d": "./output_eda_bank_aml_tm_50k_local/hist_avg_amount_7d.png",
+        "hist_account_age_days": "./output_eda_bank_aml_tm_50k_local/hist_account_age_days.png",
+        "hist_kyc_risk_score": "./output_eda_bank_aml_tm_50k_local/hist_kyc_risk_score.png",
+        "hist_num_txn_24h": "./output_eda_bank_aml_tm_50k_local/hist_num_txn_24h.png",
+        "hist_ip_country_code": "./output_eda_bank_aml_tm_50k_local/hist_ip_country_code.png",
+        "hist_origin_country_code": "./output_eda_bank_aml_tm_50k_local/hist_origin_country_code.png",
+        "hist_destination_country_code": "./output_eda_bank_aml_tm_50k_local/hist_destination_country_code.png",
+        "hist_payment_rail_code": "./output_eda_bank_aml_tm_50k_local/hist_payment_rail_code.png",
+        "hist_currency_code": "./output_eda_bank_aml_tm_50k_local/hist_currency_code.png",
+        "cat_origin_country": "./output_eda_bank_aml_tm_50k_local/cat_origin_country.png",
+        "cat_destination_country": "./output_eda_bank_aml_tm_50k_local/cat_destination_country.png",
+        "cat_ip_country": "./output_eda_bank_aml_tm_50k_local/cat_ip_country.png",
+        "cat_currency": "./output_eda_bank_aml_tm_50k_local/cat_currency.png",
+        "cat_payment_rail": "./output_eda_bank_aml_tm_50k_local/cat_payment_rail.png",
+        "cat_merchant_category": "./output_eda_bank_aml_tm_50k_local/cat_merchant_category.png",
+        "cat_txn_type": "./output_eda_bank_aml_tm_50k_local/cat_txn_type.png",
+        "cat_txn_channel": "./output_eda_bank_aml_tm_50k_local/cat_txn_channel.png",
+        "cat_device_type": "./output_eda_bank_aml_tm_50k_local/cat_device_type.png",
+        "cat_is_pep": "./output_eda_bank_aml_tm_50k_local/cat_is_pep.png"
+      },
+      "summary": [
+        "Numeric columns analyzed: txn_amount, avg_amount_7d, account_age_days, kyc_risk_score, num_txn_24h, ip_country_code, origin_country_code, destination_country_code, payment_rail_code, currency_code",
+        "Categorical columns analyzed: origin_country, destination_country, ip_country, currency, payment_rail, merchant_category, txn_type, txn_channel, device_type, is_pep"
+      ],
+      "univariate_payload": {
+        "numeric_columns": [
+          "txn_amount",
+          "avg_amount_7d",
+          "account_age_days",
+          "kyc_risk_score",
+          "num_txn_24h",
+          "ip_country_code",
+          "origin_country_code",
+          "destination_country_code",
+          "payment_rail_code",
+          "currency_code"
+        ],
+        "categorical_columns": [
+          "origin_country",
+          "destination_country",
+          "ip_country",
+          "currency",
+          "payment_rail",
+          "merchant_category",
+          "txn_type",
+          "txn_channel",
+          "device_type",
+          "is_pep"
+        ],
+        "numeric_summary_rows": [
+          {
+            "column": "txn_amount",
+            "count": 50000.0,
+            "mean": 1347.007557,
+            "std": 17824.97057,
+            "min": 0.44,
+            "p25": 46.7775,
+            "p50": 127.275,
+            "p75": 423.37,
+            "max": 1826089.88
+          },
+          {
+            "column": "avg_amount_7d",
+            "count": 50000.0,
+            "mean": 1214.220867,
+            "std": 16879.335442,
+            "min": 2.68,
+            "p25": 53.92,
+            "p50": 118.16,
+            "p75": 360.4575,
+            "max": 1683265.61
+          },
+          {
+            "column": "account_age_days",
+            "count": 50000.0,
+            "mean": 1831.73742,
+            "std": 1050.634398,
+            "min": 1.0,
+            "p25": 925.0,
+            "p50": 1839.5,
+            "p75": 2747.0,
+            "max": 3649.0
+          },
+          {
+            "column": "kyc_risk_score",
+            "count": 50000.0,
+            "mean": 39.880374,
+            "std": 18.147165,
+            "min": 0.0,
+            "p25": 27.53,
+            "p50": 38.671362,
+            "p75": 50.722296,
+            "max": 100.0
+          },
+          {
+            "column": "num_txn_24h",
+            "count": 50000.0,
+            "mean": 4.24914,
+            "std": 7.759183,
+            "min": 0.0,
+            "p25": 1.0,
+            "p50": 3.0,
+            "p75": 5.0,
+            "max": 89.0
+          },
+          {
+            "column": "ip_country_code",
+            "count": 50000.0,
+            "mean": 9.96626,
+            "std": 5.728404,
+            "min": 0.0,
+            "p25": 5.0,
+            "p50": 9.0,
+            "p75": 17.0,
+            "max": 17.0
+          },
+          {
+            "column": "origin_country_code",
+            "count": 50000.0,
+            "mean": 9.99068,
+            "std": 5.725533,
+            "min": 0.0,
+            "p25": 5.0,
+            "p50": 10.0,
+            "p75": 17.0,
+            "max": 17.0
+          },
+          {
+            "column": "destination_country_code",
+            "count": 50000.0,
+            "mean": 10.10976,
+            "std": 5.646644,
+            "min": 0.0,
+            "p25": 5.0,
+            "p50": 11.0,
+            "p75": 16.0,
+            "max": 17.0
+          },
+          {
+            "column": "payment_rail_code",
+            "count": 50000.0,
+            "mean": 6.75662,
+            "std": 4.499666,
+            "min": 0.0,
+            "p25": 3.0,
+            "p50": 7.0,
+            "p75": 11.0,
+            "max": 13.0
+          },
+          {
+            "column": "currency_code",
+            "count": 50000.0,
+            "mean": 7.20622,
+            "std": 4.335425,
+            "min": 0.0,
+            "p25": 4.0,
+            "p50": 5.0,
+            "p75": 13.0,
+            "max": 13.0
+          }
+        ],
+        "categorical_topk_by_column": {
+          "origin_country": [
+            {
+              "category": "US",
+              "count": 13639,
+              "rate": 0.27278
+            },
+            {
+              "category": "DE",
+              "count": 4103,
+              "rate": 0.08206
+            },
+            {
+              "category": "GB",
+              "count": 4007,
+              "rate": 0.08014
+            },
+            {
+              "category": "FR",
+              "count": 3289,
+              "rate": 0.06578
+            },
+            {
+              "category": "ES",
+              "count": 2726,
+              "rate": 0.05452
+            },
+            {
+              "category": "IT",
+              "count": 2711,
+              "rate": 0.05422
+            },
+            {
+              "category": "BR",
+              "count": 2053,
+              "rate": 0.04106
+            },
+            {
+              "category": "CN",
+              "count": 2052,
+              "rate": 0.04104
+            },
+            {
+              "category": "IN",
+              "count": 2022,
+              "rate": 0.04044
+            },
+            {
+              "category": "NL",
+              "count": 2015,
+              "rate": 0.0403
+            }
+          ],
+          "destination_country": [
+            {
+              "category": "US",
+              "count": 10630,
+              "rate": 0.2126
+            },
+            {
+              "category": "MX",
+              "count": 3516,
+              "rate": 0.07032
+            },
+            {
+              "category": "MA",
+              "count": 3493,
+              "rate": 0.06986
+            },
+            {
+              "category": "TR",
+              "count": 3446,
+              "rate": 0.06892
+            },
+            {
+              "category": "AE",
+              "count": 3401,
+              "rate": 0.06802
+            },
+            {
+              "category": "DE",
+              "count": 3148,
+              "rate": 0.06296
+            },
+            {
+              "category": "GB",
+              "count": 3090,
+              "rate": 0.0618
+            },
+            {
+              "category": "NG",
+              "count": 2970,
+              "rate": 0.0594
+            },
+            {
+              "category": "FR",
+              "count": 2601,
+              "rate": 0.05202
+            },
+            {
+              "category": "IT",
+              "count": 2134,
+              "rate": 0.04268
+            }
+          ],
+          "ip_country": [
+            {
+              "category": "US",
+              "count": 14011,
+              "rate": 0.28022
+            },
+            {
+              "category": "DE",
+              "count": 4196,
+              "rate": 0.08392
+            },
+            {
+              "category": "GB",
+              "count": 4084,
+              "rate": 0.08168
+            },
+            {
+              "category": "FR",
+              "count": 3482,
+              "rate": 0.06964
+            },
+            {
+              "category": "ES",
+              "count": 2801,
+              "rate": 0.05602
+            },
+            {
+              "category": "IT",
+              "count": 2776,
+              "rate": 0.05552
+            },
+            {
+              "category": "BR",
+              "count": 2068,
+              "rate": 0.04136
+            },
+            {
+              "category": "CN",
+              "count": 2063,
+              "rate": 0.04126
+            },
+            {
+              "category": "NL",
+              "count": 2025,
+              "rate": 0.0405
+            },
+            {
+              "category": "IN",
+              "count": 2003,
+              "rate": 0.04006
+            }
+          ],
+          "currency": [
+            {
+              "category": "EUR",
+              "count": 14844,
+              "rate": 0.29688
+            },
+            {
+              "category": "USD",
+              "count": 13639,
+              "rate": 0.27278
+            },
+            {
+              "category": "GBP",
+              "count": 4007,
+              "rate": 0.08014
+            },
+            {
+              "category": "BRL",
+              "count": 2053,
+              "rate": 0.04106
+            },
+            {
+              "category": "CNY",
+              "count": 2052,
+              "rate": 0.04104
+            },
+            {
+              "category": "INR",
+              "count": 2022,
+              "rate": 0.04044
+            },
+            {
+              "category": "AED",
+              "count": 1669,
+              "rate": 0.03338
+            },
+            {
+              "category": "MAD",
+              "count": 1610,
+              "rate": 0.0322
+            },
+            {
+              "category": "TRY",
+              "count": 1582,
+              "rate": 0.03164
+            },
+            {
+              "category": "MXN",
+              "count": 1571,
+              "rate": 0.03142
+            }
+          ],
+          "payment_rail": [
+            {
+              "category": "wire",
+              "count": 8361,
+              "rate": 0.16722
+            },
+            {
+              "category": "ACH",
+              "count": 8321,
+              "rate": 0.16642
+            },
+            {
+              "category": "paypal",
+              "count": 5701,
+              "rate": 0.11402
+            },
+            {
+              "category": "swift",
+              "count": 4460,
+              "rate": 0.0892
+            },
+            {
+              "category": "card",
+              "count": 4100,
+              "rate": 0.082
+            },
+            {
+              "category": "zelle",
+              "count": 4056,
+              "rate": 0.08112
+            },
+            {
+              "category": "cashapp",
+              "count": 3043,
+              "rate": 0.06086
+            },
+            {
+              "category": "rtp",
+              "count": 2735,
+              "rate": 0.0547
+            },
+            {
+              "category": "venmo",
+              "count": 2196,
+              "rate": 0.04392
+            },
+            {
+              "category": "sepa",
+              "count": 2076,
+              "rate": 0.04152
+            }
+          ],
+          "merchant_category": [
+            {
+              "category": "restaurants",
+              "count": 8867,
+              "rate": 0.17734
+            },
+            {
+              "category": "grocery",
+              "count": 7311,
+              "rate": 0.14622
+            },
+            {
+              "category": "utilities",
+              "count": 6839,
+              "rate": 0.13678
+            },
+            {
+              "category": "rideshare",
+              "count": 5861,
+              "rate": 0.11722
+            },
+            {
+              "category": "electronics",
+              "count": 4890,
+              "rate": 0.0978
+            },
+            {
+              "category": "travel",
+              "count": 3912,
+              "rate": 0.07824
+            },
+            {
+              "category": "gaming",
+              "count": 3871,
+              "rate": 0.07742
+            },
+            {
+              "category": "luxury",
+              "count": 2966,
+              "rate": 0.05932
+            },
+            {
+              "category": "charity",
+              "count": 2448,
+              "rate": 0.04896
+            },
+            {
+              "category": "crypto",
+              "count": 2038,
+              "rate": 0.04076
+            }
+          ],
+          "txn_type": [
+            {
+              "category": "p2p_transfer",
+              "count": 11956,
+              "rate": 0.23912
+            },
+            {
+              "category": "merchant_pay",
+              "count": 8243,
+              "rate": 0.16486
+            },
+            {
+              "category": "international_remit",
+              "count": 7386,
+              "rate": 0.14772
+            },
+            {
+              "category": "bill_pay",
+              "count": 6186,
+              "rate": 0.12372
+            },
+            {
+              "category": "crypto_exchange",
+              "count": 5155,
+              "rate": 0.1031
+            },
+            {
+              "category": "cash_withdrawal",
+              "count": 4807,
+              "rate": 0.09614
+            },
+            {
+              "category": "loan_payment",
+              "count": 3469,
+              "rate": 0.06938
+            },
+            {
+              "category": "cash_deposit",
+              "count": 2798,
+              "rate": 0.05596
+            }
+          ],
+          "txn_channel": [
+            {
+              "category": "mobile_app",
+              "count": 22345,
+              "rate": 0.4469
+            },
+            {
+              "category": "web",
+              "count": 14973,
+              "rate": 0.29946
+            },
+            {
+              "category": "api",
+              "count": 5274,
+              "rate": 0.10548
+            },
+            {
+              "category": "branch",
+              "count": 4958,
+              "rate": 0.09916
+            },
+            {
+              "category": "call_center",
+              "count": 2450,
+              "rate": 0.049
+            }
+          ],
+          "device_type": [
+            {
+              "category": "android",
+              "count": 17304,
+              "rate": 0.34608
+            },
+            {
+              "category": "ios",
+              "count": 14669,
+              "rate": 0.29338
+            },
+            {
+              "category": "web",
+              "count": 12386,
+              "rate": 0.24772
+            },
+            {
+              "category": "api",
+              "count": 5012,
+              "rate": 0.10024
+            },
+            {
+              "category": "UNKNOWN",
+              "count": 323,
+              "rate": 0.00646
+            },
+            {
+              "category": "nan",
+              "count": 306,
+              "rate": 0.00612
+            }
+          ],
+          "is_pep": [
+            {
+              "category": "0",
+              "count": 47766,
+              "rate": 0.95532
+            },
+            {
+              "category": "1",
+              "count": 2234,
+              "rate": 0.04468
+            }
+          ]
+        },
+        "chart_paths": [
+          {
+            "title": "txn_amount distribution",
+            "path": "./output_eda_bank_aml_tm_50k_local/hist_txn_amount.png",
+            "kind": "hist"
+          },
+          {
+            "title": "avg_amount_7d distribution",
+            "path": "./output_eda_bank_aml_tm_50k_local/hist_avg_amount_7d.png",
+            "kind": "hist"
+          },
+          {
+            "title": "account_age_days distribution",
+            "path": "./output_eda_bank_aml_tm_50k_local/hist_account_age_days.png",
+            "kind": "hist"
+          },
+          {
+            "title": "kyc_risk_score distribution",
+            "path": "./output_eda_bank_aml_tm_50k_local/hist_kyc_risk_score.png",
+            "kind": "hist"
+          },
+          {
+            "title": "num_txn_24h distribution",
+            "path": "./output_eda_bank_aml_tm_50k_local/hist_num_txn_24h.png",
+            "kind": "hist"
+          },
+          {
+            "title": "ip_country_code distribution",
+            "path": "./output_eda_bank_aml_tm_50k_local/hist_ip_country_code.png",
+            "kind": "hist"
+          },
+          {
+            "title": "origin_country_code distribution",
+            "path": "./output_eda_bank_aml_tm_50k_local/hist_origin_country_code.png",
+            "kind": "hist"
+          },
+          {
+            "title": "destination_country_code distribution",
+            "path": "./output_eda_bank_aml_tm_50k_local/hist_destination_country_code.png",
+            "kind": "hist"
+          },
+          {
+            "title": "payment_rail_code distribution",
+            "path": "./output_eda_bank_aml_tm_50k_local/hist_payment_rail_code.png",
+            "kind": "hist"
+          },
+          {
+            "title": "currency_code distribution",
+            "path": "./output_eda_bank_aml_tm_50k_local/hist_currency_code.png",
+            "kind": "hist"
+          },
+          {
+            "title": "origin_country top 10",
+            "path": "./output_eda_bank_aml_tm_50k_local/cat_origin_country.png",
+            "kind": "bar"
+          },
+          {
+            "title": "destination_country top 10",
+            "path": "./output_eda_bank_aml_tm_50k_local/cat_destination_country.png",
+            "kind": "bar"
+          },
+          {
+            "title": "ip_country top 10",
+            "path": "./output_eda_bank_aml_tm_50k_local/cat_ip_country.png",
+            "kind": "bar"
+          },
+          {
+            "title": "currency top 10",
+            "path": "./output_eda_bank_aml_tm_50k_local/cat_currency.png",
+            "kind": "bar"
+          },
+          {
+            "title": "payment_rail top 10",
+            "path": "./output_eda_bank_aml_tm_50k_local/cat_payment_rail.png",
+            "kind": "bar"
+          },
+          {
+            "title": "merchant_category top 10",
+            "path": "./output_eda_bank_aml_tm_50k_local/cat_merchant_category.png",
+            "kind": "bar"
+          },
+          {
+            "title": "txn_type top 10",
+            "path": "./output_eda_bank_aml_tm_50k_local/cat_txn_type.png",
+            "kind": "bar"
+          },
+          {
+            "title": "txn_channel top 10",
+            "path": "./output_eda_bank_aml_tm_50k_local/cat_txn_channel.png",
+            "kind": "bar"
+          },
+          {
+            "title": "device_type top 10",
+            "path": "./output_eda_bank_aml_tm_50k_local/cat_device_type.png",
+            "kind": "bar"
+          },
+          {
+            "title": "is_pep top 10",
+            "path": "./output_eda_bank_aml_tm_50k_local/cat_is_pep.png",
+            "kind": "bar"
+          }
+        ]
+      }
+    },
+    "bivariate_target": {
+      "metrics": {
+        "target_mapping": {
+          "kind": "numeric"
+        }
+      },
+      "tables": [
+        {
+          "title": "Numeric vs Target (Binned)",
+          "headers": [
+            "Column",
+            "Bin",
+            "Target Rate"
+          ],
+          "rows": [
+            [
+              "txn_amount",
+              "(0.439, 36.788]",
+              0.0497
+            ],
+            [
+              "txn_amount",
+              "(36.788, 85.22]",
+              0.087791
+            ],
+            [
+              "txn_amount",
+              "(85.22, 195.502]",
+              0.132813
+            ],
+            [
+              "txn_amount",
+              "(195.502, 583.078]",
+              0.1937
+            ],
+            [
+              "txn_amount",
+              "(583.078, 1826089.88]",
+              0.3358
+            ],
+            [
+              "avg_amount_7d",
+              "(2.6790000000000003, 45.5]",
+              0.064787
+            ],
+            [
+              "avg_amount_7d",
+              "(45.5, 85.58]",
+              0.0896
+            ],
+            [
+              "avg_amount_7d",
+              "(85.58, 171.808]",
+              0.124025
+            ],
+            [
+              "avg_amount_7d",
+              "(171.808, 500.072]",
+              0.1933
+            ],
+            [
+              "avg_amount_7d",
+              "(500.072, 1683265.61]",
+              0.3281
+            ],
+            [
+              "account_age_days",
+              "(0.999, 741.0]",
+              0.16615
+            ],
+            [
+              "account_age_days",
+              "(741.0, 1466.0]",
+              0.159552
+            ],
+            [
+              "account_age_days",
+              "(1466.0, 2195.0]",
+              0.153177
+            ],
+            [
+              "account_age_days",
+              "(2195.0, 2922.0]",
+              0.163
+            ],
+            [
+              "account_age_days",
+              "(2922.0, 3649.0]",
+              0.157911
+            ],
+            [
+              "kyc_risk_score",
+              "(-0.001, 24.78]",
+              0.064787
+            ],
+            [
+              "kyc_risk_score",
+              "(24.78, 34.48]",
+              0.087356
+            ],
+            [
+              "kyc_risk_score",
+              "(34.48, 42.976]",
+              0.124487
+            ],
+            [
+              "kyc_risk_score",
+              "(42.976, 53.87]",
+              0.178982
+            ],
+            [
+              "kyc_risk_score",
+              "(53.87, 100.0]",
+              0.344234
+            ],
+            [
+              "num_txn_24h",
+              "(-0.001, 1.0]",
+              0.067891
+            ],
+            [
+              "num_txn_24h",
+              "(1.0, 2.0]",
+              0.081693
+            ],
+            [
+              "num_txn_24h",
+              "(2.0, 3.0]",
+              0.103718
+            ],
+            [
+              "num_txn_24h",
+              "(3.0, 5.0]",
+              0.171039
+            ],
+            [
+              "num_txn_24h",
+              "(5.0, 89.0]",
+              0.417677
+            ],
+            [
+              "ip_country_code",
+              "(-0.001, 4.0]",
+              0.160414
+            ],
+            [
+              "ip_country_code",
+              "(4.0, 7.0]",
+              0.160895
+            ],
+            [
+              "ip_country_code",
+              "(7.0, 12.0]",
+              0.158065
+            ],
+            [
+              "ip_country_code",
+              "(12.0, 17.0]",
+              0.160072
+            ],
+            [
+              "origin_country_code",
+              "(-0.001, 4.0]",
+              0.164315
+            ],
+            [
+              "origin_country_code",
+              "(4.0, 7.0]",
+              0.150768
+            ],
+            [
+              "origin_country_code",
+              "(7.0, 12.0]",
+              0.173464
+            ],
+            [
+              "origin_country_code",
+              "(12.0, 17.0]",
+              0.155834
+            ],
+            [
+              "destination_country_code",
+              "(-0.001, 4.0]",
+              0.15052
+            ],
+            [
+              "destination_country_code",
+              "(4.0, 9.0]",
+              0.075611
+            ],
+            [
+              "destination_country_code",
+              "(9.0, 12.0]",
+              0.267855
+            ],
+            [
+              "destination_country_code",
+              "(12.0, 17.0]",
+              0.159727
+            ],
+            [
+              "payment_rail_code",
+              "(-0.001, 2.0]",
+              0.066862
+            ],
+            [
+              "payment_rail_code",
+              "(2.0, 6.0]",
+              0.129151
+            ],
+            [
+              "payment_rail_code",
+              "(6.0, 9.0]",
+              0.064766
+            ],
+            [
+              "payment_rail_code",
+              "(9.0, 12.0]",
+              0.270893
+            ],
+            [
+              "payment_rail_code",
+              "(12.0, 13.0]",
+              0.241124
+            ],
+            [
+              "currency_code",
+              "(-0.001, 4.0]",
+              0.156479
+            ],
+            [
+              "currency_code",
+              "(4.0, 8.0]",
+              0.164126
+            ],
+            [
+              "currency_code",
+              "(8.0, 13.0]",
+              0.162008
+            ]
+          ]
+        },
+        {
+          "title": "Categorical vs Target",
+          "headers": [
+            "Column",
+            "Category",
+            "Target Rate"
+          ],
+          "rows": [
+            [
+              "origin_country",
+              "NG",
+              0.254255
+            ],
+            [
+              "origin_country",
+              "AE",
+              0.24985
+            ],
+            [
+              "origin_country",
+              "TR",
+              0.22756
+            ],
+            [
+              "origin_country",
+              "MA",
+              0.226087
+            ],
+            [
+              "origin_country",
+              "MX",
+              0.217059
+            ],
+            [
+              "origin_country",
+              "DE",
+              0.155983
+            ],
+            [
+              "origin_country",
+              "SG",
+              0.155429
+            ],
+            [
+              "origin_country",
+              "HK",
+              0.154567
+            ],
+            [
+              "origin_country",
+              "GB",
+              0.151984
+            ],
+            [
+              "origin_country",
+              "CH",
+              0.150643
+            ],
+            [
+              "destination_country",
+              "NG",
+              0.361279
+            ],
+            [
+              "destination_country",
+              "TR",
+              0.334881
+            ],
+            [
+              "destination_country",
+              "MX",
+              0.327361
+            ],
+            [
+              "destination_country",
+              "MA",
+              0.323218
+            ],
+            [
+              "destination_country",
+              "AE",
+              0.321376
+            ],
+            [
+              "destination_country",
+              "SG",
+              0.084494
+            ],
+            [
+              "destination_country",
+              "IN",
+              0.083019
+            ],
+            [
+              "destination_country",
+              "GB",
+              0.080906
+            ],
+            [
+              "destination_country",
+              "IT",
+              0.079194
+            ],
+            [
+              "destination_country",
+              "BR",
+              0.074448
+            ],
+            [
+              "ip_country",
+              "ES",
+              0.173152
+            ],
+            [
+              "ip_country",
+              "AE",
+              0.170272
+            ],
+            [
+              "ip_country",
+              "CN",
+              0.167232
+            ],
+            [
+              "ip_country",
+              "DE",
+              0.166349
+            ],
+            [
+              "ip_country",
+              "SG",
+              0.164511
+            ],
+            [
+              "ip_country",
+              "MA",
+              0.163751
+            ],
+            [
+              "ip_country",
+              "US",
+              0.161587
+            ],
+            [
+              "ip_country",
+              "IN",
+              0.160759
+            ],
+            [
+              "ip_country",
+              "HK",
+              0.159722
+            ],
+            [
+              "ip_country",
+              "FR",
+              0.157381
+            ],
+            [
+              "currency",
+              "NGN",
+              0.254255
+            ],
+            [
+              "currency",
+              "AED",
+              0.24985
+            ],
+            [
+              "currency",
+              "TRY",
+              0.22756
+            ],
+            [
+              "currency",
+              "MAD",
+              0.226087
+            ],
+            [
+              "currency",
+              "MXN",
+              0.217059
+            ],
+            [
+              "currency",
+              "SGD",
+              0.155429
+            ],
+            [
+              "currency",
+              "HKD",
+              0.154567
+            ],
+            [
+              "currency",
+              "GBP",
+              0.151984
+            ],
+            [
+              "currency",
+              "CHF",
+              0.150643
+            ],
+            [
+              "currency",
+              "EUR",
+              0.150431
+            ],
+            [
+              "payment_rail",
+              "swift",
+              0.314798
+            ],
+            [
+              "payment_rail",
+              "wire",
+              0.293984
+            ],
+            [
+              "payment_rail",
+              "zelle",
+              0.241124
+            ],
+            [
+              "payment_rail",
+              "cashapp",
+              0.23858
+            ],
+            [
+              "payment_rail",
+              "paypal",
+              0.129977
+            ],
+            [
+              "payment_rail",
+              "google_pay",
+              0.124516
+            ],
+            [
+              "payment_rail",
+              "stripe",
+              0.121646
+            ],
+            [
+              "payment_rail",
+              "adyen",
+              0.117128
+            ],
+            [
+              "payment_rail",
+              "apple_pay",
+              0.094023
+            ],
+            [
+              "payment_rail",
+              "venmo",
+              0.093807
+            ],
+            [
+              "merchant_category",
+              "luxury",
+              0.193527
+            ],
+            [
+              "merchant_category",
+              "travel",
+              0.185583
+            ],
+            [
+              "merchant_category",
+              "charity",
+              0.160948
+            ],
+            [
+              "merchant_category",
+              "grocery",
+              0.158391
+            ],
+            [
+              "merchant_category",
+              "electronics",
+              0.156851
+            ],
+            [
+              "merchant_category",
+              "utilities",
+              0.156456
+            ],
+            [
+              "merchant_category",
+              "restaurants",
+              0.155069
+            ],
+            [
+              "merchant_category",
+              "gaming",
+              0.151124
+            ],
+            [
+              "merchant_category",
+              "rideshare",
+              0.150998
+            ],
+            [
+              "merchant_category",
+              "crypto",
+              0.150147
+            ],
+            [
+              "txn_type",
+              "international_remit",
+              0.351205
+            ],
+            [
+              "txn_type",
+              "crypto_exchange",
+              0.334045
+            ],
+            [
+              "txn_type",
+              "cash_withdrawal",
+              0.213023
+            ],
+            [
+              "txn_type",
+              "p2p_transfer",
+              0.091753
+            ],
+            [
+              "txn_type",
+              "bill_pay",
+              0.07808
+            ],
+            [
+              "txn_type",
+              "merchant_pay",
+              0.076307
+            ],
+            [
+              "txn_type",
+              "loan_payment",
+              0.073508
+            ],
+            [
+              "txn_type",
+              "cash_deposit",
+              0.069335
+            ],
+            [
+              "txn_channel",
+              "api",
+              0.176147
+            ],
+            [
+              "txn_channel",
+              "web",
+              0.161224
+            ],
+            [
+              "txn_channel",
+              "mobile_app",
+              0.157664
+            ],
+            [
+              "txn_channel",
+              "branch",
+              0.153086
+            ],
+            [
+              "txn_channel",
+              "call_center",
+              0.152245
+            ],
+            [
+              "device_type",
+              "UNKNOWN",
+              0.170279
+            ],
+            [
+              "device_type",
+              "ios",
+              0.162451
+            ],
+            [
+              "device_type",
+              "android",
+              0.161003
+            ],
+            [
+              "device_type",
+              "web",
+              0.158566
+            ],
+            [
+              "device_type",
+              "api",
+              0.151237
+            ],
+            [
+              "is_pep",
+              "1",
+              0.495524
+            ],
+            [
+              "is_pep",
+              "0",
+              0.144266
+            ]
+          ]
+        }
+      ],
+      "plots": {
+        "target_rate_bins_txn_amount": "./output_eda_bank_aml_tm_50k_local/target_rate_bins_txn_amount.png",
+        "target_rate_cat_origin_country": "./output_eda_bank_aml_tm_50k_local/target_rate_cat_origin_country.png"
+      },
+      "summary": [
+        "Bivariate target analysis completed."
+      ]
+    },
+    "feature_vs_feature": {
+      "metrics": {
+        "correlation": {
+          "txn_amount": {
+            "txn_amount": 1.0,
+            "avg_amount_7d": 0.9419,
+            "account_age_days": 0.0066,
+            "kyc_risk_score": 0.0645,
+            "num_txn_24h": 0.0909,
+            "ip_country_code": -0.004,
+            "origin_country_code": -0.0001,
+            "destination_country_code": 0.0076,
+            "payment_rail_code": 0.0261,
+            "currency_code": 0.0015
+          },
+          "avg_amount_7d": {
+            "txn_amount": 0.9419,
+            "avg_amount_7d": 1.0,
+            "account_age_days": 0.0057,
+            "kyc_risk_score": 0.0619,
+            "num_txn_24h": 0.0845,
+            "ip_country_code": -0.0019,
+            "origin_country_code": 0.0023,
+            "destination_country_code": 0.0063,
+            "payment_rail_code": 0.0232,
+            "currency_code": 0.0036
+          },
+          "account_age_days": {
+            "txn_amount": 0.0066,
+            "avg_amount_7d": 0.0057,
+            "account_age_days": 1.0,
+            "kyc_risk_score": -0.0085,
+            "num_txn_24h": 0.0008,
+            "ip_country_code": -0.0035,
+            "origin_country_code": 0.0064,
+            "destination_country_code": 0.0059,
+            "payment_rail_code": -0.0001,
+            "currency_code": 0.0054
+          },
+          "kyc_risk_score": {
+            "txn_amount": 0.0645,
+            "avg_amount_7d": 0.0619,
+            "account_age_days": -0.0085,
+            "kyc_risk_score": 1.0,
+            "num_txn_24h": 0.3559,
+            "ip_country_code": 0.0001,
+            "origin_country_code": -0.001,
+            "destination_country_code": 0.0183,
+            "payment_rail_code": 0.1425,
+            "currency_code": 0.0029
+          },
+          "num_txn_24h": {
+            "txn_amount": 0.0909,
+            "avg_amount_7d": 0.0845,
+            "account_age_days": 0.0008,
+            "kyc_risk_score": 0.3559,
+            "num_txn_24h": 1.0,
+            "ip_country_code": -0.0042,
+            "origin_country_code": -0.0005,
+            "destination_country_code": 0.0093,
+            "payment_rail_code": 0.0738,
+            "currency_code": 0.005
+          },
+          "ip_country_code": {
+            "txn_amount": -0.004,
+            "avg_amount_7d": -0.0019,
+            "account_age_days": -0.0035,
+            "kyc_risk_score": 0.0001,
+            "num_txn_24h": -0.0042,
+            "ip_country_code": 1.0,
+            "origin_country_code": 0.0052,
+            "destination_country_code": 0.0027,
+            "payment_rail_code": -0.0049,
+            "currency_code": 0.0038
+          },
+          "origin_country_code": {
+            "txn_amount": -0.0001,
+            "avg_amount_7d": 0.0023,
+            "account_age_days": 0.0064,
+            "kyc_risk_score": -0.001,
+            "num_txn_24h": -0.0005,
+            "ip_country_code": 0.0052,
+            "origin_country_code": 1.0,
+            "destination_country_code": 0.0072,
+            "payment_rail_code": -0.0042,
+            "currency_code": 0.9343
+          },
+          "destination_country_code": {
+            "txn_amount": 0.0076,
+            "avg_amount_7d": 0.0063,
+            "account_age_days": 0.0059,
+            "kyc_risk_score": 0.0183,
+            "num_txn_24h": 0.0093,
+            "ip_country_code": 0.0027,
+            "origin_country_code": 0.0072,
+            "destination_country_code": 1.0,
+            "payment_rail_code": 0.0138,
+            "currency_code": 0.0026
+          },
+          "payment_rail_code": {
+            "txn_amount": 0.0261,
+            "avg_amount_7d": 0.0232,
+            "account_age_days": -0.0001,
+            "kyc_risk_score": 0.1425,
+            "num_txn_24h": 0.0738,
+            "ip_country_code": -0.0049,
+            "origin_country_code": -0.0042,
+            "destination_country_code": 0.0138,
+            "payment_rail_code": 1.0,
+            "currency_code": -0.0055
+          },
+          "currency_code": {
+            "txn_amount": 0.0015,
+            "avg_amount_7d": 0.0036,
+            "account_age_days": 0.0054,
+            "kyc_risk_score": 0.0029,
+            "num_txn_24h": 0.005,
+            "ip_country_code": 0.0038,
+            "origin_country_code": 0.9343,
+            "destination_country_code": 0.0026,
+            "payment_rail_code": -0.0055,
+            "currency_code": 1.0
+          }
+        }
+      },
+      "tables": [],
+      "plots": {
+        "correlation_heatmap": "./output_eda_bank_aml_tm_50k_local/correlation_heatmap.png"
+      },
+      "summary": [
+        "No highly correlated feature pairs detected."
+      ]
+    },
+    "time_drift": {
+      "metrics": {},
+      "tables": [
+        {
+          "title": "PSI Drift (Numeric)",
+          "headers": [
+            "Column",
+            "PSI"
+          ],
+          "rows": [
+            [
+              "payment_rail_code",
+              0.289851
+            ],
+            [
+              "num_txn_24h",
+              0.280775
+            ],
+            [
+              "destination_country_code",
+              0.185442
+            ],
+            [
+              "kyc_risk_score",
+              0.131146
+            ],
+            [
+              "txn_amount",
+              0.044259
+            ],
+            [
+              "avg_amount_7d",
+              0.03556
+            ],
+            [
+              "account_age_days",
+              0.000395
+            ],
+            [
+              "ip_country_code",
+              0.000358
+            ],
+            [
+              "origin_country_code",
+              0.000347
+            ],
+            [
+              "currency_code",
+              0.000116
+            ]
+          ]
+        },
+        {
+          "title": "Categorical Drift (Total Variation)",
+          "headers": [
+            "Column",
+            "Drift Score"
+          ],
+          "rows": [
+            [
+              "txn_type",
+              0.29192
+            ],
+            [
+              "payment_rail",
+              0.26522
+            ],
+            [
+              "destination_country",
+              0.16824
+            ],
+            [
+              "is_pep",
+              0.03664
+            ],
+            [
+              "merchant_category",
+              0.0141
+            ],
+            [
+              "currency",
+              0.00974
+            ],
+            [
+              "origin_country",
+              0.00946
+            ],
+            [
+              "txn_channel",
+              0.0076
+            ],
+            [
+              "ip_country",
+              0.00666
+            ],
+            [
+              "device_type",
+              0.0052
+            ]
+          ]
+        }
+      ],
+      "plots": {
+        "time_volume": "./output_eda_bank_aml_tm_50k_local/time_volume.png",
+        "time_amount_mean": "./output_eda_bank_aml_tm_50k_local/time_amount_mean.png"
+      },
+      "summary": [
+        "Time series and drift analysis completed."
+      ]
+    }
+  },
+  "skipped_sections": [],
+  "config": {
+    "data_path": "bank_aml_tm_synthetic_50k_local=data/bank_aml_tm_synthetic_50k_local.csv",
+    "rows_original": 50000,
+    "rows_used": 50000,
+    "target_col": "sar_label",
+    "time_col": "value_date",
+    "time_parse_ratio": 1.0,
+    "composition": {
+      "mode": "single_table",
+      "base_table": "bank_aml_tm_synthetic_50k_local",
+      "tables": [
+        "bank_aml_tm_synthetic_50k_local"
+      ]
+    }
+  }
+}
